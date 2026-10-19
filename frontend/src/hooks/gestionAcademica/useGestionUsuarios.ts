@@ -666,7 +666,12 @@ export function useGestionUsuarios() {
         // Cargar espacios permitidos si el rol supervisa espacios.
         if (isSpaceSupervisorRole(rol)) {
             try {
-                const response = await espacioPermitidoService.listByUsuario(usuario.id as number);
+                // Los tipos se piden al servidor: la lista de usuarios puede venir de la caché de la sesión
+                // (anterior a que se asignaran) y mostraría la asignación por tipo vacía
+                const [response, usuarioActual] = await Promise.all([
+                    espacioPermitidoService.listByUsuario(usuario.id as number),
+                    userService.obtenerUsuario(usuario.id as number).catch(() => usuario),
+                ]);
                 const espaciosPermitidosNormalizados = (response.espacios || [])
                     .map(normalizeEspacioAsignable)
                     .filter((espacio): espacio is EspacioAsignable => espacio !== null);
@@ -683,7 +688,7 @@ export function useGestionUsuarios() {
                     return Array.from(espaciosPorId.values());
                 });
                 setEspaciosPermitidosEdit(espaciosIds);
-                const tiposAsignados = usuario.tipos_espacio_permitidos ?? [];
+                const tiposAsignados = usuarioActual.tipos_espacio_permitidos ?? usuario.tipos_espacio_permitidos ?? [];
                 if (tiposAsignados.length > 0) {
                     // Asignación por tipo: se conserva como tal (si no, al guardar pasaría a individual)
                     setModoAsignacionSupervisorEdit('tipo');

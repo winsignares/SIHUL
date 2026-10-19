@@ -333,3 +333,53 @@ class AlcanceSupervisorTests(TestCase):
         # los espacios de quien tiene tipos son derivados; los de quien no, individuales
         self.assertFalse(EspacioPermitido.objects.get(usuario=self.sup_tipo, espacio=self.aula1).individual)
         self.assertTrue(EspacioPermitido.objects.get(usuario=self.sup_individual, espacio=self.aula1).individual)
+
+    # ---------------------------------------------------------------- varios tipos a la vez
+    @mock.patch('mysite.permissions.user_can_edit_componente', return_value=True)
+    def test_varios_tipos_asignados(self, _):
+        auditorio = TipoEspacio.objects.get_or_create(nombre='Auditorio')[0]
+        serializer = UsuarioSerializer(self.sup_individual, data={'tipos_espacio_permitidos': [self.aula.id, self.lab.id]}, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        usuario = serializer.save()
+        self.assertEqual(tipos_de(usuario), {self.aula.id, self.lab.id})
+        self.assertEqual(UsuarioSerializer(usuario).data['tipos_espacio_permitidos'], sorted([self.aula.id, self.lab.id]))
+        self.assertEqual(self.ids_de(usuario), {self.aula1.id, self.aula2.id, self.lab1.id})  # ambos tipos; ninguna de otra sede
+        client = self.cliente(usuario)
+        for tipo in (self.aula, self.lab):  # puede crear de cualquiera de sus tipos
+            r = client.post('/api/espacios/', self.payload_espacio(tipo, self.sede, nombre=f'N-{tipo.nombre}'), format='json')
+            self.assertEqual(r.status_code, 201, r.content)
+        r = client.post('/api/espacios/', self.payload_espacio(auditorio, self.sede), format='json')
+        self.assertEqual(r.status_code, 403)  # pero no de uno que no tiene
+        # y un espacio de cualquiera de sus tipos puede pasar al otro tipo asignado, no a uno ajeno
+        self.assertEqual(client.patch(f'/api/espacios/{self.aula1.id}/', {'tipo': self.lab.id}, format='json').status_code, 200)
+        self.assertEqual(client.patch(f'/api/espacios/{self.lab1.id}/', {'tipo': auditorio.id}, format='json').status_code, 403)
+        # quitar un tipo retira solo sus espacios
+        alcance.asignar_tipos(usuario, [self.lab.id])
+        self.assertEqual(tipos_de(usuario), {self.lab.id})
+        self.assertNotIn(self.aula2.id, self.ids_de(usuario))
+        self.assertIn(self.lab1.id, self.ids_de(usuario))
+
+    # ---------------------------------------------------------------- por la API de usuarios (lo que usa el formulario)
+    def test_formulario_guarda_y_devuelve_los_tipos_por_la_api_de_usuarios(self):
+        client = self.cliente(self.admin)
+        # asignar un tipo y un espacio suelto, como lo envía el formulario de edición
+        r = client.patch(f'/api/usuarios/{self.docente.id}/', {
+            'espacios_permitidos': [self.lab1.id], 'tipos_espacio_permitidos': [self.aula.id],
+        }, format='json')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()['tipos_espacio_permitidos'], [self.aula.id])
+        # al volver a abrir la edición: el detalle y el listado lo devuelven
+        detalle = client.get(f'/api/usuarios/{self.docente.id}/').json()
+        self.assertEqual(detalle['tipos_espacio_permitidos'], [self.aula.id])
+        listado = client.get('/api/usuarios/').json()
+        fila = next(u for u in (listado if isinstance(listado, list) else listado.get('results', [])) if u['id'] == self.docente.id)
+        self.assertEqual(fila['tipos_espacio_permitidos'], [self.aula.id])
+        # y el listado de espacios del usuario marca cuáles son individuales
+        espacios = client.get(f'/api/espacios-permitidos/usuario/{self.docente.id}/').json()['espacios']
+        individual = {e['id']: e['individual'] for e in espacios}
+        self.assertEqual(individual, {self.aula1.id: False, self.aula2.id: False, self.lab1.id: True})
+        # editar sin tocar los tipos (el formulario siempre los reenvía) los conserva
+        r = client.patch(f'/api/usuarios/{self.docente.id}/', {
+            'nombre': 'Docente 2', 'espacios_permitidos': [self.lab1.id], 'tipos_espacio_permitidos': [self.aula.id],
+        }, format='json')
+        self.assertEqual(r.json()['tipos_espacio_permitidos'], [self.aula.id])
