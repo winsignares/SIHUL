@@ -1,2 +1,0 @@
-cd backend
-python manage.py shell -c "from config.management.commands.seeders.componentes_rol_seeder import create_componentes_rol; from django.core.management.base import BaseCommand; c=BaseCommand(); create_componentes_rol(c.stdout, c.style)"
