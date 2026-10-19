@@ -52,8 +52,8 @@ services:
   backend:
     container_name: sihul-backend
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend.Dockerfile
     restart: unless-stopped
     env_file:
       - ./.env
@@ -95,8 +95,8 @@ services:
   chatbot:
     container_name: sihul-chatbot
     build:
-      context: ./chatbot
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: chatbot.Dockerfile
     restart: unless-stopped
     env_file:
       - ./.env
@@ -128,8 +128,8 @@ services:
   frontend:
     container_name: react_vite_app
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend.Dockerfile
     restart: unless-stopped
     ports:
       - "5173:5173"

@@ -25,12 +25,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements e instalar dependencias Python
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copiar código del backend
-COPY . .
+COPY backend/ .
 
 # Exponer puerto Django
 EXPOSE 8000
