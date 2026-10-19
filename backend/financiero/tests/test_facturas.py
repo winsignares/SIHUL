@@ -79,7 +79,7 @@ class FacturaTestCase(TestCase):
         self.assertEqual(factura.estado, 'Radicada')
         self.assertIsNotNone(factura.fecha_radicacion)
 
-    @patch('financiero.facturas.views._regenerar_pdf_unificado_nas')
+    @patch('financiero.facturas.views.documentos._regenerar_pdf_unificado_nas')
     @patch('financiero.facturas.shared_storage.shared_storage')
     def test_documento_adjunto_se_guarda_solo_en_carpeta_compartida(self, storage_mock, _regenerar_mock):
         storage_mock.enabled = True
