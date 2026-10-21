@@ -3,6 +3,7 @@ import datetime
 from django.test import TestCase
 
 from espacios.models import EspacioFisico, TipoEspacio
+from periodos.models import PeriodoAcademico
 from prestamos.models import PrestamoEspacio, PrestamoRecurso, TipoActividad
 from prestamos.serializers import PrestamoEspacioSerializer
 from recursos.models import Recurso
@@ -11,6 +12,14 @@ from sedes.models import Sede
 
 class PrestamoEspacioSerializerRecursosTests(TestCase):
     def setUp(self):
+        # El préstamo exige un periodo que cubra la fecha; se crea uno alrededor de hoy
+        # para que la prueba no dependa de la fecha en que se ejecute.
+        hoy = datetime.date.today()
+        PeriodoAcademico.objects.create(
+            nombre='Periodo de prueba',
+            fecha_inicio=hoy - datetime.timedelta(days=30),
+            fecha_fin=hoy + datetime.timedelta(days=30),
+        )
         sede = Sede.objects.create(nombre='Sede de prueba')
         tipo_espacio = TipoEspacio.objects.create(nombre='Aula de prueba')
         self.espacio = EspacioFisico.objects.create(
