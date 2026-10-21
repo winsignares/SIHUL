@@ -6,7 +6,7 @@ Repositorio: `winsignares/SIHUL`. Requiere rol **Admin** del repositorio (o prop
 
 | Rama | Reglas |
 |---|---|
-| `main` | Solo por PR. 1 aprobación de **otra persona** (el autor no puede aprobar su propio PR); si se sube un commit después de aprobar, lo debe aprobar alguien distinto de quien lo subió. Solo *merge commit*. Sin force push ni borrado. Checks obligatorios. Sin excepciones (bypass vacío). |
+| `main` | Solo por PR. 1 aprobación de **otra persona** (el autor no puede aprobar su propio PR); si se sube un commit después de aprobar, lo debe aprobar alguien distinto de quien lo subió. Solo *merge commit*. Sin force push ni borrado. Checks obligatorios (sin exigir que la rama esté al día con main, para no obligar a actualizar develop tras cada release). Sin excepciones (bypass vacío). |
 | `develop` | Solo por PR. 1 aprobación de otra persona. Solo *squash*. Sin force push ni borrado. Checks obligatorios. |
 
 Origen de los PR (lo exige el check `check`, de `.github/workflows/branch-policy.yml`):
