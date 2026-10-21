@@ -27,6 +27,14 @@ export const maxDocumentosPorDefecto = (tipo?: ChatbotTipo): number => (tipo ===
 export const limiteDocumentos = (chatbot?: { max_documentos?: number | null; tipo?: ChatbotTipo }): number =>
     chatbot?.max_documentos || maxDocumentosPorDefecto(chatbot?.tipo);
 
+/** Persona encargada de cargar la documentación de un chatbot. */
+export interface ChatbotResponsable {
+    id: number;
+    nombre: string;
+    correo: string;
+    seccional: string | null;
+}
+
 export interface ChatbotAgente {
     id: number;
     nombre: string;
@@ -42,9 +50,15 @@ export interface ChatbotAgente {
     tipo?: ChatbotTipo;
     instrucciones_adicionales?: string;
     max_documentos?: number | null;
+    /** El servidor indica si el usuario puede cargar documentación en este chatbot. */
+    puede_gestionar_documentos?: boolean;
+    /** Solo llega a quien administra chatbots. */
+    responsables?: ChatbotResponsable[];
 }
 
-export type ChatbotAgentePayload = Omit<ChatbotAgente, 'id'>;
+export type ChatbotAgentePayload = Omit<ChatbotAgente, 'id' | 'responsables' | 'puede_gestionar_documentos'> & {
+    responsables_ids?: number[];
+};
 
 export interface ChatbotDocumento {
     id: number;

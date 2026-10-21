@@ -1,10 +1,11 @@
+from django.db.models import Prefetch
 from django.db.models.functions import Lower
 from rest_framework import generics, permissions
 
 from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
 
 from .admin_views import PuedeGestionarChatbots
-from .models import Agente, Conversacion, PreguntaSugerida
+from .models import Agente, AgenteResponsable, Conversacion, PreguntaSugerida
 from .serializers import AgenteSerializer, ConversacionSerializer, PreguntaSugeridaSerializer
 
 
@@ -22,14 +23,21 @@ class LecturaAutenticadaEscrituraGestor(permissions.BasePermission):
         return PuedeGestionarChatbots().has_permission(request, view)
 
 
+# Responsables ya cargados con su usuario: el listado no hace una consulta por chatbot.
+_RESPONSABLES = Prefetch(
+    'responsables',
+    queryset=AgenteResponsable.objects.select_related('usuario', 'usuario__seccional', 'usuario__sede__seccional'),
+)
+
+
 class AgenteListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Agente.objects.all().order_by(Lower('nombre'))
+    queryset = Agente.objects.prefetch_related(_RESPONSABLES).order_by(Lower('nombre'))
     serializer_class = AgenteSerializer
     permission_classes = [LecturaAutenticadaEscrituraGestor]
 
 
 class AgenteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Agente.objects.all()
+    queryset = Agente.objects.prefetch_related(_RESPONSABLES)
     serializer_class = AgenteSerializer
     permission_classes = [LecturaAutenticadaEscrituraGestor]
 

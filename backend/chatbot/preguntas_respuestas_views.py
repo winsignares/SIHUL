@@ -26,7 +26,7 @@ from rest_framework.views import APIView
 
 from mysite.auth_helpers import is_admin_global, is_admin_sistema
 
-from .admin_views import PuedeGestionarDocumentosChatbots
+from .admin_views import PuedeGestionarDocumentosChatbots, _chatbot_permitido, ids_chatbots_permitidos
 from .anexos import (
     AnexoInvalido,
     anexos_json,
@@ -166,10 +166,16 @@ class PreguntasRespuestasView(APIView):
             .select_related('agente')
             .prefetch_related('anexos')
         )
+        permitidos = ids_chatbots_permitidos(request)
+        if permitidos is not None:
+            # Quien solo carga documentación ve únicamente las de sus chatbots asignados.
+            parejas = parejas.filter(agente_id__in=permitidos)
         agente_id = request.query_params.get('agente')
         if agente_id:
             if not str(agente_id).isdigit():
                 return Response({'error': 'agente no válido'}, status=400)
+            if not _chatbot_permitido(permitidos, agente_id):
+                return Response({'error': 'No tienes asignado este chatbot'}, status=403)
             parejas = parejas.filter(agente_id=int(agente_id))
         return Response([_serializar(request, p) for p in parejas])
 
@@ -183,6 +189,8 @@ class PreguntasRespuestasView(APIView):
         agente = Agente.objects.filter(id=int(agente_id)).first()
         if not agente:
             return Response({'error': 'El chatbot no existe'}, status=404)
+        if not _chatbot_permitido(ids_chatbots_permitidos(request), agente.id):
+            return Response({'error': 'No tienes asignado este chatbot'}, status=403)
 
         pregunta = (request.data.get('pregunta') or '').strip()
         respuesta = (request.data.get('respuesta') or '').strip()
@@ -224,6 +232,8 @@ class PreguntaRespuestaDetalleView(APIView):
         if not _puede_ver_todas_las_sedes(request.user) and pareja.sede != _resolve_user_sede_value(request.user):
             # Para quien no la puede gestionar es como si no existiera
             return None, Response({'error': 'Pregunta-respuesta no encontrada'}, status=404)
+        if not _chatbot_permitido(ids_chatbots_permitidos(request), pareja.agente_id):
+            return None, Response({'error': 'Pregunta-respuesta no encontrada'}, status=404)
         return pareja, None
 
     def get(self, request, pk):
@@ -243,6 +253,8 @@ class PreguntaRespuestaDetalleView(APIView):
             agente = Agente.objects.filter(id=int(agente_id)).first() if str(agente_id).isdigit() else None
             if not agente:
                 return Response({'error': 'El chatbot no existe'}, status=404)
+            if not _chatbot_permitido(ids_chatbots_permitidos(request), agente.id):
+                return Response({'error': 'No tienes asignado este chatbot'}, status=403)
             pareja.agente = agente
         if 'pregunta' in request.data:
             pareja.pregunta = (request.data.get('pregunta') or '').strip()
