@@ -454,7 +454,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
 
     def _crear_agente(self):
         return self.client.post(reverse('api-agente-list-create'), json.dumps({
-            'nombre': 'Nuevo', 'descripcion': 'Nuevo chatbot', 'endpoint_url': 'http://chatbot:8001',
+            'nombre': 'Nuevo', 'descripcion': 'Nuevo chatbot', 'endpoint_url': 'http://localhost:8001',
             'mensaje_bienvenida': 'Hola', 'tipo': 'normativo',
         }), content_type='application/json')
 
@@ -473,19 +473,22 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
 
     def test_cargador_no_puede_administrar_chatbots(self):
         self.entrar(self.cargador)
+        # La migración de datos ya siembra el agente de biblioteca: se compara contra el total previo.
+        total_antes = Agente.objects.count()
         self.assertEqual(self._crear_agente().status_code, 403)
         detalle = reverse('api-agente-detail', args=[self.agente.id])
         self.assertEqual(self.client.patch(detalle, json.dumps({'activo': False}), content_type='application/json').status_code, 403)
         self.assertEqual(self.client.delete(detalle).status_code, 403)
         self.agente.refresh_from_db()
         self.assertTrue(self.agente.activo)
-        self.assertEqual(Agente.objects.count(), 1)
+        self.assertEqual(Agente.objects.count(), total_antes)
 
     def test_cargador_ve_los_chatbots_pero_no_sus_instrucciones_internas(self):
         self.entrar(self.cargador)
         agentes = self.client.get(reverse('api-agente-list-create')).json()
-        self.assertEqual(len(agentes), 1)
-        self.assertNotIn('instrucciones_adicionales', agentes[0])
+        self.assertIn(self.agente.id, [agente['id'] for agente in agentes])
+        for agente in agentes:
+            self.assertNotIn('instrucciones_adicionales', agente)
 
     def test_gestor_de_chatbots_administra_y_tambien_carga_documentos(self):
         self.entrar(self.gestor)
