@@ -1,0 +1,21 @@
+name: Branch Policy
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar origen del PR
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          if [ "$BASE" = "main" ] && ! [[ "$HEAD" =~ ^(develop|hotfix/.+)$ ]]; then
+            echo "A main solo se entra desde develop o hotfix/*"; exit 1
+          fi
+          if [ "$BASE" = "develop" ] && ! [[ "$HEAD" =~ ^(feature|fix|chore|docs|refactor|hotfix)/.+ ]]; then
+            echo "A develop solo desde feature/*, fix/*, chore/*, docs/*, refactor/* o hotfix/*"; exit 1
+          fi
