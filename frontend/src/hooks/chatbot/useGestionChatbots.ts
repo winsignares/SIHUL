@@ -7,6 +7,7 @@ import {
     type ChatbotAgente,
     type ChatbotAgentePayload,
     type ChatbotDocumento,
+    type ChatbotResponsable,
 } from '../../services/chatbot/chatbotAdminAPI';
 import { limiteDocumentos, MAX_DOCUMENTOS, MIN_DOCUMENTOS, maxDocumentosPorDefecto, type ChatbotTipo } from '../../models/chatbot/chatbotAdmin.model';
 
@@ -22,6 +23,7 @@ export type ChatbotFormState = {
     tipo: ChatbotTipo;
     instrucciones_adicionales: string;
     max_documentos: number;
+    responsables: ChatbotResponsable[];
 };
 
 // El modelo Agente conserva endpoint_url por compatibilidad histórica (webhook de n8n),
@@ -42,6 +44,7 @@ const emptyForm: ChatbotFormState = {
     tipo: 'normativo',
     instrucciones_adicionales: '',
     max_documentos: maxDocumentosPorDefecto('normativo'),
+    responsables: [],
 };
 
 // apiClient lanza un objeto { message, status } (no una instancia de Error)
@@ -206,9 +209,16 @@ export function useGestionChatbots() {
 
     // Un chatbot puede tener varios documentos por seccional; subir uno con el mismo nombre
     // que otro ya cargado lo reemplaza (el servicio RAG lo interpreta como una versión nueva).
-    const chatbotsDisponiblesParaCarga = useMemo(
-        () => chatbots.filter((chatbot) => chatbot.activo),
+    // Solo los chatbots en los que el usuario puede cargar documentación (el servidor lo indica:
+    // quien solo carga documentos ve únicamente los que tiene asignados).
+    const chatbotsGestionables = useMemo(
+        () => chatbots.filter((chatbot) => chatbot.puede_gestionar_documentos !== false),
         [chatbots],
+    );
+
+    const chatbotsDisponiblesParaCarga = useMemo(
+        () => chatbotsGestionables.filter((chatbot) => chatbot.activo),
+        [chatbotsGestionables],
     );
 
     const documentosDelChatbotSeleccionado = useMemo(
@@ -261,6 +271,7 @@ export function useGestionChatbots() {
             tipo: chatbot.tipo ?? 'normativo',
             instrucciones_adicionales: chatbot.instrucciones_adicionales ?? '',
             max_documentos: limiteDocumentos(chatbot),
+            responsables: chatbot.responsables ?? [],
         });
         setDialogChatbotOpen(true);
     };
@@ -291,6 +302,7 @@ export function useGestionChatbots() {
                 instrucciones_adicionales: form.instrucciones_adicionales.trim(),
                 max_documentos: Math.min(MAX_DOCUMENTOS, Math.max(MIN_DOCUMENTOS, Math.round(form.max_documentos) || maxDocumentosPorDefecto(form.tipo))),
                 endpoint_url: editingChatbotId ? undefined : LEGACY_ENDPOINT_URL,
+                responsables_ids: form.responsables.map((persona) => persona.id),
             };
 
             if (editingChatbotId) {
@@ -500,6 +512,7 @@ export function useGestionChatbots() {
         chatbotsPorId,
         documentos,
         documentosFiltrados,
+        chatbotsGestionables,
         chatbotsDisponiblesParaCarga,
         documentosDelChatbotSeleccionado,
         cantidadDocumentosEnEdicion,

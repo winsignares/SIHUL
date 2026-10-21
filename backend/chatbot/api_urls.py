@@ -6,6 +6,7 @@ from .admin_views import (
     ChatbotDocumentoDetalleProxyView,
     ChatbotDocumentosProxyView,
     ChatbotSedesProxyView,
+    ResponsablesCandidatosView,
 )
 from .preguntas_respuestas_views import (
     AnexoDescargaView,
@@ -41,6 +42,9 @@ urlpatterns = [
     path('admin/documentos/<int:pk>/', ChatbotDocumentoDetalleProxyView.as_view(), name='api-admin-documento-detalle'),
     path('admin/documentos/<int:pk>/prioridad/', ChatbotDocumentoPrioridadProxyView.as_view(), name='api-admin-documento-prioridad'),
     path('admin/sedes/', ChatbotSedesProxyView.as_view(), name='api-admin-sedes'),
+
+    # Personas a las que se puede asignar la carga de documentación de un chatbot (búsqueda)
+    path('responsables/candidatos/', ResponsablesCandidatosView.as_view(), name='api-responsables-candidatos'),
 
     # Preguntas-respuestas con anexos (documentos de soporte) por chatbot/sede
     path('admin/preguntas-respuestas/', PreguntasRespuestasView.as_view(), name='api-admin-preguntas-respuestas'),

@@ -3,6 +3,7 @@ import type {
     ChatbotAgente,
     ChatbotAgentePayload,
     ChatbotDocumento,
+    ChatbotResponsable,
     GuardarPreguntaRespuestaPayload,
     PreguntaRespuestaChatbot,
     SubirDocumentoChatbotPayload,
@@ -12,6 +13,7 @@ export type {
     ChatbotAgente,
     ChatbotAgentePayload,
     ChatbotDocumento,
+    ChatbotResponsable,
     GuardarPreguntaRespuestaPayload,
     PreguntaRespuestaChatbot,
 } from '../../models/chatbot/chatbotAdmin.model';
@@ -60,6 +62,14 @@ export const chatbotAdminAPI = {
 
     eliminarChatbot: (id: number): Promise<unknown> =>
         apiClient.delete(`/chatbot/agentes/${id}/`),
+
+    /**
+     * Personas a las que se puede asignar la carga de documentación de un chatbot
+     */
+    buscarResponsables: async (q: string): Promise<ChatbotResponsable[]> => {
+        const response = await apiClient.get<unknown>(`/chatbot/responsables/candidatos/?q=${encodeURIComponent(q)}`);
+        return extraerLista<ChatbotResponsable>(response);
+    },
 
     /**
      * Sedes válidas para asociar documentos (según el servicio RAG)

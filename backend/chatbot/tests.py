@@ -23,7 +23,7 @@ from sedes.models import Seccional, Sede
 from usuarios.models import Rol, Usuario
 
 from .anexos import AnexoInvalido, generar_token, leer_token, validar_anexo
-from .models import Agente, AnexoRespuesta, Conversacion, PreguntaRespuesta
+from .models import Agente, AgenteResponsable, AnexoRespuesta, Conversacion, PreguntaRespuesta
 
 _OLE = b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'
 
@@ -409,8 +409,9 @@ class ChatConAnexosTests(_BaseAnexos):
 class PermisosDocumentacionChatbotsTests(_BaseAnexos):
     """Administrar chatbots y gestionar su documentación son permisos distintos.
 
-    - «Gestión de Chatbots» (EDITAR): crear/editar/eliminar chatbots y, además, documentación.
-    - «Gestión de Documentación de Chatbots» (EDITAR): solo documentos y preguntas-respuestas.
+    - «Gestión de Chatbots» (EDITAR): crear/editar/eliminar chatbots y documentación de TODOS.
+    - «Gestión de Documentación de Chatbots» (EDITAR): solo documentos y preguntas-respuestas de
+      los chatbots que tiene asignados como responsable, y siempre de la seccional de su usuario.
     El servicio RAG (FastAPI) se simula.
     """
 
@@ -422,10 +423,15 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         gestion, _ = Componente.objects.get_or_create(nombre='Gestión de Chatbots')
         documentacion, _ = Componente.objects.get_or_create(nombre='Gestión de Documentación de Chatbots')
         cls.documentacion = documentacion
+        cls.otro_agente = Agente.objects.create(
+            nombre='Investigativo', descripcion='Investigativo', endpoint_url='http://localhost:8001',
+            mensaje_bienvenida='Hola', tipo='investigativo',
+        )
 
-        def usuario(correo, rol):
+        def usuario(correo, rol, con_seccional=True):
             return Usuario.objects.create(
-                nombre=correo, correo=correo, contrasena_hash='x', rol=rol, sede=sede, seccional=barranquilla,
+                nombre=correo, correo=correo, contrasena_hash='x', rol=rol,
+                sede=sede if con_seccional else None, seccional=barranquilla if con_seccional else None,
             )
 
         rol_docs = Rol.objects.create(nombre='cargador_documentos_test')
@@ -440,25 +446,34 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         cls.gestor = usuario('gestor.test@unilibre.edu.co', rol_gestor)
         cls.solo_ver = usuario('ver.test@unilibre.edu.co', rol_solo_ver)
         cls.sin_rol_util = usuario('sinrol.test@unilibre.edu.co', rol_sin_componentes)
+        cls.sin_seccional = usuario('sinseccional.test@unilibre.edu.co', rol_docs, con_seccional=False)
+
+    def setUp(self):
+        super().setUp()
+        # El cargador tiene asignado solo el chatbot «Admisiones» (self.agente).
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.cargador)
 
     def _rag(self, status=200, cuerpo=None):
         respuesta = mock.Mock(status_code=status, content=b'{}')
         respuesta.json.return_value = {} if cuerpo is None else cuerpo
         return respuesta
 
-    def _subir(self):
-        return self.client.post(reverse('api-admin-documentos'), {
-            'chatbot_id': self.agente.id, 'sede': 'barranquilla',
-            'file': SimpleUploadedFile('reglamento.pdf', CONTENIDOS['soporte.pdf']),
-        })
+    def _subir(self, agente=None, **extra):
+        datos = {'chatbot_id': (agente or self.agente).id, 'sede': 'barranquilla',
+                 'file': SimpleUploadedFile('reglamento.pdf', CONTENIDOS['soporte.pdf'])}
+        datos.update(extra)
+        return self.client.post(reverse('api-admin-documentos'), {k: v for k, v in datos.items() if v is not None})
 
-    def _crear_agente(self):
-        return self.client.post(reverse('api-agente-list-create'), json.dumps({
+    def _crear_agente(self, **extra):
+        datos = {
             'nombre': 'Nuevo', 'descripcion': 'Nuevo chatbot', 'endpoint_url': 'http://localhost:8001',
-            'mensaje_bienvenida': 'Hola', 'tipo': 'normativo',
-        }), content_type='application/json')
+            'mensaje_bienvenida': 'Hola', 'tipo': 'normativo', **extra,
+        }
+        return self.client.post(reverse('api-agente-list-create'), json.dumps(datos), content_type='application/json')
 
-    def test_cargador_sube_y_lista_documentos(self):
+    # ---- permiso por componente -------------------------------------------------------------
+
+    def test_cargador_sube_y_lista_documentos_de_su_chatbot(self):
         self.entrar(self.cargador)
         with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()) as post, \
                 mock.patch('chatbot.admin_views.requests.get', return_value=self._rag(cuerpo=[])) as get:
@@ -483,20 +498,22 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         self.assertTrue(self.agente.activo)
         self.assertEqual(Agente.objects.count(), total_antes)
 
-    def test_cargador_ve_los_chatbots_pero_no_sus_instrucciones_internas(self):
+    def test_cargador_ve_los_chatbots_pero_no_sus_instrucciones_ni_responsables(self):
         self.entrar(self.cargador)
         agentes = self.client.get(reverse('api-agente-list-create')).json()
         self.assertIn(self.agente.id, [agente['id'] for agente in agentes])
         for agente in agentes:
             self.assertNotIn('instrucciones_adicionales', agente)
+            self.assertNotIn('responsables', agente)
 
-    def test_gestor_de_chatbots_administra_y_tambien_carga_documentos(self):
+    def test_gestor_de_chatbots_administra_y_carga_documentos_de_cualquiera(self):
         self.entrar(self.gestor)
         self.assertEqual(self._crear_agente().status_code, 201)
         with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
-            self.assertEqual(self._subir().status_code, 200)
+            self.assertEqual(self._subir(self.otro_agente).status_code, 200)  # sin estar asignado
         agentes = self.client.get(reverse('api-agente-list-create')).json()
         self.assertIn('instrucciones_adicionales', agentes[0])
+        self.assertTrue(all(a['puede_gestionar_documentos'] for a in agentes))
 
     def test_estudiante_no_carga_documentos_ni_administra(self):
         self.entrar(self.estudiante)
@@ -509,6 +526,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         self.assertIn(self._subir().status_code, (401, 403))
 
     def test_permiso_solo_ver_no_alcanza(self):
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.solo_ver)
         self.entrar(self.solo_ver)
         with mock.patch('chatbot.admin_views.requests.post') as post:
             self.assertEqual(self._subir().status_code, 403)
@@ -516,6 +534,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
 
     def test_excepcion_individual_concede_documentacion_sin_permiso_del_rol(self):
         # Es la vía para dar a una persona solo la carga de documentos sin tocar su rol.
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_rol_util)
         self.entrar(self.sin_rol_util)
         with mock.patch('chatbot.admin_views.requests.post') as post:
             self.assertEqual(self._subir().status_code, 403)
@@ -540,7 +559,195 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         gestion = Componente.objects.get(nombre='Gestión de Chatbots')
         ComponenteUsuario.objects.create(usuario=self.gestor, componente=gestion, permiso='EDITAR', activo=False)
         ComponenteUsuario.objects.create(usuario=self.gestor, componente=self.documentacion, permiso='EDITAR', activo=True)
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.gestor)
         self.entrar(self.gestor)
         self.assertEqual(self._crear_agente().status_code, 403)
         with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
             self.assertEqual(self._subir().status_code, 200)
+
+    # ---- alcance por chatbot asignado -------------------------------------------------------
+
+    def test_sin_asignacion_no_sube_ni_ve_documentos(self):
+        AgenteResponsable.objects.all().delete()
+        self.entrar(self.cargador)
+        with mock.patch('chatbot.admin_views.requests.post') as post, \
+                mock.patch('chatbot.admin_views.requests.get', return_value=self._rag(cuerpo=[{'id': 1, 'chatbot_id': self.agente.id}])):
+            self.assertEqual(self._subir().status_code, 403)
+            self.assertEqual(self.client.get(reverse('api-admin-documentos')).json(), [])
+        post.assert_not_called()
+
+    def test_solo_sube_al_chatbot_asignado(self):
+        self.entrar(self.cargador)
+        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()) as post:
+            self.assertEqual(self._subir(self.otro_agente).status_code, 403)
+            post.assert_not_called()
+            self.assertEqual(self._subir(self.agente).status_code, 200)
+        post.assert_called_once()
+
+    def test_lista_solo_los_documentos_de_sus_chatbots(self):
+        self.entrar(self.cargador)
+        documentos = [
+            {'id': 1, 'chatbot_id': self.agente.id, 'sede': 'barranquilla'},
+            {'id': 2, 'chatbot_id': self.otro_agente.id, 'sede': 'barranquilla'},
+            {'id': 3, 'chatbot_id': None, 'sede': 'barranquilla'},
+        ]
+        with mock.patch('chatbot.admin_views.requests.get', return_value=self._rag(cuerpo=documentos)) as get:
+            respuesta = self.client.get(reverse('api-admin-documentos'))
+            self.assertEqual([d['id'] for d in respuesta.json()], [1])
+            # Pedir el chatbot de otro es 403 y ni siquiera consulta al RAG
+            get.reset_mock()
+            self.assertEqual(self.client.get(reverse('api-admin-documentos'), {'chatbot_id': self.otro_agente.id}).status_code, 403)
+            get.assert_not_called()
+
+    # ---- la seccional sale del usuario ------------------------------------------------------
+
+    def test_la_seccional_sale_del_usuario_no_del_navegador(self):
+        self.entrar(self.cargador)  # seccional Barranquilla
+        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()) as post:
+            self.assertEqual(self._subir(sede='bogota').status_code, 403)
+            post.assert_not_called()
+            self.assertEqual(self._subir(sede=None).status_code, 200)  # sin sede: usa la suya
+        self.assertEqual(post.call_args.kwargs['params']['sede'], 'barranquilla')
+
+    def test_listar_con_sede_ajena_es_403(self):
+        self.entrar(self.cargador)
+        with mock.patch('chatbot.admin_views.requests.get') as get:
+            self.assertEqual(self.client.get(reverse('api-admin-documentos'), {'sede': 'bogota'}).status_code, 403)
+        get.assert_not_called()
+
+    def test_admin_global_puede_elegir_la_seccional(self):
+        self.entrar(self.admin)
+        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()) as post:
+            self.assertEqual(self._subir(sede='bogota').status_code, 200)
+        self.assertEqual(post.call_args.kwargs['params']['sede'], 'bogota')
+
+    def test_usuario_sin_seccional_no_sube(self):
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_seccional)
+        self.entrar(self.sin_seccional)
+        with mock.patch('chatbot.admin_views.requests.post') as post:
+            self.assertEqual(self._subir(sede=None).status_code, 400)
+        post.assert_not_called()
+
+    # ---- borrar y cambiar prioridad ---------------------------------------------------------
+
+    def test_borrar_documento_exige_chatbot_asignado_y_su_seccional(self):
+        self.entrar(self.cargador)
+        url = reverse('api-admin-documento-detalle', args=[7])
+        with mock.patch('chatbot.admin_views.requests.delete', return_value=self._rag(status=204)) as borrar:
+            with mock.patch('chatbot.admin_views._datos_documento', return_value={'chatbot_id': self.otro_agente.id, 'sede': 'barranquilla'}):
+                self.assertEqual(self.client.delete(url).status_code, 403)
+            with mock.patch('chatbot.admin_views._datos_documento', return_value={'chatbot_id': self.agente.id, 'sede': 'bogota'}):
+                self.assertEqual(self.client.delete(url).status_code, 404)
+            borrar.assert_not_called()
+            with mock.patch('chatbot.admin_views._datos_documento', return_value={'chatbot_id': self.agente.id, 'sede': 'barranquilla'}):
+                self.assertEqual(self.client.delete(url).status_code, 204)
+        borrar.assert_called_once()
+
+    def test_cambiar_prioridad_exige_chatbot_asignado(self):
+        self.entrar(self.cargador)
+        url = reverse('api-admin-documento-prioridad', args=[7])
+        with mock.patch('chatbot.admin_views.requests.patch', return_value=self._rag()) as patch_rag:
+            with mock.patch('chatbot.admin_views._datos_documento', return_value={'chatbot_id': self.otro_agente.id, 'sede': 'barranquilla'}):
+                self.assertEqual(self.client.patch(url, json.dumps({'prioridad': 1}), content_type='application/json').status_code, 403)
+            patch_rag.assert_not_called()
+            with mock.patch('chatbot.admin_views._datos_documento', return_value={'chatbot_id': self.agente.id, 'sede': 'barranquilla'}):
+                self.assertEqual(self.client.patch(url, json.dumps({'prioridad': 1}), content_type='application/json').status_code, 200)
+
+    # ---- preguntas y respuestas ------------------------------------------------------------
+
+    def test_preguntas_respuestas_solo_del_chatbot_asignado(self):
+        self.entrar(self.cargador)
+        self.assertEqual(self.crear().status_code, 201)  # chatbot asignado
+        self.assertEqual(self.crear(agente=self.otro_agente.id).status_code, 403)
+        self.assertEqual(PreguntaRespuesta.objects.count(), 1)
+
+    def test_preguntas_respuestas_no_lista_las_de_chatbots_no_asignados(self):
+        PreguntaRespuesta.objects.create(
+            agente=self.agente, sede='barranquilla', pregunta='¿Horario de la biblioteca?', respuesta='De 7 a 21 h',
+        )
+        ajena = PreguntaRespuesta.objects.create(
+            agente=self.otro_agente, sede='barranquilla', pregunta='¿Cómo consulto una tesis?', respuesta='En el catálogo',
+        )
+        self.entrar(self.cargador)
+        lista = self.client.get(reverse('api-admin-preguntas-respuestas')).json()
+        self.assertEqual(len(lista), 1)
+        self.assertEqual(
+            self.client.get(reverse('api-admin-pregunta-respuesta-detalle', args=[ajena.id])).status_code, 404,
+        )
+        self.assertEqual(
+            self.client.get(reverse('api-admin-preguntas-respuestas'), {'agente': self.otro_agente.id}).status_code, 403,
+        )
+
+    # ---- asignar responsables al crear o editar el chatbot ----------------------------------
+
+    def test_gestor_asigna_responsables_al_crear_el_chatbot(self):
+        self.entrar(self.gestor)
+        respuesta = self._crear_agente(responsables_ids=[self.cargador.id])
+        self.assertEqual(respuesta.status_code, 201)
+        agente = Agente.objects.get(id=respuesta.json()['id'])
+        self.assertEqual(list(agente.responsables.values_list('usuario_id', flat=True)), [self.cargador.id])
+        self.assertEqual(respuesta.json()['responsables'][0]['correo'], self.cargador.correo)
+
+    def test_gestor_cambia_los_responsables_al_editar(self):
+        self.entrar(self.gestor)
+        detalle = reverse('api-agente-detail', args=[self.agente.id])
+        self.assertEqual(
+            self.client.patch(detalle, json.dumps({'responsables_ids': [self.solo_ver.id]}), content_type='application/json').status_code, 200,
+        )
+        # Reemplaza: el cargador anterior sale y entra el nuevo
+        self.assertEqual(
+            sorted(self.agente.responsables.values_list('usuario_id', flat=True)), [self.solo_ver.id],
+        )
+        self.client.patch(detalle, json.dumps({'responsables_ids': []}), content_type='application/json')
+        self.assertFalse(self.agente.responsables.exists())
+
+    def test_editar_sin_enviar_responsables_no_los_toca(self):
+        self.entrar(self.gestor)
+        detalle = reverse('api-agente-detail', args=[self.agente.id])
+        self.client.patch(detalle, json.dumps({'descripcion': 'Cambio'}), content_type='application/json')
+        self.assertTrue(self.agente.responsables.filter(usuario=self.cargador).exists())
+
+    def test_no_se_asigna_a_quien_no_tiene_seccional_o_esta_inactivo(self):
+        self.entrar(self.gestor)
+        self.assertEqual(self._crear_agente(responsables_ids=[self.sin_seccional.id]).status_code, 400)
+        inactivo = Usuario.objects.create(
+            nombre='Inactivo', correo='inactivo.test@unilibre.edu.co', contrasena_hash='x',
+            rol=self.cargador.rol, seccional=self.cargador.seccional, sede=self.cargador.sede, activo=False,
+        )
+        self.assertEqual(self._crear_agente(responsables_ids=[inactivo.id]).status_code, 400)
+        self.assertEqual(self._crear_agente(responsables_ids=[999999]).status_code, 400)
+
+    def test_el_cargador_no_puede_asignar_responsables(self):
+        self.entrar(self.cargador)
+        detalle = reverse('api-agente-detail', args=[self.otro_agente.id])
+        respuesta = self.client.patch(detalle, json.dumps({'responsables_ids': [self.cargador.id]}), content_type='application/json')
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertFalse(self.otro_agente.responsables.exists())
+
+    def test_cada_usuario_ve_cuales_chatbots_puede_cargar(self):
+        self.entrar(self.cargador)
+        agentes = {a['id']: a for a in self.client.get(reverse('api-agente-list-create')).json()}
+        self.assertTrue(agentes[self.agente.id]['puede_gestionar_documentos'])
+        self.assertFalse(agentes[self.otro_agente.id]['puede_gestionar_documentos'])
+
+    def test_eliminar_el_chatbot_elimina_sus_asignaciones(self):
+        self.entrar(self.gestor)
+        self.client.delete(reverse('api-agente-detail', args=[self.agente.id]))
+        self.assertFalse(AgenteResponsable.objects.filter(usuario=self.cargador).exists())
+
+    # ---- búsqueda de personas ---------------------------------------------------------------
+
+    def test_busqueda_de_candidatos(self):
+        self.entrar(self.gestor)
+        url = reverse('api-responsables-candidatos')
+        encontrados = self.client.get(url, {'q': 'cargador'}).json()
+        self.assertEqual([c['correo'] for c in encontrados], [self.cargador.correo])
+        self.assertEqual(encontrados[0]['seccional'], 'Barranquilla')
+        # Sin seccional y estudiantes no se ofrecen; con menos de 2 letras no busca
+        self.assertEqual(self.client.get(url, {'q': 'sinseccional'}).json(), [])
+        self.assertEqual(self.client.get(url, {'q': 'est.test'}).json(), [])
+        self.assertEqual(self.client.get(url, {'q': 'c'}).json(), [])
+
+    def test_busqueda_de_candidatos_solo_para_quien_administra(self):
+        self.entrar(self.cargador)
+        self.assertEqual(self.client.get(reverse('api-responsables-candidatos'), {'q': 'cargador'}).status_code, 403)
