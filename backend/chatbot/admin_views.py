@@ -11,12 +11,17 @@ from .models import Agente
 from .views import _resolve_user_sede_value, fastapi_base_url
 
 COMPONENTE_GESTION_CHATBOTS = 'Gestión de Chatbots'
+COMPONENTE_DOCUMENTACION_CHATBOTS = 'Gestión de Documentación de Chatbots'
 MAX_UPLOAD_MB = 25  # mismo tope que MAX_UPLOAD_MB del servicio RAG
 
 
 class PuedeGestionarChatbots(permissions.BasePermission):
-    """Admins globales/de sistema siempre pueden; otros roles requieren permiso
-    EDITAR sobre el componente 'Gestión de Chatbots' (asignable desde Gestión de Roles)."""
+    """Administrar los chatbots (crear, editar, activar/inactivar y eliminar).
+
+    Admins globales/de sistema siempre pueden; otros roles requieren permiso
+    EDITAR sobre el componente 'Gestión de Chatbots' (asignable desde Gestión de Roles).
+    Quien tiene este permiso también puede gestionar la documentación (ver
+    PuedeGestionarDocumentosChatbots)."""
 
     def has_permission(self, request, view):
         user = request.user
@@ -25,6 +30,24 @@ class PuedeGestionarChatbots(permissions.BasePermission):
         if is_admin_global(user) or is_admin_sistema(user):
             return True
         return user_can_edit_componente(user, COMPONENTE_GESTION_CHATBOTS)
+
+
+class PuedeGestionarDocumentosChatbots(permissions.BasePermission):
+    """Gestionar la documentación de los chatbots: subir, reemplazar, priorizar y eliminar
+    documentos, y registrar preguntas-respuestas con sus anexos. NO permite crear, editar ni
+    eliminar los chatbots.
+
+    Pueden: quienes administran chatbots (PuedeGestionarChatbots) y quienes tienen permiso
+    EDITAR sobre el componente 'Gestión de Documentación de Chatbots'. Este último es el
+    permiso que se asigna a las personas que solo deben cargar documentación."""
+
+    def has_permission(self, request, view):
+        if PuedeGestionarChatbots().has_permission(request, view):
+            return True
+        user = request.user
+        if not is_authenticated_user(user):
+            return False
+        return user_can_edit_componente(user, COMPONENTE_DOCUMENTACION_CHATBOTS)
 
 
 def _proxy_error_response(exc: requests.exceptions.RequestException) -> Response:
@@ -43,7 +66,7 @@ def _forward_response(resp: requests.Response) -> Response:
 class ChatbotDocumentosProxyView(APIView):
     """Lista y sube documentos del RAG (FastAPI), asociados a un chatbot y una sede."""
 
-    permission_classes = [PuedeGestionarChatbots]
+    permission_classes = [PuedeGestionarDocumentosChatbots]
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request):
@@ -85,7 +108,7 @@ class ChatbotDocumentosProxyView(APIView):
 class ChatbotDocumentoDetalleProxyView(APIView):
     """Elimina un documento (y sus chunks, por cascada) del RAG."""
 
-    permission_classes = [PuedeGestionarChatbots]
+    permission_classes = [PuedeGestionarDocumentosChatbots]
 
     def delete(self, request, pk):
         try:
@@ -103,7 +126,7 @@ class ChatbotDocumentoDetalleProxyView(APIView):
 class ChatbotDocumentoPrioridadProxyView(APIView):
     """Cambia la prioridad de un documento entre los de su chatbot y sede (1 = la más alta)."""
 
-    permission_classes = [PuedeGestionarChatbots]
+    permission_classes = [PuedeGestionarDocumentosChatbots]
 
     def patch(self, request, pk):
         try:
@@ -160,7 +183,7 @@ class ChatbotDocumentoArchivoView(APIView):
 class ChatbotSedesProxyView(APIView):
     """Lista las sedes válidas para asociar documentos, según el servicio RAG."""
 
-    permission_classes = [PuedeGestionarChatbots]
+    permission_classes = [PuedeGestionarDocumentosChatbots]
 
     def get(self, request):
         try:

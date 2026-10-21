@@ -18,6 +18,7 @@ from django.test import TestCase, override_settings
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.urls import reverse
 
+from componentes.models import Componente, ComponenteRol, ComponenteUsuario
 from sedes.models import Seccional, Sede
 from usuarios.models import Rol, Usuario
 
@@ -403,3 +404,143 @@ class ChatConAnexosTests(_BaseAnexos):
             cuerpo = self.client.post(reverse('api-legacy-pregunta'), json.dumps(datos), content_type='application/json').json()
         self.assertEqual(cuerpo['anexos'], [])
         self.assertFalse(Conversacion.objects.exists())
+
+
+class PermisosDocumentacionChatbotsTests(_BaseAnexos):
+    """Administrar chatbots y gestionar su documentación son permisos distintos.
+
+    - «Gestión de Chatbots» (EDITAR): crear/editar/eliminar chatbots y, además, documentación.
+    - «Gestión de Documentación de Chatbots» (EDITAR): solo documentos y preguntas-respuestas.
+    El servicio RAG (FastAPI) se simula.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        sede = Sede.objects.get(nombre='Sede Centro')
+        barranquilla = Seccional.objects.get(ciudad='Barranquilla')
+        gestion, _ = Componente.objects.get_or_create(nombre='Gestión de Chatbots')
+        documentacion, _ = Componente.objects.get_or_create(nombre='Gestión de Documentación de Chatbots')
+        cls.documentacion = documentacion
+
+        def usuario(correo, rol):
+            return Usuario.objects.create(
+                nombre=correo, correo=correo, contrasena_hash='x', rol=rol, sede=sede, seccional=barranquilla,
+            )
+
+        rol_docs = Rol.objects.create(nombre='cargador_documentos_test')
+        ComponenteRol.objects.create(componente=documentacion, rol=rol_docs, permiso='EDITAR')
+        rol_gestor = Rol.objects.create(nombre='gestor_chatbots_test')
+        ComponenteRol.objects.create(componente=gestion, rol=rol_gestor, permiso='EDITAR')
+        rol_solo_ver = Rol.objects.create(nombre='solo_ver_documentos_test')
+        ComponenteRol.objects.create(componente=documentacion, rol=rol_solo_ver, permiso='VER')
+        rol_sin_componentes = Rol.objects.create(nombre='sin_componentes_test')
+
+        cls.cargador = usuario('cargador.test@unilibre.edu.co', rol_docs)
+        cls.gestor = usuario('gestor.test@unilibre.edu.co', rol_gestor)
+        cls.solo_ver = usuario('ver.test@unilibre.edu.co', rol_solo_ver)
+        cls.sin_rol_util = usuario('sinrol.test@unilibre.edu.co', rol_sin_componentes)
+
+    def _rag(self, status=200, cuerpo=None):
+        respuesta = mock.Mock(status_code=status, content=b'{}')
+        respuesta.json.return_value = {} if cuerpo is None else cuerpo
+        return respuesta
+
+    def _subir(self):
+        return self.client.post(reverse('api-admin-documentos'), {
+            'chatbot_id': self.agente.id, 'sede': 'barranquilla',
+            'file': SimpleUploadedFile('reglamento.pdf', CONTENIDOS['soporte.pdf']),
+        })
+
+    def _crear_agente(self):
+        return self.client.post(reverse('api-agente-list-create'), json.dumps({
+            'nombre': 'Nuevo', 'descripcion': 'Nuevo chatbot', 'endpoint_url': 'http://localhost:8001',
+            'mensaje_bienvenida': 'Hola', 'tipo': 'normativo',
+        }), content_type='application/json')
+
+    def test_cargador_sube_y_lista_documentos(self):
+        self.entrar(self.cargador)
+        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()) as post, \
+                mock.patch('chatbot.admin_views.requests.get', return_value=self._rag(cuerpo=[])) as get:
+            self.assertEqual(self._subir().status_code, 200)
+            self.assertEqual(self.client.get(reverse('api-admin-documentos'), {'sede': 'barranquilla'}).status_code, 200)
+        post.assert_called_once()
+        get.assert_called_once()
+
+    def test_cargador_gestiona_preguntas_respuestas_de_su_seccional(self):
+        self.entrar(self.cargador)
+        self.assertEqual(self.client.get(reverse('api-admin-preguntas-respuestas')).status_code, 200)
+
+    def test_cargador_no_puede_administrar_chatbots(self):
+        self.entrar(self.cargador)
+        # La migración de datos ya siembra el agente de biblioteca: se compara contra el total previo.
+        total_antes = Agente.objects.count()
+        self.assertEqual(self._crear_agente().status_code, 403)
+        detalle = reverse('api-agente-detail', args=[self.agente.id])
+        self.assertEqual(self.client.patch(detalle, json.dumps({'activo': False}), content_type='application/json').status_code, 403)
+        self.assertEqual(self.client.delete(detalle).status_code, 403)
+        self.agente.refresh_from_db()
+        self.assertTrue(self.agente.activo)
+        self.assertEqual(Agente.objects.count(), total_antes)
+
+    def test_cargador_ve_los_chatbots_pero_no_sus_instrucciones_internas(self):
+        self.entrar(self.cargador)
+        agentes = self.client.get(reverse('api-agente-list-create')).json()
+        self.assertIn(self.agente.id, [agente['id'] for agente in agentes])
+        for agente in agentes:
+            self.assertNotIn('instrucciones_adicionales', agente)
+
+    def test_gestor_de_chatbots_administra_y_tambien_carga_documentos(self):
+        self.entrar(self.gestor)
+        self.assertEqual(self._crear_agente().status_code, 201)
+        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
+            self.assertEqual(self._subir().status_code, 200)
+        agentes = self.client.get(reverse('api-agente-list-create')).json()
+        self.assertIn('instrucciones_adicionales', agentes[0])
+
+    def test_estudiante_no_carga_documentos_ni_administra(self):
+        self.entrar(self.estudiante)
+        with mock.patch('chatbot.admin_views.requests.post') as post:
+            self.assertEqual(self._subir().status_code, 403)
+        post.assert_not_called()
+        self.assertEqual(self._crear_agente().status_code, 403)
+
+    def test_anonimo_no_carga_documentos(self):
+        self.assertIn(self._subir().status_code, (401, 403))
+
+    def test_permiso_solo_ver_no_alcanza(self):
+        self.entrar(self.solo_ver)
+        with mock.patch('chatbot.admin_views.requests.post') as post:
+            self.assertEqual(self._subir().status_code, 403)
+        post.assert_not_called()
+
+    def test_excepcion_individual_concede_documentacion_sin_permiso_del_rol(self):
+        # Es la vía para dar a una persona solo la carga de documentos sin tocar su rol.
+        self.entrar(self.sin_rol_util)
+        with mock.patch('chatbot.admin_views.requests.post') as post:
+            self.assertEqual(self._subir().status_code, 403)
+        ComponenteUsuario.objects.create(
+            usuario=self.sin_rol_util, componente=self.documentacion, permiso='EDITAR', activo=True,
+        )
+        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
+            self.assertEqual(self._subir().status_code, 200)
+        self.assertEqual(self._crear_agente().status_code, 403)
+
+    def test_excepcion_individual_inactiva_revoca_el_permiso_del_rol(self):
+        ComponenteUsuario.objects.create(
+            usuario=self.cargador, componente=self.documentacion, permiso='EDITAR', activo=False,
+        )
+        self.entrar(self.cargador)
+        with mock.patch('chatbot.admin_views.requests.post') as post:
+            self.assertEqual(self._subir().status_code, 403)
+        post.assert_not_called()
+
+    def test_quitar_administrar_a_alguien_con_ambos_deja_solo_la_documentacion(self):
+        # Caso Wendy: el rol da «Gestión de Chatbots»; se revoca solo para ella y se le da la documentación.
+        gestion = Componente.objects.get(nombre='Gestión de Chatbots')
+        ComponenteUsuario.objects.create(usuario=self.gestor, componente=gestion, permiso='EDITAR', activo=False)
+        ComponenteUsuario.objects.create(usuario=self.gestor, componente=self.documentacion, permiso='EDITAR', activo=True)
+        self.entrar(self.gestor)
+        self.assertEqual(self._crear_agente().status_code, 403)
+        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
+            self.assertEqual(self._subir().status_code, 200)

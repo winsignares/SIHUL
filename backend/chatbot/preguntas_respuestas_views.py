@@ -1,7 +1,7 @@
 """
 Preguntas-respuestas de los chatbots con anexos (documentos de soporte).
 
-Gestión (requiere poder gestionar chatbots, ver PuedeGestionarChatbots):
+Gestión (requiere poder gestionar la documentación, ver PuedeGestionarDocumentosChatbots):
     GET    /api/chatbot/admin/preguntas-respuestas/?agente=&sede=   listar
     POST   /api/chatbot/admin/preguntas-respuestas/                 crear (multipart)
     GET    /api/chatbot/admin/preguntas-respuestas/<id>/            detalle
@@ -26,7 +26,7 @@ from rest_framework.views import APIView
 
 from mysite.auth_helpers import is_admin_global, is_admin_sistema
 
-from .admin_views import PuedeGestionarChatbots
+from .admin_views import PuedeGestionarDocumentosChatbots
 from .anexos import (
     AnexoInvalido,
     anexos_json,
@@ -154,7 +154,7 @@ def _sincronizar_al_confirmar(*claves):
 class PreguntasRespuestasView(APIView):
     """Lista y crea preguntas-respuestas (con anexos) de los chatbots de una seccional."""
 
-    permission_classes = [PuedeGestionarChatbots]
+    permission_classes = [PuedeGestionarDocumentosChatbots]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
@@ -214,7 +214,7 @@ class PreguntasRespuestasView(APIView):
 class PreguntaRespuestaDetalleView(APIView):
     """Detalle, edición (textos, estado, agregar o quitar anexos) y borrado."""
 
-    permission_classes = [PuedeGestionarChatbots]
+    permission_classes = [PuedeGestionarDocumentosChatbots]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def _obtener(self, request, pk):
