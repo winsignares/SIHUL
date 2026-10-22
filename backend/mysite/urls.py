@@ -5,6 +5,8 @@ from django.urls import path, re_path, include
 from django.views.static import serve
 from rest_framework.routers import DefaultRouter
 
+from mysite import health
+
 from mysite.api_views import (
     AsignaturaProgramaViewSet,
     AsignaturaViewSet,
@@ -47,6 +49,8 @@ router.register(r'roles', RolViewSet, basename='rol-api')
 router.register(r'usuarios', UsuarioViewSet, basename='usuario-api')
 
 urlpatterns = [
+    path('health/', health.live),
+    path('health/ready/', health.ready),
     path('panel-sihul-gestion/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api/auth/', include('mysite.auth_urls')),
