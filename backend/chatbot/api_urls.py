@@ -14,6 +14,7 @@ from .preguntas_respuestas_views import (
     PreguntasRespuestasView,
 )
 from .api_views import (
+    SeccionalesChatbotView,
     AgenteDetailAPIView,
     AgenteListCreateAPIView,
     ConversacionDetailAPIView,
@@ -31,6 +32,7 @@ from .views import (
 urlpatterns = [
     # Endpoints privados (requieren autenticacion)
     path('agentes/', AgenteListCreateAPIView.as_view(), name='api-agente-list-create'),
+    path('seccionales/', SeccionalesChatbotView.as_view(), name='api-chatbot-seccionales'),
     path('agentes/<int:pk>/', AgenteDetailAPIView.as_view(), name='api-agente-detail'),
     path('preguntas/', PreguntaSugeridaListCreateAPIView.as_view(), name='api-pregunta-list-create'),
     path('preguntas/<int:pk>/', PreguntaSugeridaDetailAPIView.as_view(), name='api-pregunta-detail'),

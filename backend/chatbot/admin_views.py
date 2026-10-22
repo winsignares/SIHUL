@@ -189,6 +189,9 @@ class ChatbotDocumentosProxyView(APIView):
             return error
         if not _chatbot_permitido(ids_chatbots_permitidos(request), chatbot_id):
             return Response({'error': 'No tienes asignado este chatbot'}, status=403)
+        agente = Agente.objects.filter(pk=int(chatbot_id)).first() if str(chatbot_id).isdigit() else None
+        if agente and not agente.disponible_en(sede):
+            return Response({'error': 'Este chatbot no está disponible en la seccional %s.' % sede}, status=400)
         if file_obj.size > MAX_UPLOAD_MB * 1024 * 1024:
             return Response({'error': f'El archivo supera el máximo de {MAX_UPLOAD_MB} MB.'}, status=413)
 

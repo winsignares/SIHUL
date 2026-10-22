@@ -191,6 +191,8 @@ class PreguntasRespuestasView(APIView):
             return Response({'error': 'El chatbot no existe'}, status=404)
         if not _chatbot_permitido(ids_chatbots_permitidos(request), agente.id):
             return Response({'error': 'No tienes asignado este chatbot'}, status=403)
+        if not agente.disponible_en(sede):
+            return Response({'error': 'Este chatbot no está disponible en la seccional %s.' % sede}, status=400)
 
         pregunta = (request.data.get('pregunta') or '').strip()
         respuesta = (request.data.get('respuesta') or '').strip()
