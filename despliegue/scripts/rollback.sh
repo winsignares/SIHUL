@@ -24,4 +24,4 @@ echo "[rollback] $ENTORNO: $ACTUAL -> $ANTERIOR"
 read -r -p "¿Confirmas el rollback? (escribe 'si'): " RESP
 [[ "$RESP" == "si" ]] || { echo "Cancelado."; exit 1; }
 
-FORZAR=1 "$RAIZ/scripts/deploy.sh" "$ENTORNO" "$ANTERIOR"
+FORZAR=1 bash "$RAIZ/scripts/deploy.sh" "$ENTORNO" "$ANTERIOR"
