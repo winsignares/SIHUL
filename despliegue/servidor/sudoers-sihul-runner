@@ -1,0 +1,3 @@
+# Copiar a /etc/sudoers.d/sihul-runner (permisos 440, propietario root) y validar con: visudo -cf /etc/sudoers.d/sihul-runner
+# El usuario del runner solo puede ejecutar el script de despliegue, nada más.
+github-runner ALL=(root) NOPASSWD: /usr/local/sbin/sihul-deploy-ci
