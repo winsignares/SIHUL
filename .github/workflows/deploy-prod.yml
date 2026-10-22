@@ -5,10 +5,13 @@ name: Deploy Production
 # El job corre en el runner del servidor (usuario sin privilegios) y solo ejecuta un script de root con validaciones.
 # No hace checkout: no ejecuta código del repositorio en el servidor.
 on:
-  workflow_run:
-    workflows: ["Build Images"]
-    types: [completed]
-    branches: [main]
+  # TEMPORAL: sin disparo automatico hasta que existan el entorno "production" con revisores y el
+  # runner del servidor. Mientras tanto solo se ejecuta a mano (Actions > Deploy Production > Run workflow).
+  # Para activarlo, restaurar:
+  #   workflow_run:
+  #     workflows: ["Build Images"]
+  #     types: [completed]
+  #     branches: [main]
   workflow_dispatch: {}
 
 concurrency:
