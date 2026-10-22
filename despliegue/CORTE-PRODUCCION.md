@@ -31,7 +31,13 @@ Todo como `root` en el servidor, desde `/opt/sihul-repo`. Imagen a desplegar: la
    diff /etc/nginx/sites-available/sihul despliegue/nginx/sihul.conf
    ```
 
-6. Memoria libre y espacio en disco: `free -h` y `df -h /`.
+6. Instalar el snippet de proxy que usa el nginx nuevo (un archivo nuevo; ningún sitio lo usa todavía, así que no cambia nada):
+
+   ```bash
+   cp despliegue/nginx/sihul-proxy.conf /etc/nginx/snippets/sihul-proxy.conf && nginx -t
+   ```
+
+7. Memoria libre y espacio en disco: `free -h` y `df -h /`.
 
 ## B. Ventana (se estima 1–2 minutos sin respuesta del backend)
 
@@ -64,6 +70,7 @@ Elegir una hora con pocos usuarios y sin la ETL (corre a las 05:00 hora local).
 
    ```bash
    cp despliegue/nginx/sihul.conf /etc/nginx/sites-available/sihul && nginx -t && systemctl reload nginx
+   # (el snippet /etc/nginx/snippets/sihul-proxy.conf ya debe estar instalado: paso A6)
    ```
 
 8. Verificar: `curl -s https://sihul.unilibre.edu.co/health/ready/`, entrar, iniciar sesión, preguntar al chatbot y
