@@ -1,0 +1,249 @@
+# ============================================================================
+# SIHUL — stack de despliegue (producción y pruebas con el MISMO archivo)
+#
+# Se parametriza solo con variables de entorno (despliegue/env/*.env):
+#   producción: docker compose --env-file despliegue/env/prod.env -f despliegue/compose/docker-compose.yml ...
+#   pruebas:    docker compose --env-file despliegue/env/test.env -f despliegue/compose/docker-compose.yml ...
+# Normalmente se usa a través de despliegue/scripts/deploy.sh.
+#
+# Principios:
+#   - Imágenes inmutables por versión (TAG); ningún código montado como volumen.
+#   - Solo se publican puertos en 127.0.0.1: el nginx del servidor es la única entrada.
+#   - Cada servicio recibe SOLO los secretos que necesita.
+#   - Límite de memoria y de CPU por servicio (uno no deja sin memoria a los demás).
+#   - Logs con rotación (los logs de Docker no rotan por defecto).
+#   - Migraciones y collectstatic en un job aparte ("release"), no al arrancar.
+#   - En producción los volúmenes de datos son "external": si el nombre no existe, Docker
+#     FALLA en lugar de crear una base de datos vacía (VOLUMES_EXTERNAL=true).
+# ============================================================================
+
+name: ${COMPOSE_PROJECT_NAME:-sihul}
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-backend-env: &backend-env
+  DB_HOST: db
+  DB_PORT: "5432"
+  # Variables críticas obligatorias: si faltan, docker compose se detiene antes de arrancar
+  # (en vez de arrancar mal, por ejemplo con la base de datos o la clave vacías).
+  DB_NAME: ${DB_NAME:?falta DB_NAME en el .env del entorno}
+  DB_USER: ${DB_USER:?falta DB_USER en el .env del entorno}
+  DB_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD en el .env del entorno}
+  REDIS_URL: redis://redis:6379/0
+  DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?falta DJANGO_SECRET_KEY en el .env del entorno}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?falta DJANGO_ALLOWED_HOSTS en el .env del entorno}
+  FRONTEND_URL: ${FRONTEND_URL:?falta FRONTEND_URL en el .env del entorno}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+  SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-sessionid}
+  CSRF_COOKIE_NAME: ${CSRF_COOKIE_NAME:-csrftoken}
+  # En http (pruebas por IP y puerto) las cookies "secure" no viajan: pruebas las pone en False.
+  SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-True}
+  CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE:-True}
+  CHATBOT_FASTAPI_URL: http://chatbot:8001/api/v1
+  MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
+  MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
+  MICROSOFT_TENANT: ${MICROSOFT_TENANT:-common}
+  RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY:-}
+  RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
+  FINANCIERO_DOCUMENT_ROOT: /app/media
+  FINANCIERO_DOCUMENT_NETWORK_ROOT: ${FINANCIERO_DOCUMENT_NETWORK_ROOT:-}
+  FINANCIERO_DOCUMENT_NETWORK_USER: ${FINANCIERO_DOCUMENT_NETWORK_USER:-}
+  FINANCIERO_DOCUMENT_NETWORK_PASSWORD: ${FINANCIERO_DOCUMENT_NETWORK_PASSWORD:-}
+  PYTHONUNBUFFERED: "1"
+
+services:
+  # --------------------------------------------------------------------------
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # Ajustes dimensionados con DB_MEM_LIMIT; el log de consultas lentas ayuda a encontrarlas.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${PG_SHARED_BUFFERS:-192MB}
+      - -c
+      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-512MB}
+      - -c
+      - work_mem=${PG_WORK_MEM:-8MB}
+      - -c
+      - max_connections=${PG_MAX_CONNECTIONS:-100}
+      - -c
+      - log_min_duration_statement=${PG_SLOW_QUERY_MS:-500}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    shm_size: 256mb
+    mem_limit: ${DB_MEM_LIMIT:-768m}
+    cpus: ${DB_CPUS:-2}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging: *logging
+    networks: [sihul]
+
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Solo caché: límite de memoria y expulsión de las claves menos usadas.
+    command: ["redis-server", "--maxmemory", "${REDIS_MAXMEMORY:-96mb}", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+    volumes:
+      - redis_data:/data
+    mem_limit: ${REDIS_MEM_LIMIT:-160m}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging: *logging
+    networks: [sihul]
+
+  # --------------------------------------------------------------------------
+  # Job de release: aplica migraciones y collectstatic. NO arranca con "up".
+  #   docker compose ... --profile release run --rm release
+  release:
+    profiles: ["release"]
+    image: ${REGISTRY:-ghcr.io/winsignares}/sihul-backend:${TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: despliegue/docker/backend.prod.Dockerfile
+    restart: "no"
+    environment: *backend-env
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput"]
+    volumes:
+      - static:/app/staticfiles
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [sihul]
+
+  # --------------------------------------------------------------------------
+  backend:
+    image: ${REGISTRY:-ghcr.io/winsignares}/sihul-backend:${TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: despliegue/docker/backend.prod.Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-4}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-60}
+      GUNICORN_MAX_REQUESTS: ${GUNICORN_MAX_REQUESTS:-800}
+      DJANGO_WSGI: ${DJANGO_WSGI:-mysite.wsgi:application}
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - media:/app/media
+      - static:/app/staticfiles
+    mem_limit: ${BACKEND_MEM_LIMIT:-1792m}
+    cpus: ${BACKEND_CPUS:-2}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *logging
+    networks: [sihul]
+
+  # --------------------------------------------------------------------------
+  chatbot:
+    image: ${REGISTRY:-ghcr.io/winsignares}/sihul-chatbot:${TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: despliegue/docker/chatbot.prod.Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      REDIS_URL: redis://redis:6379/1
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      CHUNK_SIZE: ${CHUNK_SIZE:-900}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-150}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      CHAT_MODEL: ${CHAT_MODEL:-gpt-4o-mini}
+      UVICORN_WORKERS: ${UVICORN_WORKERS:-1}
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "127.0.0.1:${CHATBOT_PORT:-8001}:8001"
+    mem_limit: ${CHATBOT_MEM_LIMIT:-512m}
+    cpus: ${CHATBOT_CPUS:-1}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/docs', timeout=3).status == 200 else 1)"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *logging
+    networks: [sihul]
+
+  # --------------------------------------------------------------------------
+  frontend:
+    image: ${REGISTRY:-ghcr.io/winsignares}/sihul-frontend:${TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: despliegue/docker/frontend.prod.Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_CHATBOT_URL: ${VITE_CHATBOT_URL:-}
+        VITE_RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY:-}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8080}:80"
+    volumes:
+      - static:/usr/share/nginx/html/static:ro
+    mem_limit: ${FRONTEND_MEM_LIMIT:-64m}
+    logging: *logging
+    networks: [sihul]
+
+volumes:
+  # Con COMPOSE_PROJECT_NAME=sihul los nombres reales son sihul_postgres_data, sihul_media y
+  # sihul_redis_data: los MISMOS que usa el despliegue actual, así los datos se reutilizan.
+  postgres_data:
+    name: ${COMPOSE_PROJECT_NAME:-sihul}_postgres_data
+    external: ${VOLUMES_EXTERNAL:-false}
+  media:
+    name: ${COMPOSE_PROJECT_NAME:-sihul}_media
+    external: ${VOLUMES_EXTERNAL:-false}
+  redis_data:
+    name: ${COMPOSE_PROJECT_NAME:-sihul}_redis_data
+    external: ${VOLUMES_EXTERNAL:-false}
+  # Estáticos de Django: se regeneran en cada release, siempre son nuevos.
+  static:
+    name: ${COMPOSE_PROJECT_NAME:-sihul}_static
+
+networks:
+  sihul:
+    name: ${COMPOSE_PROJECT_NAME:-sihul}_net
+    # SUBRED FIJA OBLIGATORIA. Si Docker eligiera una sola, podría tomar 172.18.0.0/16, 172.20.0.0/16,
+    # etc., rangos que usa la red de la universidad (clientes y SSH): el servidor dejaría de poder
+    # responderles y se perdería el acceso (incluido el puerto 22). Producción y pruebas usan los
+    # mismos rangos que hoy: 10.201.2.0/24 y 10.202.10.0/24.
+    ipam:
+      driver: default
+      config:
+        - subnet: ${DOCKER_NETWORK_SUBNET:?define DOCKER_NETWORK_SUBNET en el .env (ver despliegue/README.md)}
+          gateway: ${DOCKER_NETWORK_GATEWAY:?define DOCKER_NETWORK_GATEWAY en el .env}

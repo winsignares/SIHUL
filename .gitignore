@@ -31,3 +31,11 @@ backend/financiero/media/
 
 # collectstatic output (se regenera en cada deploy)
 backend/staticfiles/
+
+# Variables de despliegue con secretos (las plantillas *.example sí se versionan)
+!despliegue/env/
+despliegue/env/*.env
+!despliegue/env/*.env.example
+
+# Estado local del despliegue (versión actual y anterior por entorno)
+despliegue/.estado/

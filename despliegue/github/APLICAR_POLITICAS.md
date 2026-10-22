@@ -29,8 +29,8 @@ Los rulesets exigen checks que deben existir en las ramas. Si se activan antes d
 Desde la raíz del repositorio:
 
 ```bash
-gh api repos/winsignares/SIHUL/rulesets --method POST --input infra/github/ruleset-main.json
-gh api repos/winsignares/SIHUL/rulesets --method POST --input infra/github/ruleset-develop.json
+gh api repos/winsignares/SIHUL/rulesets --method POST --input despliegue/github/ruleset-main.json
+gh api repos/winsignares/SIHUL/rulesets --method POST --input despliegue/github/ruleset-develop.json
 gh api repos/winsignares/SIHUL --method PATCH -f delete_branch_on_merge=true
 ```
 
