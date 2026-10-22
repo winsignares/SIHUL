@@ -118,6 +118,17 @@ class Command(BaseCommand):
     def _find_role(nombre):
         return Rol.objects.filter(nombre__iexact=nombre).first()
 
+    ROLES_BASE_ETL = {'docente', 'estudiante'}
+
+    @classmethod
+    def _rol_reasignable_por_etl(cls, usuario):
+        """El ETL solo (re)asigna el rol base. Un rol puesto a mano (administrativo, gestor, planeación,
+        financiero...) no se pisa: de lo contrario se desharía cada noche para el personal que
+        Oracle trae como docente."""
+        if usuario.rol_id is None:
+            return True
+        return (usuario.rol.nombre or '').strip().lower() in cls.ROLES_BASE_ETL
+
     @classmethod
     def _find_usuario_by_normalized_name(cls, nombre, rol_nombre=None):
         nombre_normalizado = cls._normalize_text(nombre)
@@ -807,7 +818,7 @@ class Command(BaseCommand):
                     usuario.activo = activo
                     usuario.is_active = activo
                     changed = True
-                if not matched_by_name and rol_docente and usuario.rol_id != rol_docente.id:
+                if not matched_by_name and rol_docente and usuario.rol_id != rol_docente.id and self._rol_reasignable_por_etl(usuario):
                     usuario.rol = rol_docente
                     changed = True
                 if sede and usuario.sede_id != sede.id:
@@ -917,7 +928,7 @@ class Command(BaseCommand):
                 if usuario.nombre != nombre:
                     usuario.nombre = nombre
                     changed = True
-                if not matched_by_name and rol_estudiante and usuario.rol_id != rol_estudiante.id:
+                if not matched_by_name and rol_estudiante and usuario.rol_id != rol_estudiante.id and self._rol_reasignable_por_etl(usuario):
                     usuario.rol = rol_estudiante
                     changed = True
                 if not matched_by_name and not usuario.activo:
