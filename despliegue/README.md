@@ -123,7 +123,7 @@ Regla: **no se toca lo que corre hasta tener inventario, backup verificado y ens
 | Fase | Qué se hace | Retorno |
 |---|---|---|
 | 0 | `inventario.sh` y `backup.sh`; copiar el backup a la carpeta compartida; restauración de prueba | Nada que revertir |
-| 1 | Certificado: `certbot certonly --dry-run`; si funciona, renovar y recargar nginx | Restaurar la copia de nginx |
+| 1 | Certificado: **no aplica**. El HTTPS lo termina un equipo de la universidad con un certificado comodín (RapidSSL, vence 25-feb-2027); el del servidor (Let's Encrypt) está vencido y no lo ve ningún usuario. No se toca. | — |
 | 2 | **Ensayo** en paralelo: proyecto `sihul-ensayo`, puertos 18080/18000/18001 y una **copia** de la base restaurada | `docker compose down -v` del proyecto de ensayo |
 | 3 | **Pruebas nuevo**: `docker compose -f docker-compose.test.yml down` del stack viejo (sin `-v`), `deploy.sh test`, activar `sihul-pruebas.conf` | Levantar el stack viejo |
 | 4 | **Producción** (ventana corta): backup final → `down` del stack viejo (sin `-v`; así se libera la subred y **nunca hay dos Postgres sobre el mismo volumen**) → `deploy.sh prod` → `verificar-nas.sh prod` → instalar `sihul.conf` → `nginx -t` → `reload` → verificar el sitio | `rollback.sh prod`, o `down` del nuevo + `up -d` del stack viejo (mismo volumen) y restaurar la copia de nginx |
