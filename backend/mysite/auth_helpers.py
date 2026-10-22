@@ -1,3 +1,5 @@
+COMPONENTE_DOCUMENTACION_CHATBOTS = 'Gestión de Documentación de Chatbots'
+
 MISSING_SECCIONAL_MESSAGE = 'Usuario sin sede o seccional asignada. Asignarle una sede para consultar datos por seccional.'
 
 
@@ -83,6 +85,16 @@ def has_any_role(user, allowed_roles):
     return role_name in allowed
 
 
+def es_responsable_de_chatbots(user):
+    """True si el usuario es responsable (AgenteResponsable) de al menos un chatbot."""
+    if not is_authenticated_user(user):
+        return False
+
+    from chatbot.models import AgenteResponsable
+
+    return AgenteResponsable.objects.filter(usuario_id=user.id).exists()
+
+
 def get_componente_permiso(user, nombre_componente):
     """Resuelve el permiso efectivo ('VER'/'EDITAR'/None) de `user` sobre el
     Componente `nombre_componente`, replicando la precedencia usada por
@@ -92,8 +104,11 @@ def get_componente_permiso(user, nombre_componente):
     acceso aunque el rol lo conceda; si no hay grant de rol pero sí un
     override activo, igual se concede acceso con el permiso del override.
 
-    Réplica exacta de mysite.api_views._build_componentes: no hay bypass
-    implícito por rol (ni siquiera admin_global); el acceso depende
+    Excepción: «Gestión de Documentación de Chatbots» se concede (EDITAR) a quien esté
+    asignado como responsable de algún chatbot, sea cual sea su rol, salvo que un override
+    inactivo lo haya revocado expresamente. Así subir documentación no exige un rol especial.
+
+    No hay bypass implícito por rol (ni siquiera admin_global); el acceso depende
     estrictamente de los registros ComponenteRol/ComponenteUsuario, igual
     que en el frontend (hasEditPermission solo consulta la lista enviada
     por el backend).
@@ -116,12 +131,20 @@ def get_componente_permiso(user, nombre_componente):
     if cr:
         if override and not override.activo:
             return None
-        return override.permiso if override else cr.permiso
+        permiso = override.permiso if override else cr.permiso
+    elif override and override.activo:
+        permiso = override.permiso
+    else:
+        permiso = None
 
-    if override and override.activo:
-        return override.permiso
-
-    return None
+    if (
+        nombre_componente == COMPONENTE_DOCUMENTACION_CHATBOTS
+        and permiso != 'EDITAR'
+        and not (override and not override.activo)
+        and es_responsable_de_chatbots(user)
+    ):
+        return 'EDITAR'
+    return permiso
 
 
 def user_can_edit_componente(user, nombre_componente):

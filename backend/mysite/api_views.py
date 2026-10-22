@@ -652,7 +652,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         if not usuario.rol:
             return []
 
-        from componentes.models import ComponenteRol, ComponenteUsuario
+        from componentes.models import Componente, ComponenteRol, ComponenteUsuario
 
         componentes_rol = ComponenteRol.objects.filter(rol=usuario.rol).select_related('componente')
         componentes_usuario = ComponenteUsuario.objects.filter(usuario=usuario).select_related('componente')
@@ -686,6 +686,23 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
                     'descripcion': override.componente.descripcion,
                     'permiso': override.permiso,
                 }
+
+        # Quien es responsable de algún chatbot recibe «Gestión de Documentación de Chatbots»
+        # sin importar su rol (misma regla que mysite.auth_helpers.get_componente_permiso).
+        from mysite.auth_helpers import COMPONENTE_DOCUMENTACION_CHATBOTS, es_responsable_de_chatbots
+
+        if es_responsable_de_chatbots(usuario):
+            documentacion = Componente.objects.filter(nombre=COMPONENTE_DOCUMENTACION_CHATBOTS).first()
+            if documentacion:
+                actual = componentes_por_id.get(documentacion.id)
+                revocado = any(o.componente_id == documentacion.id and not o.activo for o in componentes_usuario)
+                if not revocado and (actual is None or actual['permiso'] != 'EDITAR'):
+                    componentes_por_id[documentacion.id] = {
+                        'id': documentacion.id,
+                        'nombre': documentacion.nombre,
+                        'descripcion': documentacion.descripcion,
+                        'permiso': 'EDITAR',
+                    }
 
         return list(componentes_por_id.values())
 
