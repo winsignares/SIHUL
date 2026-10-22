@@ -23,7 +23,7 @@ from sedes.models import Seccional, Sede
 from usuarios.models import Rol, Usuario
 
 from .anexos import AnexoInvalido, generar_token, leer_token, validar_anexo
-from .models import Agente, AgenteResponsable, AnexoRespuesta, Conversacion, PreguntaRespuesta
+from .models import Agente, AgenteResponsable, AnexoRespuesta, Conversacion, PreguntaRespuesta, PreguntaSugerida
 
 _OLE = b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'
 
@@ -645,6 +645,43 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
             self.assertEqual(self._subir().status_code, 200)
 
+    # ---- preguntas sugeridas: solo las escribe quien gestiona la documentación de ese chatbot
+    def _crear_pregunta(self, agente, texto='¿Pregunta de prueba?'):
+        return self.client.post(reverse('api-pregunta-list-create'), json.dumps(
+            {'agente': agente.id, 'pregunta': texto, 'orden': 1, 'activo': True}), content_type='application/json')
+
+    def test_un_estudiante_no_crea_preguntas_sugeridas(self):
+        self.entrar(self.estudiante)
+        self.assertEqual(self._crear_pregunta(self.agente).status_code, 403)
+        self.assertEqual(PreguntaSugerida.objects.filter(agente=self.agente, pregunta__startswith='¿Pregunta de').count(), 0)
+
+    def test_cualquier_autenticado_puede_verlas(self):
+        PreguntaSugerida.objects.create(agente=self.agente, pregunta='¿Horario?', orden=1)
+        self.entrar(self.estudiante)
+        self.assertEqual(self.client.get(reverse('api-pregunta-list-create')).status_code, 200)
+
+    def test_el_responsable_gestiona_las_de_su_chatbot_y_no_las_de_otro(self):
+        self.entrar(self.cargador)  # responsable de self.agente
+        creada = self._crear_pregunta(self.agente)
+        self.assertEqual(creada.status_code, 201)
+        self.assertEqual(self._crear_pregunta(self.otro_agente).status_code, 403)
+        ajena = PreguntaSugerida.objects.create(agente=self.otro_agente, pregunta='Ajena', orden=1)
+        detalle_ajena = reverse('api-pregunta-detail', args=[ajena.id])
+        self.assertEqual(self.client.delete(detalle_ajena).status_code, 403)
+        self.assertEqual(self.client.patch(detalle_ajena, json.dumps({'pregunta': 'x'}), content_type='application/json').status_code, 403)
+        propia = reverse('api-pregunta-detail', args=[creada.json()['id']])
+        self.assertEqual(self.client.patch(propia, json.dumps({'pregunta': 'Editada'}), content_type='application/json').status_code, 200)
+        mover = self.client.patch(propia, json.dumps({'agente': self.otro_agente.id}), content_type='application/json')
+        self.assertEqual(mover.status_code, 403)  # tampoco puede pasarla a un chatbot ajeno
+        self.assertEqual(self.client.delete(propia).status_code, 204)
+
+    def test_quien_administra_chatbots_gestiona_las_de_cualquiera(self):
+        self.entrar(self.gestor)
+        self.assertEqual(self._crear_pregunta(self.otro_agente).status_code, 201)
+
+    def test_un_anonimo_no_las_escribe(self):
+        self.assertIn(self._crear_pregunta(self.agente).status_code, (401, 403))
+
     # ---- alcance por chatbot asignado -------------------------------------------------------
 
     def test_sin_asignacion_no_sube_ni_ve_documentos(self):
@@ -875,3 +912,4 @@ class AsignarResponsablesCommandTests(_BaseAnexos):
         with self.assertRaises(CommandError) as error:
             self._ejecutar('--agente', 'No existe', '--correos', self.admin.correo)
         self.assertIn(self.agente.nombre, str(error.exception))
+
