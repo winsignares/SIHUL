@@ -6,6 +6,7 @@ from usuarios.models import Usuario
 
 from .admin_views import PuedeGestionarChatbots, ids_chatbots_permitidos
 from .models import Agente, AgenteResponsable, Conversacion, PreguntaSugerida
+from .sedes import normalizar_sede
 from .views import _resolve_user_sede_value
 
 
@@ -18,6 +19,26 @@ class AgenteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Agente
         fields = '__all__'
+
+    def validate(self, attrs):
+        # Quien sube documentación de un chatbot restringido debe ser de una de sus seccionales.
+        seccionales = attrs.get('seccionales')
+        ids = attrs.get('responsables_ids')
+        if self.instance is not None:
+            if seccionales is None:
+                seccionales = list(self.instance.seccionales.all())
+            if ids is None:
+                ids = list(self.instance.responsables.values_list('usuario_id', flat=True))
+        if seccionales and ids:
+            permitidas = {normalizar_sede(s.ciudad) for s in seccionales}
+            usuarios = Usuario.objects.filter(id__in=ids).select_related('seccional', 'sede__seccional')
+            fuera = [u.nombre for u in usuarios if _resolve_user_sede_value(u) not in permitidas]
+            if fuera:
+                raise serializers.ValidationError(
+                    {'seccionales': 'Estos responsables son de una seccional donde el chatbot no estará disponible: '
+                                    + ', '.join(fuera)}
+                )
+        return attrs
 
     def validate_responsables_ids(self, ids):
         ids = list(dict.fromkeys(ids))  # sin repetidos, conservando el orden
@@ -80,6 +101,10 @@ class AgenteSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        # Seccionales donde está disponible; vacío = todas.
+        seccionales = list(instance.seccionales.all())
+        data['disponible_en_todas'] = not seccionales
+        data['seccionales_detalle'] = [{'id': s.id, 'ciudad': s.ciudad} for s in seccionales]
         # Las instrucciones adicionales son configuración interna del asistente: solo las
         # ve quien puede gestionarlo.
         request = self.context.get('request')
@@ -106,6 +131,8 @@ class AgenteSerializer(serializers.ModelSerializer):
 
 
 class PreguntaSugeridaSerializer(serializers.ModelSerializer):
+    seccional_nombre = serializers.CharField(source='seccional.ciudad', read_only=True, default=None)
+
     class Meta:
         model = PreguntaSugerida
         fields = '__all__'
