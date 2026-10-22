@@ -54,9 +54,13 @@ export interface ChatbotAgente {
     puede_gestionar_documentos?: boolean;
     /** Solo llega a quien administra chatbots. */
     responsables?: ChatbotResponsable[];
+    /** Ids de las seccionales donde está disponible; vacío = todas. */
+    seccionales?: number[];
+    disponible_en_todas?: boolean;
+    seccionales_detalle?: { id: number; ciudad: string }[];
 }
 
-export type ChatbotAgentePayload = Omit<ChatbotAgente, 'id' | 'responsables' | 'puede_gestionar_documentos'> & {
+export type ChatbotAgentePayload = Omit<ChatbotAgente, 'id' | 'responsables' | 'puede_gestionar_documentos' | 'disponible_en_todas' | 'seccionales_detalle'> & {
     responsables_ids?: number[];
 };
 
@@ -116,3 +120,38 @@ export const CHATBOT_ICONOS: { value: string; label: string; Icon: LucideIcon }[
     { value: 'Trophy', label: 'Trofeo', Icon: Trophy },
     { value: 'Headphones', label: 'Audífonos', Icon: Headphones },
 ];
+
+/** Seccional con chatbots (las que conoce el servicio RAG). */
+export interface ChatbotSeccional {
+    id: number;
+    ciudad: string;
+}
+
+/** Seccionales disponibles y lo que puede hacer la persona con ellas. */
+export interface ConfigSeccionalesChatbot {
+    seccionales: ChatbotSeccional[];
+    /** Solo el admin global elige la seccional al escribir preguntas; los demás usan la suya. */
+    puede_elegir_seccional: boolean;
+    seccional_propia: number | null;
+}
+
+/** Pregunta sugerida: el atajo que el chat muestra bajo «Preguntas sugeridas». */
+export interface PreguntaSugeridaChatbot {
+    id: number;
+    agente: number;
+    pregunta: string;
+    orden: number;
+    contador_uso: number;
+    activo: boolean;
+    /** Vacío = aplica a todas las seccionales. */
+    seccional: number | null;
+    seccional_nombre: string | null;
+}
+
+export interface GuardarPreguntaSugeridaPayload {
+    agente: number;
+    pregunta: string;
+    orden: number;
+    activo: boolean;
+    seccional?: number | null;
+}

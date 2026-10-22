@@ -36,6 +36,11 @@ class Agente(models.Model):
         blank=True,
         validators=[MinValueValidator(1), MaxValueValidator(10)],
     )
+    # Seccionales donde está disponible. Vacío = todas (así quedan los chatbots que ya existían).
+    seccionales = models.ManyToManyField(
+        'sedes.Seccional', blank=True, related_name='chatbots',
+        help_text='Seccionales donde está disponible este chatbot. Vacío = todas las seccionales.',
+    )
     instrucciones_adicionales = models.TextField(
         max_length=2000,
         blank=True,
@@ -45,6 +50,16 @@ class Agente(models.Model):
                   'responder solo con los documentos cargados.',
     )
     
+    def valores_sede(self):
+        """Seccionales donde está disponible, con el nombre que usa el RAG (vacío = todas)."""
+        from .sedes import normalizar_sede
+
+        return {normalizar_sede(s.ciudad) for s in self.seccionales.all()} - {None}
+
+    def disponible_en(self, sede_value):
+        valores = self.valores_sede()
+        return not valores or sede_value in valores
+
     class Meta:
         verbose_name = 'Agente'
         verbose_name_plural = 'Agentes'
@@ -85,6 +100,10 @@ class AgenteResponsable(models.Model):
 class PreguntaSugerida(models.Model):
     agente = models.ForeignKey(Agente, on_delete=models.CASCADE, related_name='preguntas')
     pregunta = models.TextField()
+    # Seccional a la que aplica la pregunta; vacío = todas las seccionales.
+    seccional = models.ForeignKey(
+        'sedes.Seccional', null=True, blank=True, on_delete=models.CASCADE, related_name='preguntas_sugeridas',
+    )
     orden = models.IntegerField(default=0)
     contador_uso = models.IntegerField(default=0)
     activo = models.BooleanField(default=True)

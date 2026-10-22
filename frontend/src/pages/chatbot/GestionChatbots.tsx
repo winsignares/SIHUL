@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
-import { Bot, FilePenLine, FileText, FileUp, MessageSquarePlus, PauseCircle, PlayCircle, Plus, Save, Search, Settings2, Trash2, UploadCloud } from 'lucide-react';
+import { Bot, FilePenLine, FileText, FileUp, Lightbulb, MessageSquarePlus, PauseCircle, PlayCircle, Plus, Save, Search, Settings2, Trash2, UploadCloud } from 'lucide-react';
 import { PreguntasRespuestasTab } from '../../components/chatbot/PreguntasRespuestasTab';
+import { PreguntasSugeridasTab } from '../../components/chatbot/PreguntasSugeridasTab';
 import { ResponsablesSelector } from '../../components/chatbot/ResponsablesSelector';
 import { Badge } from '../../share/badge';
 import { Button } from '../../share/button';
@@ -15,6 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
 import { Textarea } from '../../share/textarea';
 import { useGestionChatbots } from '../../hooks/chatbot/useGestionChatbots';
 import { CHATBOT_ICONOS, CHATBOT_TIPOS, MAX_DOCUMENTOS, MAX_INSTRUCCIONES_ADICIONALES, MIN_DOCUMENTOS, maxDocumentosPorDefecto } from '../../models/chatbot/chatbotAdmin.model';
+
+const chipClase = (activo: boolean) => `rounded-full border px-3 py-1 text-sm font-medium transition ${activo ? 'border-red-700 bg-red-700 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-red-300 hover:text-red-700'}`;
 
 const mostrarSeccional = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
@@ -45,6 +48,7 @@ export default function GestionChatbots() {
         <TabsList>
           <TabsTrigger value="documentos" className="flex items-center gap-2"><FileText className="h-4 w-4" />Documentos</TabsTrigger>
           <TabsTrigger value="preguntas" className="flex items-center gap-2"><MessageSquarePlus className="h-4 w-4" />Preguntas y respuestas</TabsTrigger>
+          <TabsTrigger value="sugeridas" className="flex items-center gap-2"><Lightbulb className="h-4 w-4" />Preguntas sugeridas</TabsTrigger>
           {puedeGestionarChatbots && <TabsTrigger value="chatbots" className="flex items-center gap-2"><Bot className="h-4 w-4" />Chatbots disponibles</TabsTrigger>}
         </TabsList>
 
@@ -117,6 +121,8 @@ export default function GestionChatbots() {
 
         <TabsContent value="preguntas"><PreguntasRespuestasTab seccional={seccionalUsuario} seccionalValida={seccionalValida} chatbots={chatbotsGestionables} /></TabsContent>
 
+        <TabsContent value="sugeridas"><PreguntasSugeridasTab chatbots={chatbotsGestionables} /></TabsContent>
+
         {puedeGestionarChatbots && <TabsContent value="chatbots"><ChatbotsTable state={state} /></TabsContent>}
       </Tabs>
 
@@ -146,7 +152,7 @@ function ChatbotsTable({ state }: { state: GestionState }) {
       {loadingChatbots ? <p className="px-6 py-5 text-sm text-slate-500">Cargando chatbots...</p> : <div className="overflow-x-auto sm:rounded-xl sm:border"><Table className="min-w-[760px] table-fixed">
         <TableHeader><TableRow className="bg-slate-50"><TableHead className="w-[20%] text-center">Nombre</TableHead><TableHead className="w-[48%] text-center">Descripción</TableHead><TableHead className="w-[12%] text-center">Estado</TableHead><TableHead className="w-[20%] text-center">Acciones</TableHead></TableRow></TableHeader>
         <TableBody>{chatbotsFiltrados.length === 0 ? <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-500">{chatbots.length === 0 ? 'No hay chatbots registrados.' : 'Ningún chatbot coincide con el filtro.'}</TableCell></TableRow> : chatbotsFiltrados.map((chatbot) => <TableRow key={chatbot.id}>
-          <TableCell className="whitespace-normal break-words text-center font-medium">{chatbot.nombre}<div className="mt-1"><Badge variant="outline" className="text-[10px] font-normal">{CHATBOT_TIPOS.find((tipo) => tipo.value === (chatbot.tipo ?? 'normativo'))?.label}</Badge></div></TableCell><TableCell className="whitespace-normal break-words px-4 text-left leading-5 text-slate-600">{chatbot.descripcion}<div className="mt-1 text-xs text-slate-500">{chatbot.responsables && chatbot.responsables.length > 0 ? `Responsables de documentación: ${chatbot.responsables.map((persona) => persona.nombre).join(', ')}` : 'Sin responsables asignados (solo quienes administran chatbots pueden cargarle documentos).'}</div></TableCell>
+          <TableCell className="whitespace-normal break-words text-center font-medium">{chatbot.nombre}<div className="mt-1"><Badge variant="outline" className="text-[10px] font-normal">{CHATBOT_TIPOS.find((tipo) => tipo.value === (chatbot.tipo ?? 'normativo'))?.label}</Badge></div></TableCell><TableCell className="whitespace-normal break-words px-4 text-left leading-5 text-slate-600">{chatbot.descripcion}<div className="mt-1 text-xs text-slate-500">{chatbot.responsables && chatbot.responsables.length > 0 ? `Responsables de documentación: ${chatbot.responsables.map((persona) => persona.nombre).join(', ')}` : 'Sin responsables asignados (solo quienes administran chatbots pueden cargarle documentos).'}</div><div className="mt-1"><Badge variant="outline" className="text-[10px] font-normal">{chatbot.seccionales && chatbot.seccionales.length > 0 ? `Disponible solo en: ${(chatbot.seccionales_detalle ?? []).map((s) => s.ciudad).join(', ')}` : 'Disponible en todas las seccionales'}</Badge></div></TableCell>
           <TableCell className="text-center"><Badge className={chatbot.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>{chatbot.activo ? 'Activo' : 'Inactivo'}</Badge></TableCell>
           <TableCell><div className="flex justify-center gap-2"><Button size="sm" variant="outline" onClick={() => abrirEdicionChatbot(chatbot)} title="Editar chatbot"><Settings2 className="h-4 w-4" /></Button><Button size="sm" variant="outline" disabled={accionId === chatbot.id} onClick={() => void alternarActivoChatbot(chatbot)} title={chatbot.activo ? 'Desactivar' : 'Activar'}>{chatbot.activo ? <PauseCircle className="h-4 w-4 text-amber-600" /> : <PlayCircle className="h-4 w-4 text-emerald-600" />}</Button><Button size="sm" variant="destructive" disabled={accionId === chatbot.id} onClick={() => void eliminarChatbot(chatbot)} title="Eliminar chatbot"><Trash2 className="h-4 w-4" /></Button></div></TableCell>
         </TableRow>)}</TableBody>
@@ -174,7 +180,7 @@ function ActualizarDocumentoDialog({ state }: { state: GestionState }) {
 }
 
 function ChatbotDialog({ state }: { state: GestionState }) {
-  const { dialogChatbotOpen, setDialogChatbotOpen, editingChatbotId, form, setForm, guardarChatbot, savingChatbot, cantidadDocumentosEnEdicion } = state;
+  const { dialogChatbotOpen, setDialogChatbotOpen, editingChatbotId, form, setForm, guardarChatbot, savingChatbot, cantidadDocumentosEnEdicion, configSeccionales } = state;
   return <Dialog open={dialogChatbotOpen} onOpenChange={setDialogChatbotOpen}><DialogContent className="max-h-[92vh] w-[96vw] overflow-y-auto sm:!max-w-[640px]">
     <DialogHeader><DialogTitle>{editingChatbotId ? 'Editar chatbot' : 'Nuevo chatbot'}</DialogTitle></DialogHeader>
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -193,6 +199,13 @@ function ChatbotDialog({ state }: { state: GestionState }) {
       <div className="space-y-2 md:col-span-2"><Label>Máximo de documentos por seccional</Label>
         <Input type="number" min={Math.max(MIN_DOCUMENTOS, cantidadDocumentosEnEdicion)} max={MAX_DOCUMENTOS} value={form.max_documentos} onChange={(event) => setForm((prev) => ({ ...prev, max_documentos: Number(event.target.value) }))} />
         <p className="text-xs text-slate-500">Cantidad máxima de documentos que este chatbot puede tener en cada seccional, entre {MIN_DOCUMENTOS} y {MAX_DOCUMENTOS} (por defecto 10 en normativos y 5 en investigativos). Más documentos restan precisión y encarecen cada consulta. {editingChatbotId ? `Hoy tiene ${cantidadDocumentosEnEdicion} en tu seccional: solo puedes bajarlo hasta esa cantidad; para reducirlo más, elimina documentos antes.` : 'Podrás bajarlo después solo hasta la cantidad de documentos que tenga.'}</p>
+      </div>
+      <div className="space-y-2 md:col-span-2"><Label>Disponible en</Label>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setForm((prev) => ({ ...prev, seccionales: [] }))} className={chipClase(form.seccionales.length === 0)}>Todas las seccionales</button>
+          {(configSeccionales?.seccionales ?? []).map((seccional) => <button key={seccional.id} type="button" onClick={() => setForm((prev) => ({ ...prev, seccionales: prev.seccionales.includes(seccional.id) ? prev.seccionales.filter((id) => id !== seccional.id) : [...prev.seccionales, seccional.id] }))} className={chipClase(form.seccionales.includes(seccional.id))}>{seccional.ciudad}</button>)}
+        </div>
+        <p className="text-xs text-slate-500">{form.seccionales.length === 0 ? 'Lo verán y podrán usarlo todas las seccionales; cada una responde con sus propios documentos.' : 'Solo lo verán y podrán usarlo las seccionales marcadas, y solo en ellas se le puede cargar documentación. Los responsables deben ser de esas seccionales.'}</p>
       </div>
       <div className="space-y-2 md:col-span-2"><Label>Responsables de documentación</Label>
         <ResponsablesSelector value={form.responsables} onChange={(responsables) => setForm((prev) => ({ ...prev, responsables }))} />

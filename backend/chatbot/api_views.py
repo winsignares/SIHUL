@@ -1,11 +1,20 @@
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from django.db.models.functions import Lower
 from rest_framework import generics, permissions
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
 
-from .admin_views import PuedeGestionarChatbots, PuedeGestionarDocumentosChatbots, _chatbot_permitido, ids_chatbots_permitidos
+from .admin_views import (
+    PuedeGestionarChatbots, PuedeGestionarDocumentosChatbots, _chatbot_permitido, ids_chatbots_permitidos,
+    puede_todas_las_sedes,
+)
+from sedes.models import Seccional
+
+from .sedes import agentes_visibles, ids_seccionales, normalizar_sede
+from .views import _resolve_user_sede_value
 from .models import Agente, AgenteResponsable, Conversacion, PreguntaSugerida
 from .serializers import AgenteSerializer, ConversacionSerializer, PreguntaSugeridaSerializer
 
@@ -31,16 +40,54 @@ _RESPONSABLES = Prefetch(
 )
 
 
-class AgenteListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Agente.objects.prefetch_related(_RESPONSABLES).order_by(Lower('nombre'))
+class _AgentesVisiblesMixin:
+    """Quien no administra chatbots solo ve los disponibles en su seccional (más los que tiene asignados)."""
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        request = self.request
+        if request.method not in permissions.SAFE_METHODS or PuedeGestionarChatbots().has_permission(request, self):
+            return queryset
+        visibles = agentes_visibles(queryset, _resolve_user_sede_value(request.user))
+        propios = ids_chatbots_permitidos(request)
+        if propios:
+            visibles = queryset.filter(Q(pk__in=visibles.values('pk')) | Q(pk__in=propios))
+        return visibles
+
+
+class AgenteListCreateAPIView(_AgentesVisiblesMixin, generics.ListCreateAPIView):
+    queryset = Agente.objects.prefetch_related(_RESPONSABLES, 'seccionales').order_by(Lower('nombre'))
     serializer_class = AgenteSerializer
     permission_classes = [LecturaAutenticadaEscrituraGestor]
 
 
-class AgenteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Agente.objects.prefetch_related(_RESPONSABLES)
+class AgenteDetailAPIView(_AgentesVisiblesMixin, generics.RetrieveUpdateDestroyAPIView):
+    queryset = Agente.objects.prefetch_related(_RESPONSABLES, 'seccionales')
     serializer_class = AgenteSerializer
     permission_classes = [LecturaAutenticadaEscrituraGestor]
+
+
+class SeccionalesChatbotView(APIView):
+    """Seccionales con chatbots (las que conoce el RAG) y qué puede hacer quien pregunta con ellas.
+
+    `puede_elegir_seccional`: solo el admin global elige la seccional al escribir preguntas o
+    subir documentos; los demás trabajan siempre con la de su usuario (`seccional_propia`).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        propias = ids_seccionales(_resolve_user_sede_value(request.user))
+        seccionales = [
+            {'id': s.id, 'ciudad': s.ciudad}
+            for s in Seccional.objects.order_by('ciudad')
+            if normalizar_sede(s.ciudad)
+        ]
+        return Response({
+            'seccionales': seccionales,
+            'puede_elegir_seccional': puede_todas_las_sedes(request.user),
+            'seccional_propia': propias[0] if propias else None,
+        })
 
 
 class LecturaAutenticadaEscrituraDocumentacion(permissions.BasePermission):
@@ -61,30 +108,72 @@ def _validar_chatbot(request, agente_id):
         raise PermissionDenied('No puedes gestionar las preguntas de este chatbot.')
 
 
-class PreguntaSugeridaListCreateAPIView(generics.ListCreateAPIView):
-    queryset = PreguntaSugerida.objects.select_related('agente').all().order_by('agente_id', 'orden')
+def _seccional_del_usuario(request):
+    """Seccional con la que escribe una pregunta quien no es admin global; error si no tiene."""
+    ids = ids_seccionales(_resolve_user_sede_value(request.user))
+    if not ids:
+        raise ValidationError({'seccional': 'Tu usuario no tiene seccional asignada.'})
+    return ids[0]
+
+
+def _puede_tocar_pregunta(request, pregunta):
+    """Admin global: cualquiera. Los demás: solo las de su seccional (no las generales)."""
+    if puede_todas_las_sedes(request.user):
+        return True
+    propias = ids_seccionales(_resolve_user_sede_value(request.user))
+    return pregunta.seccional_id is not None and pregunta.seccional_id in propias
+
+
+class _PreguntasVisiblesMixin:
+    """Cada usuario ve las preguntas generales y las de su seccional; el admin global, todas."""
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        request = self.request
+        if not puede_todas_las_sedes(request.user):
+            ids = ids_seccionales(_resolve_user_sede_value(request.user))
+            queryset = queryset.filter(Q(seccional__isnull=True) | Q(seccional_id__in=ids))
+        agente = request.query_params.get('agente')
+        if agente and str(agente).isdigit():
+            queryset = queryset.filter(agente_id=int(agente))
+        return queryset
+
+
+class PreguntaSugeridaListCreateAPIView(_PreguntasVisiblesMixin, generics.ListCreateAPIView):
+    queryset = PreguntaSugerida.objects.select_related('agente', 'seccional').all().order_by('agente_id', 'orden')
     serializer_class = PreguntaSugeridaSerializer
     permission_classes = [LecturaAutenticadaEscrituraDocumentacion]
 
     def perform_create(self, serializer):
         _validar_chatbot(self.request, serializer.validated_data['agente'].id)
-        serializer.save()
+        if puede_todas_las_sedes(self.request.user):
+            serializer.save()  # puede elegir una seccional o dejarla general
+        else:
+            serializer.save(seccional_id=_seccional_del_usuario(self.request))
 
 
-class PreguntaSugeridaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = PreguntaSugerida.objects.select_related('agente').all()
+class PreguntaSugeridaDetailAPIView(_PreguntasVisiblesMixin, generics.RetrieveUpdateDestroyAPIView):
+    queryset = PreguntaSugerida.objects.select_related('agente', 'seccional').all()
     serializer_class = PreguntaSugeridaSerializer
     permission_classes = [LecturaAutenticadaEscrituraDocumentacion]
 
+    def _autorizar(self, pregunta):
+        _validar_chatbot(self.request, pregunta.agente_id)
+        if not _puede_tocar_pregunta(self.request, pregunta):
+            raise PermissionDenied('Solo puedes gestionar las preguntas de tu seccional.')
+
     def perform_update(self, serializer):
-        _validar_chatbot(self.request, serializer.instance.agente_id)
+        self._autorizar(serializer.instance)
         nuevo = serializer.validated_data.get('agente')
         if nuevo:
             _validar_chatbot(self.request, nuevo.id)
-        serializer.save()
+        if puede_todas_las_sedes(self.request.user):
+            serializer.save()
+        else:
+            serializer.save(seccional_id=serializer.instance.seccional_id)  # no puede moverla de seccional
 
     def perform_destroy(self, instance):
-        _validar_chatbot(self.request, instance.agente_id)
+        self._autorizar(instance)
         instance.delete()
 
 
