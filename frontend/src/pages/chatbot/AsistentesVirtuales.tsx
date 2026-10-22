@@ -149,7 +149,7 @@ export default function AsistentesVirtuales() {
 
           {/* Seccional (acceso público): define qué asistentes se ven y con qué información responden */}
           {esPublico && (
-            <div className="rounded-2xl border border-white/25 bg-white/10 p-3 shadow-inner backdrop-blur-sm">
+            <div className="mb-4 rounded-2xl border border-white/25 bg-white/10 p-3 shadow-inner backdrop-blur-sm">
               <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/90">
                 <MapPin className="h-3.5 w-3.5 text-yellow-300" />
                 Tu seccional

@@ -3,7 +3,7 @@ psycopg2-binary==2.9.10
 gunicorn>=20.1
 django-environ>=0.9
 django-cors-headers==4.6.0
-djangorestframework==3.17.2
+djangorestframework==3.18.2
 django-filter>=23.0
 django-allauth==65.14.1
 requests==2.33.0
