@@ -1,0 +1,5 @@
+# Copiar a /etc/cron.d/sihul-backup (root). El servidor está en UTC.
+# Respaldo diario a las 07:30 UTC (02:30 Colombia), después de la ETL (05:00 a ~06:40 UTC).
+30 7 * * * root /opt/sihul-repo/despliegue/scripts/backup-diario.sh
+# Verificación semanal de que el último respaldo se restaura (domingo 08:30 UTC).
+30 8 * * 0 root /opt/sihul-repo/despliegue/scripts/verificar-backup.sh >> /var/log/sihul-backup/verificacion.log 2>&1

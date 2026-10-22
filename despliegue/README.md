@@ -116,6 +116,10 @@ Las imágenes las construye GitHub (`.github/workflows/build-images.yml`) y las 
 fusionar a `develop` o `main`. El servidor las descarga: debe iniciar sesión una vez con una clave de
 solo lectura (`docker login ghcr.io`).
 
+> **Estado:** el corte a producción se hizo el 22-oct-2026 (fases 0 a 4 completadas). La organización del servidor,
+> los respaldos y la restauración están en [`SERVIDOR.md`](SERVIDOR.md); el procedimiento del corte, en
+> [`CORTE-PRODUCCION.md`](CORTE-PRODUCCION.md). Lo que sigue es histórico.
+
 ## Migración del servidor actual, por fases con punto de retorno
 
 Regla: **no se toca lo que corre hasta tener inventario, backup verificado y ensayo.**
