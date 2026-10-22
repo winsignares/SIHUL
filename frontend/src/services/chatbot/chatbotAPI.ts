@@ -256,8 +256,8 @@ export const chatbotAPI = {
     /**
      * Lista agentes para usuarios públicos
      */
-    listarAgentesPublico: async (): Promise<{ agentes: AgenteAPI[] }> => {
-        const response = await apiClient.get('/chatbot/public/agentes/');
+    listarAgentesPublico: async (seccional?: string): Promise<{ agentes: AgenteAPI[] }> => {
+        const response = await apiClient.get(`/chatbot/public/agentes/${seccional ? `?seccional=${encodeURIComponent(seccional)}` : ''}`);
         const agentes = extraerListaResponse<AgenteAPI>(response, ['agentes', 'results', 'data']);
 
         return {

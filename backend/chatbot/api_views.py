@@ -1,6 +1,8 @@
 from django.db.models import Prefetch, Q
 from django.db.models.functions import Lower
 from rest_framework import generics, permissions
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
@@ -9,7 +11,9 @@ from .admin_views import (
     PuedeGestionarChatbots, PuedeGestionarDocumentosChatbots, _chatbot_permitido, ids_chatbots_permitidos,
     puede_todas_las_sedes,
 )
-from .sedes import agentes_visibles, ids_seccionales
+from sedes.models import Seccional
+
+from .sedes import agentes_visibles, ids_seccionales, normalizar_sede
 from .views import _resolve_user_sede_value
 from .models import Agente, AgenteResponsable, Conversacion, PreguntaSugerida
 from .serializers import AgenteSerializer, ConversacionSerializer, PreguntaSugeridaSerializer
@@ -61,6 +65,29 @@ class AgenteDetailAPIView(_AgentesVisiblesMixin, generics.RetrieveUpdateDestroyA
     queryset = Agente.objects.prefetch_related(_RESPONSABLES, 'seccionales')
     serializer_class = AgenteSerializer
     permission_classes = [LecturaAutenticadaEscrituraGestor]
+
+
+class SeccionalesChatbotView(APIView):
+    """Seccionales con chatbots (las que conoce el RAG) y qué puede hacer quien pregunta con ellas.
+
+    `puede_elegir_seccional`: solo el admin global elige la seccional al escribir preguntas o
+    subir documentos; los demás trabajan siempre con la de su usuario (`seccional_propia`).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        propias = ids_seccionales(_resolve_user_sede_value(request.user))
+        seccionales = [
+            {'id': s.id, 'ciudad': s.ciudad}
+            for s in Seccional.objects.order_by('ciudad')
+            if normalizar_sede(s.ciudad)
+        ]
+        return Response({
+            'seccionales': seccionales,
+            'puede_elegir_seccional': puede_todas_las_sedes(request.user),
+            'seccional_propia': propias[0] if propias else None,
+        })
 
 
 class LecturaAutenticadaEscrituraDocumentacion(permissions.BasePermission):

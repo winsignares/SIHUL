@@ -241,6 +241,8 @@ export function useAsistentesVirtuales() {
     // Cargar agentes y datos persistidos desde el backend
     useEffect(() => {
         const cargarAgentes = async () => {
+            // En acceso público los chatbots dependen de la seccional elegida: se espera a tenerla.
+            if (!user?.id && !seccionalPublica) return;
             try {
                 setLoading(true);
                 // Cargar chat_ids y mensajes persistidos DEL USUARIO ACTUAL
@@ -251,7 +253,7 @@ export function useAsistentesVirtuales() {
                 setMensajes(mensajesGuardados);
 
                 const activeToken = localStorage.getItem('auth_token');
-                const userScope = `${user?.id || 'guest'}-${user?.rol || 'public'}`;
+                const userScope = `${user?.id || 'guest'}-${user?.rol || 'public'}${user?.id ? '' : `-${seccionalPublica}`}`;
                 const cacheKey = `${ASISTENTES_VIRTUALES_CACHE_KEY}-${userScope}`;
                 const cachedData = getSessionCacheData<{
                     asistentes: CachedAsistente[];
@@ -277,7 +279,7 @@ export function useAsistentesVirtuales() {
                 // Usar endpoint público si no hay usuario autenticado
                 const response = user?.id
                     ? await chatbotAPI.listarAgentes()
-                    : await chatbotAPI.listarAgentesPublico();
+                    : await chatbotAPI.listarAgentesPublico(seccionalPublica);
 
                 const agentes = normalizarAgentes(response);
 
@@ -337,7 +339,7 @@ export function useAsistentesVirtuales() {
 
         cargarAgentes();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id, user?.rol]); // Recargar cuando cambie el usuario o su rol
+    }, [user?.id, user?.rol, user?.id ? '' : seccionalPublica]); // Recargar cuando cambie el usuario, su rol o (en público) la seccional
 
     // Guardar mensajes en localStorage cada vez que cambien
     useEffect(() => {

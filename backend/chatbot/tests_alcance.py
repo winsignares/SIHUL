@@ -201,3 +201,17 @@ class AlcancePorSeccionalTests(_BaseAnexos):
         AgenteResponsable.objects.create(agente=self.agente, usuario=self.resp_bq)
         self.entrar(self.resp_bq)
         self.assertEqual(self._crear(self.agente, 'Sin seccional').status_code, 400)
+
+    # ---- lista de seccionales para la interfaz -------------------------------------------------
+
+    def test_la_lista_de_seccionales_dice_quien_puede_elegir(self):
+        self.entrar(self.resp_bq)
+        propio = self.client.get(reverse('api-chatbot-seccionales')).json()
+        self.assertEqual(propio['puede_elegir_seccional'], False)
+        self.assertEqual(propio['seccional_propia'], self.bq.id)
+        self.assertEqual(sorted(s['ciudad'] for s in propio['seccionales']), ['Barranquilla', 'Cali'])
+        self.entrar(self.admin)
+        self.assertEqual(self.client.get(reverse('api-chatbot-seccionales')).json()['puede_elegir_seccional'], True)
+        self.client.logout()
+        self.client.cookies.clear()
+        self.assertIn(self.client.get(reverse('api-chatbot-seccionales')).status_code, (401, 403))

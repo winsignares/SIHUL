@@ -4,8 +4,11 @@ import type {
     ChatbotAgentePayload,
     ChatbotDocumento,
     ChatbotResponsable,
+    ConfigSeccionalesChatbot,
     GuardarPreguntaRespuestaPayload,
+    GuardarPreguntaSugeridaPayload,
     PreguntaRespuestaChatbot,
+    PreguntaSugeridaChatbot,
     SubirDocumentoChatbotPayload,
 } from '../../models/chatbot/chatbotAdmin.model';
 
@@ -14,8 +17,11 @@ export type {
     ChatbotAgentePayload,
     ChatbotDocumento,
     ChatbotResponsable,
+    ConfigSeccionalesChatbot,
     GuardarPreguntaRespuestaPayload,
+    GuardarPreguntaSugeridaPayload,
     PreguntaRespuestaChatbot,
+    PreguntaSugeridaChatbot,
 } from '../../models/chatbot/chatbotAdmin.model';
 
 function formDataPreguntaRespuesta(data: GuardarPreguntaRespuestaPayload): FormData {
@@ -62,6 +68,29 @@ export const chatbotAdminAPI = {
 
     eliminarChatbot: (id: number): Promise<unknown> =>
         apiClient.delete(`/chatbot/agentes/${id}/`),
+
+    /**
+     * Seccionales con chatbots y qué puede hacer quien consulta (elegir seccional o usar la suya)
+     */
+    obtenerSeccionales: (): Promise<ConfigSeccionalesChatbot> =>
+        apiClient.get<ConfigSeccionalesChatbot>('/chatbot/seccionales/'),
+
+    /**
+     * Preguntas sugeridas (atajos del chat): las generales y las de la seccional de quien consulta
+     */
+    listarPreguntasSugeridas: async (agente?: number): Promise<PreguntaSugeridaChatbot[]> => {
+        const response = await apiClient.get<unknown>(`/chatbot/preguntas/${agente ? `?agente=${agente}` : ''}`);
+        return extraerLista<PreguntaSugeridaChatbot>(response);
+    },
+
+    crearPreguntaSugerida: (data: GuardarPreguntaSugeridaPayload): Promise<PreguntaSugeridaChatbot> =>
+        apiClient.post('/chatbot/preguntas/', data),
+
+    actualizarPreguntaSugerida: (id: number, data: Partial<GuardarPreguntaSugeridaPayload>): Promise<PreguntaSugeridaChatbot> =>
+        apiClient.patch(`/chatbot/preguntas/${id}/`, data),
+
+    eliminarPreguntaSugerida: (id: number): Promise<unknown> =>
+        apiClient.delete(`/chatbot/preguntas/${id}/`),
 
     /**
      * Personas a las que se puede asignar la carga de documentación de un chatbot
