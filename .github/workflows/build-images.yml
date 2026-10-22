@@ -61,5 +61,9 @@ jobs:
           push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Clave PUBLICA de reCAPTCHA (se incrusta al compilar el frontend; los otros servicios la ignoran).
+          # La rama main publica la imagen de produccion; develop, la de pruebas.
+          build-args: |
+            VITE_RECAPTCHA_SITE_KEY=${{ github.ref_name == 'main' && vars.RECAPTCHA_SITE_KEY_PROD || vars.RECAPTCHA_SITE_KEY_TEST }}
           cache-from: type=gha,scope=${{ matrix.servicio }}
           cache-to: type=gha,scope=${{ matrix.servicio }},mode=max
