@@ -649,45 +649,9 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         return super().get_queryset()
 
     def _build_componentes(self, usuario):
-        if not usuario.rol:
-            return []
+        from mysite.auth_helpers import construir_componentes
 
-        from componentes.models import ComponenteRol, ComponenteUsuario
-
-        componentes_rol = ComponenteRol.objects.filter(rol=usuario.rol).select_related('componente')
-        componentes_usuario = ComponenteUsuario.objects.filter(usuario=usuario).select_related('componente')
-        overrides = {item.componente_id: item for item in componentes_usuario}
-
-        componentes = []
-        for cr in componentes_rol:
-            override = overrides.get(cr.componente_id)
-            if override and not override.activo:
-                continue
-
-            permiso = override.permiso if override else cr.permiso
-            componentes.append(
-                {
-                    'id': cr.componente.id,
-                    'nombre': cr.componente.nombre,
-                    'descripcion': cr.componente.descripcion,
-                    'permiso': permiso,
-                }
-            )
-
-        componentes_por_id = {item['id']: item for item in componentes}
-        for override in componentes_usuario:
-            if not override.activo:
-                continue
-
-            if override.componente_id not in componentes_por_id:
-                componentes_por_id[override.componente_id] = {
-                    'id': override.componente.id,
-                    'nombre': override.componente.nombre,
-                    'descripcion': override.componente.descripcion,
-                    'permiso': override.permiso,
-                }
-
-        return list(componentes_por_id.values())
+        return construir_componentes(usuario)
 
     def _build_espacios_permitidos(self, usuario):
         from espacios.models import EspacioPermitido

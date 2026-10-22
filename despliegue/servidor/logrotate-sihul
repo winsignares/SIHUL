@@ -1,0 +1,8 @@
+# Copiar a /etc/logrotate.d/sihul
+/var/log/sihul-backup/verificacion.log {
+    monthly
+    rotate 6
+    compress
+    missingok
+    notifempty
+}

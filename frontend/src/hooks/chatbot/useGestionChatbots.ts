@@ -8,6 +8,7 @@ import {
     type ChatbotAgentePayload,
     type ChatbotDocumento,
     type ChatbotResponsable,
+    type ConfigSeccionalesChatbot,
 } from '../../services/chatbot/chatbotAdminAPI';
 import { limiteDocumentos, MAX_DOCUMENTOS, MIN_DOCUMENTOS, maxDocumentosPorDefecto, type ChatbotTipo } from '../../models/chatbot/chatbotAdmin.model';
 
@@ -24,6 +25,8 @@ export type ChatbotFormState = {
     instrucciones_adicionales: string;
     max_documentos: number;
     responsables: ChatbotResponsable[];
+    /** Ids de las seccionales donde está disponible; vacío = todas. */
+    seccionales: number[];
 };
 
 // El modelo Agente conserva endpoint_url por compatibilidad histórica (webhook de n8n),
@@ -45,6 +48,7 @@ const emptyForm: ChatbotFormState = {
     instrucciones_adicionales: '',
     max_documentos: maxDocumentosPorDefecto('normativo'),
     responsables: [],
+    seccionales: [],
 };
 
 // apiClient lanza un objeto { message, status } (no una instancia de Error)
@@ -85,6 +89,7 @@ export function useGestionChatbots() {
     const [dialogChatbotOpen, setDialogChatbotOpen] = useState(false);
     const [editingChatbotId, setEditingChatbotId] = useState<number | null>(null);
     const [form, setForm] = useState<ChatbotFormState>(emptyForm);
+    const [configSeccionales, setConfigSeccionales] = useState<ConfigSeccionalesChatbot | null>(null);
 
     const [filtroChatbotId, setFiltroChatbotId] = useState<string>('all');
     const [busquedaDocumento, setBusquedaDocumento] = useState('');
@@ -118,6 +123,10 @@ export function useGestionChatbots() {
     // componente «Gestión de Chatbots» (asignable en Gestión de Roles), de cualquier seccional.
     const puedeGestionarChatbots = normalizeRole(user?.rol?.nombre) === 'admin'
         || hasEditPermission('Gestión de Chatbots');
+
+    useEffect(() => {
+        chatbotAdminAPI.obtenerSeccionales().then(setConfigSeccionales).catch(() => setConfigSeccionales(null));
+    }, []);
 
     const cargarChatbots = useCallback(async () => {
         setLoadingChatbots(true);
@@ -272,6 +281,7 @@ export function useGestionChatbots() {
             instrucciones_adicionales: chatbot.instrucciones_adicionales ?? '',
             max_documentos: limiteDocumentos(chatbot),
             responsables: chatbot.responsables ?? [],
+            seccionales: chatbot.seccionales ?? [],
         });
         setDialogChatbotOpen(true);
     };
@@ -303,6 +313,7 @@ export function useGestionChatbots() {
                 max_documentos: Math.min(MAX_DOCUMENTOS, Math.max(MIN_DOCUMENTOS, Math.round(form.max_documentos) || maxDocumentosPorDefecto(form.tipo))),
                 endpoint_url: editingChatbotId ? undefined : LEGACY_ENDPOINT_URL,
                 responsables_ids: form.responsables.map((persona) => persona.id),
+                seccionales: form.seccionales,
             };
 
             if (editingChatbotId) {
@@ -533,6 +544,7 @@ export function useGestionChatbots() {
         editingChatbotId,
         form,
         setForm,
+        configSeccionales,
         abrirNuevoChatbot,
         abrirEdicionChatbot,
         guardarChatbot,

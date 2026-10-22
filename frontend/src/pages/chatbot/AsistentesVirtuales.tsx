@@ -19,6 +19,7 @@ import {
   Star,
   MessageCircle,
   RotateCcw,
+  MapPin,
   /* History, */
   Clock,
   X
@@ -145,6 +146,35 @@ export default function AsistentesVirtuales() {
               <Sparkles className="w-5 h-5 text-yellow-300" />
             </motion.div>
           </div>
+
+          {/* Seccional (acceso público): define qué asistentes se ven y con qué información responden */}
+          {esPublico && (
+            <div className="rounded-2xl border border-white/25 bg-white/10 p-3 shadow-inner backdrop-blur-sm">
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/90">
+                <MapPin className="h-3.5 w-3.5 text-yellow-300" />
+                Tu seccional
+              </div>
+              <Select
+                value={seccionalPublica}
+                onValueChange={setSeccionalPublica}
+                disabled={cargandoSeccionales || seccionalesPublico.length === 0}
+              >
+                <SelectTrigger className="h-11 w-full rounded-xl border-white/40 bg-white text-slate-900 shadow-md">
+                  <SelectValue placeholder={cargandoSeccionales ? 'Cargando seccionales...' : 'Selecciona tu seccional'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {seccionalesPublico.map((seccional) => (
+                    <SelectItem key={seccional} value={seccional}>
+                      {seccional}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-2 text-[11px] leading-snug text-white/75">
+                Verás los asistentes disponibles en tu seccional y las respuestas usarán su información.
+              </p>
+            </div>
+          )}
 
           {/* Buscador */}
           <motion.div
@@ -365,32 +395,6 @@ export default function AsistentesVirtuales() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-slate-900 dark:text-slate-100">{asistenteActivo.nombre}</h2>
-                      {esPublico && (
-                        <div className="min-w-[200px]">
-                          <Select
-                            value={seccionalPublica}
-                            onValueChange={setSeccionalPublica}
-                            disabled={cargandoSeccionales || seccionalesPublico.length === 0}
-                          >
-                            <SelectTrigger className="h-8 bg-white/90 dark:bg-slate-900/50">
-                              <SelectValue
-                                placeholder={
-                                  cargandoSeccionales
-                                    ? 'Cargando seccionales...'
-                                    : 'Selecciona tu seccional'
-                                }
-                              />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {seccionalesPublico.map((seccional) => (
-                                <SelectItem key={seccional} value={seccional}>
-                                  {seccional}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
                     </div>
                     <div className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1">
                       {isTyping ? (

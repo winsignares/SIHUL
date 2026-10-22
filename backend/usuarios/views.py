@@ -358,19 +358,8 @@ def login(request):
         
         
         # Obtener componentes del rol del usuario
-        componentes = []
-        if u.rol:
-            from componentes.models import ComponenteRol
-            componentes_rol = ComponenteRol.objects.filter(rol=u.rol).select_related('componente')
-            componentes = [
-                {
-                    "id": cr.componente.id,
-                    "nombre": cr.componente.nombre,
-                    "descripcion": cr.componente.descripcion,
-                    "permiso": cr.permiso  # Enviar valor crudo ('VER' o 'EDITAR')
-                }
-                for cr in componentes_rol
-            ]
+        from mysite.auth_helpers import construir_componentes
+        componentes = construir_componentes(u)
         
         # Obtener espacios permitidos para el usuario
         espacios_permitidos = []
@@ -461,19 +450,8 @@ def session_auth_state(request):
 
         u = Usuario.objects.select_related('rol').get(id=user_id)
 
-        componentes = []
-        if u.rol:
-            from componentes.models import ComponenteRol
-            componentes_rol = ComponenteRol.objects.filter(rol=u.rol).select_related('componente')
-            componentes = [
-                {
-                    "id": cr.componente.id,
-                    "nombre": cr.componente.nombre,
-                    "descripcion": cr.componente.descripcion,
-                    "permiso": cr.permiso
-                }
-                for cr in componentes_rol
-            ]
+        from mysite.auth_helpers import construir_componentes
+        componentes = construir_componentes(u)
 
         # Firma estable para detectar cambios sin transferir payload completo.
         parts = []

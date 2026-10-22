@@ -23,7 +23,7 @@ from sedes.models import Seccional, Sede
 from usuarios.models import Rol, Usuario
 
 from .anexos import AnexoInvalido, generar_token, leer_token, validar_anexo
-from .models import Agente, AgenteResponsable, AnexoRespuesta, Conversacion, PreguntaRespuesta
+from .models import Agente, AgenteResponsable, AnexoRespuesta, Conversacion, PreguntaRespuesta, PreguntaSugerida
 
 _OLE = b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'
 
@@ -526,24 +526,104 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         self.assertIn(self._subir().status_code, (401, 403))
 
     def test_permiso_solo_ver_no_alcanza(self):
-        AgenteResponsable.objects.create(agente=self.agente, usuario=self.solo_ver)
+        # Con VER y sin ser responsable de ningún chatbot no se puede cargar nada.
         self.entrar(self.solo_ver)
         with mock.patch('chatbot.admin_views.requests.post') as post:
             self.assertEqual(self._subir().status_code, 403)
         post.assert_not_called()
 
-    def test_excepcion_individual_concede_documentacion_sin_permiso_del_rol(self):
-        # Es la vía para dar a una persona solo la carga de documentos sin tocar su rol.
+    def test_ser_responsable_basta_aunque_el_rol_no_traiga_el_componente(self):
+        # Una persona con un rol cualquiera (sin ningún componente de chatbots) sube documentos
+        # solo por estar asignada como responsable de un chatbot, y solo de ese.
+        self.entrar(self.sin_rol_util)
+        with mock.patch('chatbot.admin_views.requests.post') as post:
+            self.assertEqual(self._subir().status_code, 403)  # todavía no es responsable
+        post.assert_not_called()
         AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_rol_util)
+        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
+            self.assertEqual(self._subir().status_code, 200)
+        with mock.patch('chatbot.admin_views.requests.post') as post:
+            self.assertEqual(self._subir(self.otro_agente).status_code, 403)  # otro chatbot: no
+        post.assert_not_called()
+        self.assertEqual(self._crear_agente().status_code, 403)  # y no administra chatbots
+
+    def test_el_responsable_recibe_el_componente_en_su_lista(self):
+        from mysite.api_views import UsuarioViewSet
+
+        nombres = lambda usuario: [c['nombre'] for c in UsuarioViewSet()._build_componentes(usuario)]
+        self.assertNotIn('Gestión de Documentación de Chatbots', nombres(self.sin_rol_util))
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_rol_util)
+        componentes = UsuarioViewSet()._build_componentes(self.sin_rol_util)
+        documentacion = [c for c in componentes if c['nombre'] == 'Gestión de Documentación de Chatbots']
+        self.assertEqual([c['permiso'] for c in documentacion], ['EDITAR'])
+        self.assertNotIn('Gestión de Chatbots', [c['nombre'] for c in componentes])
+
+    def test_el_menu_real_del_navegador_incluye_la_documentacion_del_responsable(self):
+        # nginx reescribe /api/usuarios/login/ y /session-auth-state/ a /usuarios/..., que son las
+        # vistas de usuarios.views: tienen que entregar los MISMOS componentes que el ViewSet.
+        from django.contrib.auth.hashers import make_password
+
+        clave = make_password('Clave-test-1')
+        Usuario.objects.filter(pk=self.sin_rol_util.pk).update(contrasena_hash=clave, password=clave)
+        doc = 'Gestión de Documentación de Chatbots'
+
+        def entrar_y_leer():
+            r = self.client.post(reverse('login_usuario'), json.dumps(
+                {'correo': self.sin_rol_util.correo, 'contrasena': 'Clave-test-1'}), content_type='application/json')
+            self.assertEqual(r.status_code, 200)
+            estado = self.client.get(reverse('session_auth_state'))
+            self.assertEqual(estado.status_code, 200)
+            return [c['nombre'] for c in r.json()['componentes']], [c['nombre'] for c in estado.json()['componentes']]
+
+        en_login, en_estado = entrar_y_leer()
+        self.assertNotIn(doc, en_login + en_estado)
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_rol_util)
+        en_login, en_estado = entrar_y_leer()
+        self.assertIn(doc, en_login)
+        self.assertIn(doc, en_estado)
+
+    def test_el_menu_real_respeta_los_permisos_individuales(self):
+        from django.contrib.auth.hashers import make_password
+
+        clave = make_password('Clave-test-1')
+        Usuario.objects.filter(pk=self.sin_rol_util.pk).update(contrasena_hash=clave, password=clave)
+        gestion = Componente.objects.get(nombre='Gestión de Chatbots')
+        ComponenteUsuario.objects.create(usuario=self.sin_rol_util, componente=gestion, permiso='EDITAR', activo=True)
+        r = self.client.post(reverse('login_usuario'), json.dumps(
+            {'correo': self.sin_rol_util.correo, 'contrasena': 'Clave-test-1'}), content_type='application/json')
+        self.assertIn('Gestión de Chatbots', [c['nombre'] for c in r.json()['componentes']])
+
+    def test_el_responsable_con_solo_ver_pasa_a_editar(self):
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.solo_ver)
+        self.entrar(self.solo_ver)
+        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
+            self.assertEqual(self._subir().status_code, 200)
+
+    def test_una_revocacion_expresa_gana_a_la_asignacion(self):
+        from mysite.api_views import UsuarioViewSet
+
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_rol_util)
+        ComponenteUsuario.objects.create(
+            usuario=self.sin_rol_util, componente=self.documentacion, permiso='EDITAR', activo=False,
+        )
         self.entrar(self.sin_rol_util)
         with mock.patch('chatbot.admin_views.requests.post') as post:
             self.assertEqual(self._subir().status_code, 403)
+        post.assert_not_called()
+        self.assertNotIn(
+            'Gestión de Documentación de Chatbots',
+            [c['nombre'] for c in UsuarioViewSet()._build_componentes(self.sin_rol_util)],
+        )
+
+    def test_excepcion_individual_tambien_concede_documentacion(self):
+        # Sigue funcionando la vía antigua: permiso individual sobre el componente.
         ComponenteUsuario.objects.create(
             usuario=self.sin_rol_util, componente=self.documentacion, permiso='EDITAR', activo=True,
         )
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_rol_util)
+        self.entrar(self.sin_rol_util)
         with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
             self.assertEqual(self._subir().status_code, 200)
-        self.assertEqual(self._crear_agente().status_code, 403)
 
     def test_excepcion_individual_inactiva_revoca_el_permiso_del_rol(self):
         ComponenteUsuario.objects.create(
@@ -564,6 +644,43 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         self.assertEqual(self._crear_agente().status_code, 403)
         with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
             self.assertEqual(self._subir().status_code, 200)
+
+    # ---- preguntas sugeridas: solo las escribe quien gestiona la documentación de ese chatbot
+    def _crear_pregunta(self, agente, texto='¿Pregunta de prueba?'):
+        return self.client.post(reverse('api-pregunta-list-create'), json.dumps(
+            {'agente': agente.id, 'pregunta': texto, 'orden': 1, 'activo': True}), content_type='application/json')
+
+    def test_un_estudiante_no_crea_preguntas_sugeridas(self):
+        self.entrar(self.estudiante)
+        self.assertEqual(self._crear_pregunta(self.agente).status_code, 403)
+        self.assertEqual(PreguntaSugerida.objects.filter(agente=self.agente, pregunta__startswith='¿Pregunta de').count(), 0)
+
+    def test_cualquier_autenticado_puede_verlas(self):
+        PreguntaSugerida.objects.create(agente=self.agente, pregunta='¿Horario?', orden=1)
+        self.entrar(self.estudiante)
+        self.assertEqual(self.client.get(reverse('api-pregunta-list-create')).status_code, 200)
+
+    def test_el_responsable_gestiona_las_de_su_chatbot_y_no_las_de_otro(self):
+        self.entrar(self.cargador)  # responsable de self.agente
+        creada = self._crear_pregunta(self.agente)
+        self.assertEqual(creada.status_code, 201)
+        self.assertEqual(self._crear_pregunta(self.otro_agente).status_code, 403)
+        ajena = PreguntaSugerida.objects.create(agente=self.otro_agente, pregunta='Ajena', orden=1)
+        detalle_ajena = reverse('api-pregunta-detail', args=[ajena.id])
+        self.assertEqual(self.client.delete(detalle_ajena).status_code, 403)
+        self.assertEqual(self.client.patch(detalle_ajena, json.dumps({'pregunta': 'x'}), content_type='application/json').status_code, 403)
+        propia = reverse('api-pregunta-detail', args=[creada.json()['id']])
+        self.assertEqual(self.client.patch(propia, json.dumps({'pregunta': 'Editada'}), content_type='application/json').status_code, 200)
+        mover = self.client.patch(propia, json.dumps({'agente': self.otro_agente.id}), content_type='application/json')
+        self.assertEqual(mover.status_code, 403)  # tampoco puede pasarla a un chatbot ajeno
+        self.assertEqual(self.client.delete(propia).status_code, 204)
+
+    def test_quien_administra_chatbots_gestiona_las_de_cualquiera(self):
+        self.entrar(self.gestor)
+        self.assertEqual(self._crear_pregunta(self.otro_agente).status_code, 201)
+
+    def test_un_anonimo_no_las_escribe(self):
+        self.assertIn(self._crear_pregunta(self.agente).status_code, (401, 403))
 
     # ---- alcance por chatbot asignado -------------------------------------------------------
 
@@ -751,3 +868,48 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
     def test_busqueda_de_candidatos_solo_para_quien_administra(self):
         self.entrar(self.cargador)
         self.assertEqual(self.client.get(reverse('api-responsables-candidatos'), {'q': 'cargador'}).status_code, 403)
+
+
+class AsignarResponsablesCommandTests(_BaseAnexos):
+    """El comando asigna responsables a partir de correos; sin --aplicar solo muestra lo que haría."""
+
+    def _ejecutar(self, *args):
+        from django.core.management import call_command
+
+        salida = io.StringIO()
+        call_command('asignar_responsables_chatbot', *args, stdout=salida)
+        return salida.getvalue()
+
+    def test_la_vista_previa_no_guarda_nada(self):
+        texto = self._ejecutar('--agente', str(self.agente.id), '--correos', self.admin.correo)
+        self.assertIn('VISTA PREVIA', texto)
+        self.assertIn('ASIGNAR', texto)
+        self.assertFalse(AgenteResponsable.objects.filter(usuario=self.admin).exists())
+
+    def test_aplicar_asigna_por_nombre_o_id_y_es_idempotente(self):
+        self._ejecutar('--agente', self.agente.nombre.upper(), '--correos', self.admin.correo.upper(), '--aplicar')
+        self.assertTrue(AgenteResponsable.objects.filter(usuario=self.admin, agente=self.agente).exists())
+        texto = self._ejecutar('--agente', str(self.agente.id), '--correos', self.admin.correo, '--aplicar')
+        self.assertIn('ya estaba', texto)
+        self.assertEqual(AgenteResponsable.objects.filter(usuario=self.admin, agente=self.agente).count(), 1)
+
+    def test_informa_correos_inexistentes_y_avisa_si_falta_seccional(self):
+        texto = self._ejecutar(
+            '--agente', str(self.agente.id), '--correos', 'nadie@unilibre.edu.co,' + self.coordinador_cali.correo, '--aplicar',
+        )
+        self.assertIn('NO EXISTE', texto)
+        self.assertIn('nadie@unilibre.edu.co', texto)
+        self.assertTrue(AgenteResponsable.objects.filter(usuario=self.coordinador_cali).exists())
+
+    def test_quitar_elimina_la_asignacion(self):
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.admin)
+        self._ejecutar('--agente', str(self.agente.id), '--correos', self.admin.correo, '--quitar', '--aplicar')
+        self.assertFalse(AgenteResponsable.objects.filter(usuario=self.admin).exists())
+
+    def test_chatbot_inexistente_da_error_con_la_lista_disponible(self):
+        from django.core.management.base import CommandError
+
+        with self.assertRaises(CommandError) as error:
+            self._ejecutar('--agente', 'No existe', '--correos', self.admin.correo)
+        self.assertIn(self.agente.nombre, str(error.exception))
+

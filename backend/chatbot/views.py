@@ -1,9 +1,10 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 from .anexos import anexos_json
+from .sedes import agentes_visibles, ids_seccionales
 from .models import Agente, AnexoRespuesta, PreguntaSugerida, Conversacion
 from usuarios.models import Usuario
 import json
@@ -19,31 +20,7 @@ logger = logging.getLogger(__name__)
 # a la respuesta ni al historial.
 RAG_ERROR_MESSAGE = 'Lo siento, en este momento no puedo responder tu pregunta. Intenta de nuevo en unos minutos.'
 
-FASTAPI_SEDES = {
-    'nacional',
-    'virtual',
-    'el_socorro',
-    'cali',
-    'barranquilla',
-    'bogota',
-    'cucuta',
-    'cartagena',
-    'pereira',
-}
-
-
-def _normalize_sede_value(raw_value):
-    if not raw_value:
-        return None
-
-    normalized = unicodedata.normalize('NFKD', str(raw_value))
-    normalized = normalized.encode('ascii', 'ignore').decode('ascii')
-    normalized = normalized.strip().lower().replace(' ', '_')
-    normalized = re.sub(r'[^a-z0-9_]+', '', normalized)
-    normalized = re.sub(r'_+', '_', normalized)
-    if normalized in FASTAPI_SEDES:
-        return normalized
-    return None
+from .sedes import FASTAPI_SEDES, normalizar_sede as _normalize_sede_value  # noqa: F401
 
 
 def _resolve_user_sede_value(usuario):
@@ -136,11 +113,15 @@ def _registrar_uso_pregunta_sugerida(pregunta_sugerida_id, agente):
         )
 
 
-def _agentes_activos_json():
-    agentes = Agente.objects.filter(activo=True).prefetch_related('preguntas')
+def _agentes_activos_json(sede_value=None):
+    """Agentes activos disponibles en una seccional (sin seccional: solo los de «todas»)."""
+    agentes = agentes_visibles(Agente.objects.filter(activo=True), sede_value).prefetch_related('preguntas')
+    ids = ids_seccionales(sede_value)
     lst = []
     for agente in agentes:
-        preguntas = agente.preguntas.filter(activo=True).order_by('-contador_uso', 'orden')[:5]
+        preguntas = agente.preguntas.filter(activo=True).filter(
+            Q(seccional__isnull=True) | Q(seccional_id__in=ids)
+        ).order_by('-contador_uso', 'orden')[:5]
         lst.append({
             'id': agente.id,
             'nombre': agente.nombre,
@@ -201,7 +182,9 @@ def enviar_pregunta(request):
             agente = Agente.objects.get(id=agente_id, activo=True)
         except Agente.DoesNotExist:
             return JsonResponse({'error': 'Agente no encontrado o inactivo'}, status=404)
-        
+        if not agente.disponible_en(sede_value):
+            return JsonResponse({'error': 'Este chatbot no está disponible en esta seccional.'}, status=403)
+
         # Generar chat_id si no existe (nueva conversación)
         if not chat_id:
             chat_id = str(uuid.uuid4())
@@ -390,9 +373,9 @@ def listar_conversaciones(request):
 
 @csrf_exempt
 def list_agentes_publico(request):
-    """Lista todos los agentes activos para usuarios públicos"""
+    """Agentes activos disponibles en la seccional elegida (?seccional=); sin ella, solo los de todas."""
     if request.method == 'GET':
-        return _agentes_activos_json()
+        return _agentes_activos_json(_normalize_sede_value(request.GET.get('seccional') or request.GET.get('sede')))
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
@@ -424,7 +407,9 @@ def enviar_pregunta_publico(request):
             agente = Agente.objects.get(id=agente_id, activo=True)
         except Agente.DoesNotExist:
             return JsonResponse({'error': 'Agente no encontrado o inactivo'}, status=404)
-        
+        if not agente.disponible_en(sede_value):
+            return JsonResponse({'error': 'Este chatbot no está disponible en esta seccional.'}, status=403)
+
         # Generar chat_id temporal (no se guardará)
         chat_id = str(client_chat_id or uuid.uuid4())
         
