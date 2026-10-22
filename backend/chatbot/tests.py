@@ -558,6 +558,41 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         self.assertEqual([c['permiso'] for c in documentacion], ['EDITAR'])
         self.assertNotIn('Gestión de Chatbots', [c['nombre'] for c in componentes])
 
+    def test_el_menu_real_del_navegador_incluye_la_documentacion_del_responsable(self):
+        # nginx reescribe /api/usuarios/login/ y /session-auth-state/ a /usuarios/..., que son las
+        # vistas de usuarios.views: tienen que entregar los MISMOS componentes que el ViewSet.
+        from django.contrib.auth.hashers import make_password
+
+        clave = make_password('Clave-test-1')
+        Usuario.objects.filter(pk=self.sin_rol_util.pk).update(contrasena_hash=clave, password=clave)
+        doc = 'Gestión de Documentación de Chatbots'
+
+        def entrar_y_leer():
+            r = self.client.post(reverse('login_usuario'), json.dumps(
+                {'correo': self.sin_rol_util.correo, 'contrasena': 'Clave-test-1'}), content_type='application/json')
+            self.assertEqual(r.status_code, 200)
+            estado = self.client.get(reverse('session_auth_state'))
+            self.assertEqual(estado.status_code, 200)
+            return [c['nombre'] for c in r.json()['componentes']], [c['nombre'] for c in estado.json()['componentes']]
+
+        en_login, en_estado = entrar_y_leer()
+        self.assertNotIn(doc, en_login + en_estado)
+        AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_rol_util)
+        en_login, en_estado = entrar_y_leer()
+        self.assertIn(doc, en_login)
+        self.assertIn(doc, en_estado)
+
+    def test_el_menu_real_respeta_los_permisos_individuales(self):
+        from django.contrib.auth.hashers import make_password
+
+        clave = make_password('Clave-test-1')
+        Usuario.objects.filter(pk=self.sin_rol_util.pk).update(contrasena_hash=clave, password=clave)
+        gestion = Componente.objects.get(nombre='Gestión de Chatbots')
+        ComponenteUsuario.objects.create(usuario=self.sin_rol_util, componente=gestion, permiso='EDITAR', activo=True)
+        r = self.client.post(reverse('login_usuario'), json.dumps(
+            {'correo': self.sin_rol_util.correo, 'contrasena': 'Clave-test-1'}), content_type='application/json')
+        self.assertIn('Gestión de Chatbots', [c['nombre'] for c in r.json()['componentes']])
+
     def test_el_responsable_con_solo_ver_pasa_a_editar(self):
         AgenteResponsable.objects.create(agente=self.agente, usuario=self.solo_ver)
         self.entrar(self.solo_ver)

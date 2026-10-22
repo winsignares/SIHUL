@@ -649,62 +649,9 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         return super().get_queryset()
 
     def _build_componentes(self, usuario):
-        if not usuario.rol:
-            return []
+        from mysite.auth_helpers import construir_componentes
 
-        from componentes.models import Componente, ComponenteRol, ComponenteUsuario
-
-        componentes_rol = ComponenteRol.objects.filter(rol=usuario.rol).select_related('componente')
-        componentes_usuario = ComponenteUsuario.objects.filter(usuario=usuario).select_related('componente')
-        overrides = {item.componente_id: item for item in componentes_usuario}
-
-        componentes = []
-        for cr in componentes_rol:
-            override = overrides.get(cr.componente_id)
-            if override and not override.activo:
-                continue
-
-            permiso = override.permiso if override else cr.permiso
-            componentes.append(
-                {
-                    'id': cr.componente.id,
-                    'nombre': cr.componente.nombre,
-                    'descripcion': cr.componente.descripcion,
-                    'permiso': permiso,
-                }
-            )
-
-        componentes_por_id = {item['id']: item for item in componentes}
-        for override in componentes_usuario:
-            if not override.activo:
-                continue
-
-            if override.componente_id not in componentes_por_id:
-                componentes_por_id[override.componente_id] = {
-                    'id': override.componente.id,
-                    'nombre': override.componente.nombre,
-                    'descripcion': override.componente.descripcion,
-                    'permiso': override.permiso,
-                }
-
-        # Quien es responsable de algún chatbot recibe «Gestión de Documentación de Chatbots»
-        # sin importar su rol (misma regla que mysite.auth_helpers.get_componente_permiso).
-        from mysite.auth_helpers import COMPONENTE_DOCUMENTACION_CHATBOTS, es_responsable_de_chatbots
-
-        if es_responsable_de_chatbots(usuario):
-            documentacion = Componente.objects.filter(nombre=COMPONENTE_DOCUMENTACION_CHATBOTS).first()
-            if documentacion:
-                actual = componentes_por_id.get(documentacion.id)
-                revocado = any(o.componente_id == documentacion.id and not o.activo for o in componentes_usuario)
-                if not revocado and (actual is None or actual['permiso'] != 'EDITAR'):
-                    componentes_por_id[documentacion.id] = {
-                        'id': documentacion.id,
-                        'nombre': documentacion.nombre,
-                        'descripcion': documentacion.descripcion,
-                        'permiso': 'EDITAR',
-                    }
-
-        return list(componentes_por_id.values())
+        return construir_componentes(usuario)
 
     def _build_espacios_permitidos(self, usuario):
         from espacios.models import EspacioPermitido
