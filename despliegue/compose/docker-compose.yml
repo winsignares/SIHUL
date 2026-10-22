@@ -36,7 +36,9 @@ x-backend-env: &backend-env
   REDIS_URL: redis://redis:6379/0
   DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?falta DJANGO_SECRET_KEY en el .env del entorno}
-  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?falta DJANGO_ALLOWED_HOSTS en el .env del entorno}
+  # Se anaden siempre los nombres internos: el healthcheck consulta http://127.0.0.1:8000 y Django
+  # rechazaria (400) ese Host si el valor heredado del servidor actual no los trae.
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?falta DJANGO_ALLOWED_HOSTS en el .env del entorno},127.0.0.1,localhost,backend
   FRONTEND_URL: ${FRONTEND_URL:?falta FRONTEND_URL en el .env del entorno}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
   CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
