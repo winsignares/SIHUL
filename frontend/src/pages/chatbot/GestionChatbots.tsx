@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { Bot, FilePenLine, FileText, FileUp, MessageSquarePlus, PauseCircle, PlayCircle, Plus, Save, Search, Settings2, Trash2, UploadCloud } from 'lucide-react';
 import { PreguntasRespuestasTab } from '../../components/chatbot/PreguntasRespuestasTab';
+import { ResponsablesSelector } from '../../components/chatbot/ResponsablesSelector';
 import { Badge } from '../../share/badge';
 import { Button } from '../../share/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
@@ -20,7 +21,7 @@ const mostrarSeccional = (value: string) => value.replaceAll('_', ' ').replace(/
 export default function GestionChatbots() {
   const state = useGestionChatbots();
   const {
-    chatbots, chatbotsPorId, documentos, documentosFiltrados, chatbotsDisponiblesParaCarga, documentosDelChatbotSeleccionado, limiteDelChatbotSeleccionado, cambiarPrioridadDocumento, seccionalUsuario, seccionalValida, puedeGestionarChatbots,
+    chatbotsGestionables, chatbotsPorId, documentos, documentosFiltrados, chatbotsDisponiblesParaCarga, documentosDelChatbotSeleccionado, limiteDelChatbotSeleccionado, cambiarPrioridadDocumento, seccionalUsuario, seccionalValida, puedeGestionarChatbots,
     loadingDocumentos, loadingSeccional, uploading, accionId,
     filtroChatbotId, setFiltroChatbotId, busquedaDocumento, setBusquedaDocumento,
     uploadChatbotId, setUploadChatbotId, uploadFile, seleccionarArchivoCarga, uploadInputKey, puedeSubirDocumento,
@@ -79,7 +80,7 @@ export default function GestionChatbots() {
                 <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><Input value={busquedaDocumento} onChange={(event) => setBusquedaDocumento(event.target.value)} placeholder="Buscar por documento o chatbot" className="pl-9" /></div>
                 <Select value={filtroChatbotId} onValueChange={setFiltroChatbotId}>
                   <SelectTrigger><SelectValue placeholder="Filtrar por chatbot" /></SelectTrigger>
-                  <SelectContent><SelectItem value="all">Todos los chatbots</SelectItem>{chatbots.map((chatbot) => <SelectItem key={chatbot.id} value={String(chatbot.id)}>{chatbot.nombre}</SelectItem>)}</SelectContent>
+                  <SelectContent><SelectItem value="all">Todos los chatbots</SelectItem>{chatbotsGestionables.map((chatbot) => <SelectItem key={chatbot.id} value={String(chatbot.id)}>{chatbot.nombre}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </CardHeader>
@@ -114,7 +115,7 @@ export default function GestionChatbots() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="preguntas"><PreguntasRespuestasTab seccional={seccionalUsuario} seccionalValida={seccionalValida} chatbots={chatbots} /></TabsContent>
+        <TabsContent value="preguntas"><PreguntasRespuestasTab seccional={seccionalUsuario} seccionalValida={seccionalValida} chatbots={chatbotsGestionables} /></TabsContent>
 
         {puedeGestionarChatbots && <TabsContent value="chatbots"><ChatbotsTable state={state} /></TabsContent>}
       </Tabs>
@@ -145,7 +146,7 @@ function ChatbotsTable({ state }: { state: GestionState }) {
       {loadingChatbots ? <p className="px-6 py-5 text-sm text-slate-500">Cargando chatbots...</p> : <div className="overflow-x-auto sm:rounded-xl sm:border"><Table className="min-w-[760px] table-fixed">
         <TableHeader><TableRow className="bg-slate-50"><TableHead className="w-[20%] text-center">Nombre</TableHead><TableHead className="w-[48%] text-center">Descripción</TableHead><TableHead className="w-[12%] text-center">Estado</TableHead><TableHead className="w-[20%] text-center">Acciones</TableHead></TableRow></TableHeader>
         <TableBody>{chatbotsFiltrados.length === 0 ? <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-500">{chatbots.length === 0 ? 'No hay chatbots registrados.' : 'Ningún chatbot coincide con el filtro.'}</TableCell></TableRow> : chatbotsFiltrados.map((chatbot) => <TableRow key={chatbot.id}>
-          <TableCell className="whitespace-normal break-words text-center font-medium">{chatbot.nombre}<div className="mt-1"><Badge variant="outline" className="text-[10px] font-normal">{CHATBOT_TIPOS.find((tipo) => tipo.value === (chatbot.tipo ?? 'normativo'))?.label}</Badge></div></TableCell><TableCell className="whitespace-normal break-words px-4 text-left leading-5 text-slate-600">{chatbot.descripcion}</TableCell>
+          <TableCell className="whitespace-normal break-words text-center font-medium">{chatbot.nombre}<div className="mt-1"><Badge variant="outline" className="text-[10px] font-normal">{CHATBOT_TIPOS.find((tipo) => tipo.value === (chatbot.tipo ?? 'normativo'))?.label}</Badge></div></TableCell><TableCell className="whitespace-normal break-words px-4 text-left leading-5 text-slate-600">{chatbot.descripcion}<div className="mt-1 text-xs text-slate-500">{chatbot.responsables && chatbot.responsables.length > 0 ? `Responsables de documentación: ${chatbot.responsables.map((persona) => persona.nombre).join(', ')}` : 'Sin responsables asignados (solo quienes administran chatbots pueden cargarle documentos).'}</div></TableCell>
           <TableCell className="text-center"><Badge className={chatbot.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>{chatbot.activo ? 'Activo' : 'Inactivo'}</Badge></TableCell>
           <TableCell><div className="flex justify-center gap-2"><Button size="sm" variant="outline" onClick={() => abrirEdicionChatbot(chatbot)} title="Editar chatbot"><Settings2 className="h-4 w-4" /></Button><Button size="sm" variant="outline" disabled={accionId === chatbot.id} onClick={() => void alternarActivoChatbot(chatbot)} title={chatbot.activo ? 'Desactivar' : 'Activar'}>{chatbot.activo ? <PauseCircle className="h-4 w-4 text-amber-600" /> : <PlayCircle className="h-4 w-4 text-emerald-600" />}</Button><Button size="sm" variant="destructive" disabled={accionId === chatbot.id} onClick={() => void eliminarChatbot(chatbot)} title="Eliminar chatbot"><Trash2 className="h-4 w-4" /></Button></div></TableCell>
         </TableRow>)}</TableBody>
@@ -192,6 +193,9 @@ function ChatbotDialog({ state }: { state: GestionState }) {
       <div className="space-y-2 md:col-span-2"><Label>Máximo de documentos por seccional</Label>
         <Input type="number" min={Math.max(MIN_DOCUMENTOS, cantidadDocumentosEnEdicion)} max={MAX_DOCUMENTOS} value={form.max_documentos} onChange={(event) => setForm((prev) => ({ ...prev, max_documentos: Number(event.target.value) }))} />
         <p className="text-xs text-slate-500">Cantidad máxima de documentos que este chatbot puede tener en cada seccional, entre {MIN_DOCUMENTOS} y {MAX_DOCUMENTOS} (por defecto 10 en normativos y 5 en investigativos). Más documentos restan precisión y encarecen cada consulta. {editingChatbotId ? `Hoy tiene ${cantidadDocumentosEnEdicion} en tu seccional: solo puedes bajarlo hasta esa cantidad; para reducirlo más, elimina documentos antes.` : 'Podrás bajarlo después solo hasta la cantidad de documentos que tenga.'}</p>
+      </div>
+      <div className="space-y-2 md:col-span-2"><Label>Responsables de documentación</Label>
+        <ResponsablesSelector value={form.responsables} onChange={(responsables) => setForm((prev) => ({ ...prev, responsables }))} />
       </div>
       <div className="space-y-2 md:col-span-2"><Label>Instrucciones adicionales (opcional)</Label><Textarea rows={3} maxLength={MAX_INSTRUCCIONES_ADICIONALES} placeholder="Ej.: Responde siempre en máximo tres frases." value={form.instrucciones_adicionales} onChange={(event) => setForm((prev) => ({ ...prev, instrucciones_adicionales: event.target.value }))} />
         <p className="text-xs text-slate-500">Ajustes finos que se suman al tipo. No pueden anular la regla de responder solo con los documentos cargados. {form.instrucciones_adicionales.length}/{MAX_INSTRUCCIONES_ADICIONALES}</p>

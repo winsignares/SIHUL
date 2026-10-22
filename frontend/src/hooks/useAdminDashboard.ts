@@ -658,7 +658,13 @@ export function useAdminDashboard(propsUserName?: string, propsUserRole?: string
             sections.flatMap(section => section.items.map(item => item.code))
         );
 
-        const dynamicComponents = components.filter(c => !usedComponentNames.has(c.nombre));
+        // «Gestión de Documentación de Chatbots» abre la misma pantalla que «Gestión de
+        // Chatbots»: quien tiene ambas ve una sola entrada en el menú.
+        const tieneGestionChatbots = components.some(c => c.nombre === 'Gestión de Chatbots');
+        const dynamicComponents = components.filter(c =>
+            !usedComponentNames.has(c.nombre)
+            && !(tieneGestionChatbots && c.nombre === 'Gestión de Documentación de Chatbots')
+        );
 
         if (dynamicComponents.length > 0) {
             sections.push({

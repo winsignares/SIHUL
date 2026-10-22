@@ -150,7 +150,8 @@ function ProtectedRoute({
   requiredComponent
 }: {
   children: React.ReactNode;
-  requiredComponent?: string; // Nombre del componente requerido
+  // Nombre del componente requerido; con una lista basta con tener cualquiera de ellos.
+  requiredComponent?: string | string[];
 }) {
   const { isAuthenticated, hasPermission } = useAuth();
 
@@ -163,14 +164,15 @@ function ProtectedRoute({
     return <>{children}</>;
   }
 
-  // Verificar si el usuario tiene el componente
-  if (!hasPermission(requiredComponent)) {
-    console.warn('[ProtectedRoute] Acceso denegado a componente:', requiredComponent);
+  // Verificar si el usuario tiene el componente (o alguno de la lista)
+  const requeridos = Array.isArray(requiredComponent) ? requiredComponent : [requiredComponent];
+  if (!requeridos.some((nombre) => hasPermission(nombre))) {
+    console.warn('[ProtectedRoute] Acceso denegado a componente:', requeridos.join(' | '));
     return (
       <div className="p-8 text-center">
         <h2 className="text-2xl font-bold text-red-600 mb-4">Acceso Denegado</h2>
         <p className="text-gray-600">No tienes permisos para acceder a esta sección.</p>
-        <p className="text-sm text-gray-500 mt-2">Componente requerido: {requiredComponent}</p>
+        <p className="text-sm text-gray-500 mt-2">Componente requerido: {requeridos.join(' o ')}</p>
       </div>
     );
   }
@@ -481,7 +483,7 @@ export default function AppRouter() {
         } />
 
         <Route path="admin/chatbots" element={
-          <ProtectedRoute requiredComponent="Gestión de Chatbots">
+          <ProtectedRoute requiredComponent={['Gestión de Chatbots', 'Gestión de Documentación de Chatbots']}>
             <GestionChatbots />
           </ProtectedRoute>
         } />

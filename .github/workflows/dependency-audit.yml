@@ -53,7 +53,20 @@ jobs:
 
       - name: npm audit (fail on High/Critical, excluding accepted risks)
         run: |
-          npm audit --omit=dev --json > audit.json 2>&1 || true
+          # El registro de npm devuelve 503 de forma intermitente: se reintenta hasta obtener un JSON valido.
+          # Si nunca responde, el paso falla (no se da por buena una auditoria que no se pudo hacer).
+          for intento in 1 2 3 4; do
+            npm audit --omit=dev --json > audit.json 2>/dev/null || true
+            if node -e "JSON.parse(require('fs').readFileSync('audit.json', 'utf8'))" 2>/dev/null; then
+              break
+            fi
+            echo "npm audit no devolvio un resultado valido (intento $intento de 4)"
+            if [ "$intento" = "4" ]; then
+              echo "::error::No se pudo completar npm audit: el registro de npm no responde"
+              exit 1
+            fi
+            sleep 45
+          done
           node -e "
           const fs = require('fs');
           const data = JSON.parse(fs.readFileSync('audit.json', 'utf8'));

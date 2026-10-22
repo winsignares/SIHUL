@@ -59,6 +59,29 @@ class Agente(models.Model):
     def __str__(self):
         return self.nombre
 
+
+class AgenteResponsable(models.Model):
+    """Persona encargada de cargar la documentación de un chatbot.
+
+    Quien no administra chatbots solo puede gestionar los documentos y las preguntas-respuestas
+    de los chatbots que tiene asignados aquí. La seccional con la que sube sale de su propio
+    usuario, no de lo que envíe el navegador.
+    """
+    agente = models.ForeignKey(Agente, on_delete=models.CASCADE, related_name='responsables')
+    usuario = models.ForeignKey('usuarios.Usuario', on_delete=models.CASCADE, related_name='chatbots_asignados')
+    creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Responsable de chatbot'
+        verbose_name_plural = 'Responsables de chatbots'
+        constraints = [
+            models.UniqueConstraint(fields=['agente', 'usuario'], name='uniq_agente_responsable'),
+        ]
+
+    def __str__(self):
+        return f'{self.usuario_id} -> {self.agente_id}'
+
+
 class PreguntaSugerida(models.Model):
     agente = models.ForeignKey(Agente, on_delete=models.CASCADE, related_name='preguntas')
     pregunta = models.TextField()

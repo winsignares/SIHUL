@@ -1,0 +1,69 @@
+name: Build Images
+
+# En cada PR: construye las 3 imágenes de producción (valida los Dockerfiles), sin publicar.
+# Al fusionar en develop o main: las publica en GHCR con el SHA corto como etiqueta
+# (más la etiqueta de la rama), para que el servidor despliegue exactamente ese commit.
+# El servidor NO construye imágenes: con 5,8 GB de RAM podría quedarse sin memoria.
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - "chatbot/**"
+      - "frontend/**"
+      - "despliegue/docker/**"
+      - ".github/workflows/build-images.yml"
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: winsignares
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        servicio: [backend, chatbot, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Iniciar sesión en GHCR (solo al publicar)
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Etiquetas
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/sihul-${{ matrix.servicio }}
+          tags: |
+            type=sha,format=short,prefix=
+            type=ref,event=branch
+
+      - name: Construir
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: despliegue/docker/${{ matrix.servicio }}.prod.Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Clave PUBLICA de reCAPTCHA (se incrusta al compilar el frontend; los otros servicios la ignoran).
+          # La rama main publica la imagen de produccion; develop, la de pruebas.
+          build-args: |
+            VITE_RECAPTCHA_SITE_KEY=${{ github.ref_name == 'main' && vars.RECAPTCHA_SITE_KEY_PROD || vars.RECAPTCHA_SITE_KEY_TEST }}
+          cache-from: type=gha,scope=${{ matrix.servicio }}
+          cache-to: type=gha,scope=${{ matrix.servicio }},mode=max
