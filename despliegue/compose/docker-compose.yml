@@ -28,14 +28,16 @@ x-logging: &logging
 x-backend-env: &backend-env
   DB_HOST: db
   DB_PORT: "5432"
-  DB_NAME: ${DB_NAME}
-  DB_USER: ${DB_USER}
-  DB_PASSWORD: ${DB_PASSWORD}
+  # Variables críticas obligatorias: si faltan, docker compose se detiene antes de arrancar
+  # (en vez de arrancar mal, por ejemplo con la base de datos o la clave vacías).
+  DB_NAME: ${DB_NAME:?falta DB_NAME en el .env del entorno}
+  DB_USER: ${DB_USER:?falta DB_USER en el .env del entorno}
+  DB_PASSWORD: ${DB_PASSWORD:?falta DB_PASSWORD en el .env del entorno}
   REDIS_URL: redis://redis:6379/0
   DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
-  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
-  FRONTEND_URL: ${FRONTEND_URL}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?falta DJANGO_SECRET_KEY en el .env del entorno}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?falta DJANGO_ALLOWED_HOSTS en el .env del entorno}
+  FRONTEND_URL: ${FRONTEND_URL:?falta FRONTEND_URL en el .env del entorno}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
   CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
   SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-sessionid}
@@ -236,3 +238,12 @@ volumes:
 networks:
   sihul:
     name: ${COMPOSE_PROJECT_NAME:-sihul}_net
+    # SUBRED FIJA OBLIGATORIA. Si Docker eligiera una sola, podría tomar 172.18.0.0/16, 172.20.0.0/16,
+    # etc., rangos que usa la red de la universidad (clientes y SSH): el servidor dejaría de poder
+    # responderles y se perdería el acceso (incluido el puerto 22). Producción y pruebas usan los
+    # mismos rangos que hoy: 10.201.2.0/24 y 10.202.10.0/24.
+    ipam:
+      driver: default
+      config:
+        - subnet: ${DOCKER_NETWORK_SUBNET:?define DOCKER_NETWORK_SUBNET en el .env (ver despliegue/README.md)}
+          gateway: ${DOCKER_NETWORK_GATEWAY:?define DOCKER_NETWORK_GATEWAY en el .env}
