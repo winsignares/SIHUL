@@ -1,7 +1,7 @@
 # Despliegue automático a producción (runner + aprobación)
 
 Cuando se fusiona a `main`: GitHub construye y publica las imágenes (`Build Images`) → arranca `Deploy Production` →
-**espera la aprobación** del entorno `production` → un runner en el servidor ejecuta **un único script de root**
+**espera la aprobación** del entorno `Productions` → un runner en el servidor ejecuta **un único script de root**
 (`/usr/local/sbin/sihul-deploy-ci`) que valida, respalda y despliega con vuelta atrás automática.
 
 ## Qué puede y qué no puede hacer el runner
@@ -19,7 +19,7 @@ El repositorio es público, y un runner propio en un repositorio público es un 
 
 ## Pasos en GitHub (con permisos de administrador)
 
-1. **Settings → Environments → New environment → `production`**: *Required reviewers* (mejor dos personas),
+1. **Settings → Environments → New environment → `Productions`** (el nombre debe coincidir exactamente con `environment:` de `deploy-prod.yml`; si se cambia uno, cambiar el otro): *Required reviewers* (mejor dos personas),
    *Deployment branches: Selected branches → `main`*.
 2. **Settings → Actions → General**: *Fork pull request workflows*: exigir aprobación para todos los colaboradores externos;
    *Workflow permissions*: solo lectura.
