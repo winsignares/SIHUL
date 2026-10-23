@@ -1,11 +1,11 @@
 name: Deploy Production
 
 # Despliega a producción la punta de main, DESPUÉS de que "Build Images" haya publicado las imágenes y
-# alguien con permiso apruebe el entorno "production" (revisores obligatorios en Settings > Environments).
+# alguien con permiso apruebe el entorno "Productions" (revisores obligatorios en Settings > Environments).
 # El job corre en el runner del servidor (usuario sin privilegios) y solo ejecuta un script de root con validaciones.
 # No hace checkout: no ejecuta código del repositorio en el servidor.
 on:
-  # TEMPORAL: sin disparo automatico hasta que existan el entorno "production" con revisores y el
+  # TEMPORAL: sin disparo automatico hasta que existan el entorno "Productions" con revisores y el
   # runner del servidor. Mientras tanto solo se ejecuta a mano (Actions > Deploy Production > Run workflow).
   # Para activarlo, restaurar:
   #   workflow_run:
@@ -31,7 +31,7 @@ jobs:
        github.event.workflow_run.head_branch == 'main' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: [self-hosted, sihul-prod]
-    environment: production
+    environment: Productions
     timeout-minutes: 30
     steps:
       - name: Desplegar en el servidor
