@@ -125,9 +125,22 @@ function PublicCaptchaGate({ onVerified }: { onVerified: () => void }) {
   );
 }
 
+const PUBLIC_ASISTENTE_VIRTUAL_PATH = '/public/asistente-virtual';
+
+// True si el usuario llegó desde una página del dominio unilibre.edu.co (o subdominio)
+function isReferrerUnilibre(): boolean {
+  try {
+    const host = new URL(document.referrer).hostname;
+    return host === 'unilibre.edu.co' || host.endsWith('.unilibre.edu.co');
+  } catch {
+    return false; // sin referrer o inválido
+  }
+}
+
 // Componente Layout para rutas públicas (sin componentes)
 function PublicLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [verified, setVerified] = useState(
     localStorage.getItem('public_access_verified') === 'true'
   );
@@ -137,7 +150,11 @@ function PublicLayout() {
     navigate('/login');
   };
 
-  if (!verified) {
+  // Enlace directo desde la web de la universidad: solo asistentes virtuales omite el captcha
+  const skipCaptcha =
+    location.pathname.replace(/\/+$/, '') === PUBLIC_ASISTENTE_VIRTUAL_PATH && isReferrerUnilibre();
+
+  if (!verified && !skipCaptcha) {
     return <PublicCaptchaGate onVerified={() => setVerified(true)} />;
   }
 
