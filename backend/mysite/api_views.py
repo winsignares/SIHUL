@@ -144,12 +144,16 @@ class ProgramaViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet)
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
     def get_permissions(self):
+        # La consulta pública de horarios necesita el catálogo de programas para filtrar. Solo el listado:
+        # la consulta individual y toda escritura siguen requiriendo sesión.
+        if self.action == 'list':
+            return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return Programa.objects.none()
+            return Programa.objects.all().order_by('nombre') if self.action == 'list' else Programa.objects.none()
         return super().get_queryset()
 
 
@@ -381,7 +385,7 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         # La consulta pública muestra únicamente horarios aprobados. Las demás
         # operaciones del módulo (incluidos horarios pendientes) continúan
         # requiriendo una sesión autenticada.
-        if self.action == 'list_extendidos':
+        if self.action in ('list_extendidos', 'por_periodo'):
             return [permissions.AllowAny()]
         return [permission() for permission in self.permission_classes]
 

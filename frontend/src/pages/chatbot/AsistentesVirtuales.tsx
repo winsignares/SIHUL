@@ -22,7 +22,8 @@ import {
   MapPin,
   /* History, */
   Clock,
-  X
+  X,
+  ChevronLeft
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -36,8 +37,17 @@ const getSafeIcon = (icon: unknown): LucideIcon => {
   return typeof icon === 'function' ? (icon as LucideIcon) : Bot;
 };
 
-export default function AsistentesVirtuales() {
+interface AsistentesVirtualesProps {
+  /** Página embebible del chat público: sin menú de la aplicación, con la seccional fija y pantalla única en celular. */
+  modoEmbebido?: boolean;
+  seccionalFija?: string;
+  /** Nombre de la seccional para mostrar (con tildes); por defecto, el mismo valor de `seccionalFija`. */
+  seccionalEtiqueta?: string;
+}
+
+export default function AsistentesVirtuales({ modoEmbebido = false, seccionalFija, seccionalEtiqueta }: AsistentesVirtualesProps = {}) {
   const isMobile = useIsMobile();
+  const [verLista, setVerLista] = useState(false);
   const [documentoAbierto, setDocumentoAbierto] = useState<DocumentoAbierto | null>(null);
   const floatingDotPositions = [
     'left-[10%] top-[15%]',
@@ -74,7 +84,12 @@ export default function AsistentesVirtuales() {
     cargandoHistorial,
     cargarHistorialConversaciones,
     cargarConversacionAnterior
-  } = useAsistentesVirtuales();
+  } = useAsistentesVirtuales({ publicoForzado: modoEmbebido, seccionalFija });
+
+  // En celular (solo en modo embebido) se muestra una pantalla a la vez: el chat, o la lista de asistentes.
+  const enCelularEmbebido = modoEmbebido && isMobile;
+  const mostrarLista = !enCelularEmbebido || verLista || !asistenteActivo;
+  const mostrarChat = !enCelularEmbebido || !mostrarLista;
   const ActiveIcon = asistenteActivo ? getSafeIcon(asistenteActivo.icon) : Bot;
 
   return (
@@ -83,7 +98,7 @@ export default function AsistentesVirtuales() {
       <motion.div
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        className="w-[380px] border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col relative overflow-hidden"
+        className={`${modoEmbebido ? 'w-full md:w-[380px]' : 'w-[380px]'} ${mostrarLista ? 'flex' : 'hidden'} border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex-col relative overflow-hidden`}
       >
         {/* Efectos de fondo animados */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -147,8 +162,16 @@ export default function AsistentesVirtuales() {
             </motion.div>
           </div>
 
+          {/* Seccional fija (enlace de una seccional): solo se muestra, no se cambia */}
+          {esPublico && seccionalFija && (
+            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-3 py-2.5 shadow-inner backdrop-blur-sm">
+              <MapPin className="h-4 w-4 text-yellow-300" />
+              <span className="text-sm font-semibold text-white">Seccional {seccionalEtiqueta ?? seccionalFija}</span>
+            </div>
+          )}
+
           {/* Seccional (acceso público): define qué asistentes se ven y con qué información responden */}
-          {esPublico && (
+          {esPublico && !seccionalFija && (
             <div className="mb-4 rounded-2xl border border-white/25 bg-white/10 p-3 shadow-inner backdrop-blur-sm">
               <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/90">
                 <MapPin className="h-3.5 w-3.5 text-yellow-300" />
@@ -213,7 +236,7 @@ export default function AsistentesVirtuales() {
                   transition: { type: 'spring', stiffness: 400, damping: 25 }
                 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => abrirChat(asistente)}
+                onClick={() => { abrirChat(asistente); setVerLista(false); }}
                 className={`mb-3 p-4 rounded-2xl cursor-pointer relative overflow-hidden group transition-all ${isActive
                   ? 'bg-gradient-to-br from-white via-red-50/30 to-rose-50/30 dark:from-slate-700 dark:via-red-900/10 dark:to-rose-900/10 border-2 border-red-200 dark:border-red-800 shadow-lg shadow-red-100 dark:shadow-red-900/20'
                   : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md hover:border-slate-300 dark:hover:border-slate-600'
@@ -339,7 +362,7 @@ export default function AsistentesVirtuales() {
       <motion.div
         initial={{ x: 100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        className="flex-1 min-h-0 flex flex-col bg-slate-50 dark:bg-slate-900/20 relative overflow-hidden"
+        className={`flex-1 min-h-0 ${mostrarChat ? 'flex' : 'hidden'} flex-col bg-slate-50 dark:bg-slate-900/20 relative overflow-hidden`}
       >
         {/* Efectos de fondo del chat */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -371,6 +394,16 @@ export default function AsistentesVirtuales() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                  {enCelularEmbebido && (
+                    <button
+                      type="button"
+                      onClick={() => setVerLista(true)}
+                      className="-ml-1 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 dark:border-slate-600 dark:text-slate-300"
+                      aria-label="Ver otros asistentes"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                  )}
                   <div className="relative">
                     <motion.div
                       className={`w-12 h-12 rounded-full bg-gradient-to-br ${asistenteActivo.bgGradient} flex items-center justify-center shadow-lg relative overflow-hidden`}

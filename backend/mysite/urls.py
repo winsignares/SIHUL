@@ -82,7 +82,7 @@ if settings.MICROSOFT_OAUTH_ENABLED:
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # En local corremos gunicorn dentro de Docker sin nginx delante, así que nadie
-# sirve /static/. En producción nginx toma ese rol (ver nginx2.conf), por eso
+# sirve /static/. En producción nginx toma ese rol (ver despliegue/nginx/), por eso
 # esto solo se activa con DEBUG=True.
 if settings.DEBUG:
     urlpatterns += [

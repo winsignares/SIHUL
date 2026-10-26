@@ -55,6 +55,18 @@ CHATBOT_ANEXO_MAX_MB = int(os.getenv('CHATBOT_ANEXO_MAX_MB', '15'))
 CHATBOT_ANEXO_MAX_POR_RESPUESTA = int(os.getenv('CHATBOT_ANEXO_MAX_POR_RESPUESTA', '5'))
 # Vigencia (segundos) de los enlaces de descarga que se entregan en el chat
 CHATBOT_ANEXO_URL_MAX_AGE = int(os.getenv('CHATBOT_ANEXO_URL_MAX_AGE', str(7 * 24 * 3600)))
+# Acceso público al chat (ver chatbot/acceso_publico.py). Los límites por IP son generosos a propósito:
+# detrás del equipo de la Universidad muchos visitantes pueden llegar con la misma IP. Los límites fuertes son
+# por sesión y el tope diario global.
+CHATBOT_PUBLICO_DIFICULTAD_BITS = int(os.getenv('CHATBOT_PUBLICO_DIFICULTAD_BITS', '17'))
+CHATBOT_PUBLICO_DESAFIO_VIGENCIA = int(os.getenv('CHATBOT_PUBLICO_DESAFIO_VIGENCIA', '120'))
+CHATBOT_PUBLICO_SESION_VIGENCIA = int(os.getenv('CHATBOT_PUBLICO_SESION_VIGENCIA', str(30 * 60)))
+CHATBOT_PUBLICO_MAX_PREGUNTAS_SESION = int(os.getenv('CHATBOT_PUBLICO_MAX_PREGUNTAS_SESION', '20'))
+CHATBOT_PUBLICO_MAX_CARACTERES = int(os.getenv('CHATBOT_PUBLICO_MAX_CARACTERES', '500'))
+CHATBOT_PUBLICO_SESIONES_POR_IP_MINUTO = int(os.getenv('CHATBOT_PUBLICO_SESIONES_POR_IP_MINUTO', '60'))
+CHATBOT_PUBLICO_PREGUNTAS_POR_IP_MINUTO = int(os.getenv('CHATBOT_PUBLICO_PREGUNTAS_POR_IP_MINUTO', '60'))
+CHATBOT_PUBLICO_PREGUNTAS_POR_IP_DIA = int(os.getenv('CHATBOT_PUBLICO_PREGUNTAS_POR_IP_DIA', '1000'))
+CHATBOT_PUBLICO_TOPE_DIARIO = int(os.getenv('CHATBOT_PUBLICO_TOPE_DIARIO', '1500'))
 
 
 # Application definition
@@ -204,7 +216,7 @@ USE_TZ = True
 STATIC_URL = os.getenv('STATIC_URL', '/static/')
 STATIC_ROOT = Path(os.getenv('STATIC_ROOT', BASE_DIR / 'staticfiles'))
 
-# nginx sirve /static/ con Cache-Control de larga duración (ver backend/nginx2.conf).
+# nginx sirve /static/ con Cache-Control de larga duración (ver despliegue/docker/nginx-frontend.conf).
 # Sin nombres de archivo con hash, un deploy puede dejar navegadores sirviendo JS/CSS
 # viejos del admin durante días. ManifestStaticFilesStorage añade el hash y falla el
 # collectstatic si hay una referencia rota, en vez de servir un archivo desactualizado.

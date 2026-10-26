@@ -143,7 +143,9 @@ class PeriodoAcademicoActivoAPIView(APIView):
 
 
 class PeriodoPorRangoFechasAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    # Los periodos académicos son información institucional pública: la página pública de disponibilidad de
+    # espacios los consulta por rango de fechas (igual que /periodos/activo/). Solo lectura.
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request):
         """

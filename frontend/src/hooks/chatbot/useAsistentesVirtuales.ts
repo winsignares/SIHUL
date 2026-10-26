@@ -102,8 +102,16 @@ const convertirAgenteAPI = (agenteAPI: AgenteAPI): Asistente => {
     };
 };
 
-export function useAsistentesVirtuales() {
-    const { user } = useAuth(); // Obtener usuario autenticado
+export interface OpcionesAsistentesVirtuales {
+    /** Ignora cualquier sesión abierta y funciona siempre como chat público (página embebible). */
+    publicoForzado?: boolean;
+    /** Seccional fija (nombre tal como la espera el servidor): no se puede cambiar desde la pantalla. */
+    seccionalFija?: string;
+}
+
+export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {}) {
+    const { user: usuarioAutenticado } = useAuth();
+    const user = opciones.publicoForzado ? null : usuarioAutenticado;
     const [asistentes, setAsistentes] = useState<Asistente[]>([]);
     const [asistenteActivo, setAsistenteActivo] = useState<Asistente | null>(null);
     const [mensajes, setMensajes] = useState<{ [key: string]: Mensaje[] }>({});
@@ -124,7 +132,9 @@ export function useAsistentesVirtuales() {
 
     // Funciones para persistir chat_ids y mensajes en localStorage POR USUARIO
     const obtenerClavesStorage = () => {
-        const userId = user?.id || 'guest';
+        // En el enlace público con seccional elegible, cada seccional conserva su propia conversación: al cambiar
+        // de seccional no se mezclan respuestas que salieron de los documentos de otra.
+        const userId = user?.id || (opciones.seccionalFija ? `guest-${opciones.seccionalFija}` : 'guest');
         return {
             CHAT_IDS_KEY: `sihul_chat_ids_${userId}`,
             MENSAJES_KEY: `sihul_mensajes_chat_${userId}`
@@ -222,6 +232,13 @@ export function useAsistentesVirtuales() {
             return;
         }
 
+        if (opciones.seccionalFija) {
+            setSeccionalesPublico([opciones.seccionalFija]);
+            setSeccionalPublica(opciones.seccionalFija);
+            setCargandoSeccionales(false);
+            return;
+        }
+
         const stored = localStorage.getItem('sihul_chatbot_public_seccional');
         if (stored) {
             setSeccionalPublica(stored);
@@ -236,7 +253,7 @@ export function useAsistentesVirtuales() {
         }
         setCargandoSeccionales(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id]);
+    }, [user?.id, opciones.seccionalFija]);
 
     // Cargar agentes y datos persistidos desde el backend
     useEffect(() => {

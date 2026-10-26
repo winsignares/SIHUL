@@ -112,9 +112,9 @@ Los errores de ingesta usan `IngestionError` con su código HTTP: 409 duplicado,
 
 Respuestas oficiales por chatbot y seccional con documentos de soporte (Word, PDF, Excel) que el chat entrega como enlaces de descarga. En `POST /chat/ask`, las preguntas registradas parecidas a la del usuario entran al contexto antes que los fragmentos; si una corresponde a lo que se pregunta (similitud casi idéntica o confirmación de un verificador), la respuesta devuelve sus `anexos` y no lleva la cita automática del PDF. Detalle completo (modelo, API, seguridad, umbrales, pruebas) en [ANEXOS_PREGUNTAS_RESPUESTAS.md](ANEXOS_PREGUNTAS_RESPUESTAS.md).
 
-## Variables de entorno (`chatbot/.env`)
+## Variables de entorno
 
-El chatbot usa su **propio** archivo (`chatbot/.env`, plantilla en `chatbot/.env.template`); `docker-compose.yml` fija además `DATABASE_URL`, `REDIS_URL` y los tamaños de chunk.
+En desarrollo el chatbot recibe `OPENAI_API_KEY` desde el `.env` de la raíz (plantilla `.env.example`) y en pruebas y producción desde `despliegue/env/*.env`; los `docker-compose` fijan además `DATABASE_URL`, `REDIS_URL` y los tamaños de chunk.
 
 | Variable | Por defecto | Descripción |
 |---|---|---|

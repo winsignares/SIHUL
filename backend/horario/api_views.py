@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 
 from django.db.models import Q
 from django.core.exceptions import ValidationError
@@ -13,6 +14,8 @@ from espacios.models import EspacioFisico
 
 from .models import Horario, HorarioEstudiante, SolicitudEspacio
 from mysite.auth_helpers import is_superuser_effective
+
+logger = logging.getLogger(__name__)
 
 
 def _get_request_user(request):
@@ -584,9 +587,8 @@ def horarios_por_periodo(request):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
     try:
-        user, auth_error = _require_auth(request)
-        if auth_error:
-            return auth_error
+        # Sin sesión es una consulta pública: solo ve horarios aprobados (igual que list_horarios_extendidos).
+        es_consulta_publica = _get_request_user(request) is None
 
         periodo_id = request.GET.get('periodo_id')
         estado_raw = request.GET.get('estado')
@@ -631,6 +633,10 @@ def horarios_por_periodo(request):
                 )
 
             horarios_qs = horarios_qs.filter(estado__in=estados_filtrados)
+
+        # Ningún usuario público puede descubrir horarios pendientes ni rechazados, aunque el frontend los pida.
+        if es_consulta_publica:
+            horarios_qs = horarios_qs.filter(estado='aprobado')
 
         # Filtro opcional por rango de fecha_inicio (mismo criterio que el
         # frontend en useConsultaEspacios.ts): sin esto, esta consulta trae
@@ -686,5 +692,7 @@ def horarios_por_periodo(request):
             'horarios': lst
         }, status=200)
 
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    except Exception:
+        # Es una consulta pública: nunca se devuelve el texto del error interno.
+        logger.exception('Error en horarios_por_periodo')
+        return JsonResponse({'error': 'No se pudieron consultar los horarios'}, status=500)
