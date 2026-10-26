@@ -5,8 +5,18 @@ con la misma pantalla del módulo de Asistentes Virtuales en acceso público y u
 
 ## Enlaces para entregar
 
+**Un solo enlace para todos:** `https://sihul.unilibre.edu.co/asistente`
+
+- Abre en **Nacional** (los asistentes disponibles para todas las seccionales) o, si la persona ya eligió otra antes, en la
+  última que eligió en ese navegador.
+- Arriba hay un selector **«Seccional»**: la persona cambia de seccional **sin salir de la página**. La dirección se actualiza
+  (`/asistente/bogota`), se cargan los asistentes de esa seccional y se muestra un aviso. **Cada seccional conserva su propia
+  conversación** (no se mezclan respuestas de documentos de otra); al volver a una seccional se recupera su conversación.
+- También hay enlaces con la seccional **ya elegida** (la persona igual puede cambiarla):
+
 | Seccional | Enlace | «Volver» lleva a |
 |---|---|---|
+| Nacional | `https://sihul.unilibre.edu.co/asistente/nacional` | `https://www.unilibre.edu.co/` |
 | Barranquilla | `https://sihul.unilibre.edu.co/asistente/barranquilla` | `https://www.unilibre.edu.co/barranquilla` |
 | Bogotá | `https://sihul.unilibre.edu.co/asistente/bogota` | `https://www.unilibre.edu.co/bogota` |
 | Cali | `https://sihul.unilibre.edu.co/asistente/cali` | `https://www.unilibre.edu.co/cali` |
@@ -17,12 +27,14 @@ con la misma pantalla del módulo de Asistentes Virtuales en acceso público y u
 | Virtual | `https://sihul.unilibre.edu.co/asistente/virtual` | `https://www.unilibre.edu.co/programas-virtuales/` |
 
 - Cada seccional muestra solo los chatbots disponibles en ella («Disponible en» en Gestión de Chatbots) y responde con los
-  documentos de esa seccional.
-- Las direcciones de «Volver» están fijas en `frontend/src/config/seccionalesPublicas.ts` (no viajan en el enlace).
+  documentos de esa seccional. «Nacional» muestra los chatbots marcados como disponibles en todas.
+- Las direcciones de «Volver» y la lista de seccionales están en `frontend/src/config/seccionalesPublicas.ts` (no viajan en
+  el enlace). «Volver» sigue a la seccional que la persona tenga elegida.
+- El botón «Atrás» del navegador sale de la página (el cambio de seccional no agrega pasos al historial).
 - **Cómo ponerlo en el sitio de la Universidad:** un botón o enlace normal (idealmente que abra en pestaña nueva:
   `target="_blank" rel="noopener"`). Si prefieren incrustarlo en una página, se puede en un marco (`<iframe>`) desde
-  cualquier página de `unilibre.edu.co` o sus subdominios; dentro del marco el botón «Volver» no se muestra (la persona
-  sigue en su página).
+  cualquier página de `unilibre.edu.co` o sus subdominios (sirve también `/asistente`); dentro del marco el botón «Volver» no
+  se muestra (la persona sigue en su página) y el selector de seccional sí.
 
 ## Cómo se protege
 
