@@ -5,6 +5,7 @@ import { programaService } from '../../services/programas/programaAPI';
 import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 import { userService } from '../../services/users/authService';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { useAuth } from '../../context/AuthContext';
 
 export interface Docente {
     id: number | string;
@@ -17,6 +18,7 @@ const PERIODO_EMPTY = 'Sin periodo activo';
 const CONSULTA_HORARIO_DATA_CACHE_KEY = 'horarios-consulta-data';
 
 export function useConsultaHorario() {
+    const { user } = useAuth();
     const [tipoConsulta, setTipoConsulta] = useState('horarios-programa');
     const [filtroDocente, setFiltroDocente] = useState('Todos');
     const [filtroPrograma, setFiltroPrograma] = useState('Todos');
@@ -98,31 +100,35 @@ export function useConsultaHorario() {
             setHorariosDocenteData(horariosDocenteTransformados);
 
             let docentesFinales: Docente[] = [];
-            // Cargar docentes completos desde el endpoint
-            try {
-                const docentesResponse = await userService.listarDocentes();
-                docentesFinales = [
-                    { id: 'todos', nombre: 'Todos', correo: '' },
-                    ...docentesResponse.usuarios.map((u) => ({
-                        id: u.id ?? 0,
-                        nombre: u.nombre,
-                        correo: u.correo,
-                    }))
-                ];
-                setDocentes(docentesFinales);
-            } catch (error) {
-                console.error('Error al cargar docentes:', error);
-                // Fallback: usar nombres únicos de horarios
-                docentesFinales = [
-                    { id: 'todos', nombre: 'Todos', correo: '' },
-                    ...Array.from(new Set(horariosExtendidos.map(h => h.docente_nombre).filter(Boolean))).map((nombre, idx) => ({
-                        id: `docente-${idx}`,
-                        nombre,
-                        correo: ''
-                    }))
-                ];
-                setDocentes(docentesFinales);
+            // Sin sesión (consulta pública) la lista completa de docentes no está disponible: se usan los
+            // nombres únicos de los horarios aprobados, que sí son públicos. Con sesión, se pide el listado completo.
+            const docentesDesdeHorarios = (): Docente[] => [
+                { id: 'todos', nombre: 'Todos', correo: '' },
+                ...Array.from(new Set(horariosExtendidos.map(h => h.docente_nombre).filter(Boolean))).map((nombre, idx) => ({
+                    id: `docente-${idx}`,
+                    nombre,
+                    correo: ''
+                }))
+            ];
+            if (user?.id) {
+                try {
+                    const docentesResponse = await userService.listarDocentes();
+                    docentesFinales = [
+                        { id: 'todos', nombre: 'Todos', correo: '' },
+                        ...docentesResponse.usuarios.map((u) => ({
+                            id: u.id ?? 0,
+                            nombre: u.nombre,
+                            correo: u.correo,
+                        }))
+                    ];
+                } catch (error) {
+                    console.error('Error al cargar docentes:', error);
+                    docentesFinales = docentesDesdeHorarios();
+                }
+            } else {
+                docentesFinales = docentesDesdeHorarios();
             }
+            setDocentes(docentesFinales);
 
             if (docentesFinales.length === 0) {
                 docentesFinales = [{ id: 'todos', nombre: 'Todos', correo: '' }];
