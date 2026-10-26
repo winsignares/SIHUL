@@ -14,7 +14,7 @@ services:
     image: pgvector/pgvector:pg16
     restart: always
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: mypostgresdb
       POSTGRES_USER: postgres
@@ -58,7 +58,7 @@ services:
     env_file:
       - ./.env
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       # Código fuente montado para hot-reload
       - ./backend:/app
@@ -81,6 +81,8 @@ services:
       FINANCIERO_DOCUMENT_NETWORK_ROOT: ${FINANCIERO_DOCUMENT_NETWORK_ROOT}
       FINANCIERO_DOCUMENT_NETWORK_USER: ${FINANCIERO_DOCUMENT_NETWORK_USER}
       FINANCIERO_DOCUMENT_NETWORK_PASSWORD: ${FINANCIERO_DOCUMENT_NETWORK_PASSWORD}
+      # La llave de OpenAI es solo del chatbot: aunque esté en el .env, el backend no la recibe.
+      OPENAI_API_KEY: ""
     depends_on:
       db:
         condition: service_healthy
@@ -98,15 +100,15 @@ services:
       context: .
       dockerfile: chatbot.Dockerfile
     restart: unless-stopped
-    env_file:
-      - ./chatbot/.env
+    # Sin env_file: recibe solo lo que necesita, tomado del .env de la raíz (el único archivo de variables).
     # La imagen arranca sin --reload; en desarrollo se activa aquí junto al volumen
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
     ports:
-      - "8001:8001"
+      - "127.0.0.1:8001:8001"
     volumes:
       - ./chatbot:/app
     environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DATABASE_URL: postgresql+asyncpg://postgres:mysecretpassword@db:5432/mypostgresdb
       REDIS_URL: redis://redis:6379/1
       CHUNK_SIZE: ${CHUNK_SIZE:-900}
@@ -132,7 +134,7 @@ services:
       dockerfile: frontend.Dockerfile
     restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     volumes:
       # Código fuente montado para hot-reload
       - ./frontend:/app

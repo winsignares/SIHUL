@@ -216,7 +216,7 @@ USE_TZ = True
 STATIC_URL = os.getenv('STATIC_URL', '/static/')
 STATIC_ROOT = Path(os.getenv('STATIC_ROOT', BASE_DIR / 'staticfiles'))
 
-# nginx sirve /static/ con Cache-Control de larga duración (ver backend/nginx2.conf).
+# nginx sirve /static/ con Cache-Control de larga duración (ver despliegue/docker/nginx-frontend.conf).
 # Sin nombres de archivo con hash, un deploy puede dejar navegadores sirviendo JS/CSS
 # viejos del admin durante días. ManifestStaticFilesStorage añade el hash y falla el
 # collectstatic si hay una referencia rota, en vez de servir un archivo desactualizado.

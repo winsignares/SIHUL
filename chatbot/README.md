@@ -12,6 +12,6 @@ Servicio de chatbot con recuperación aumentada por generación (RAG) integrado 
 
 ## Configuración
 
-Copia `.env.template` a `.env` y completa `OPENAI_API_KEY`. El resto de variables y sus valores por defecto están descritos en la documentación técnica.
+En desarrollo, define `OPENAI_API_KEY` en el `.env` de la raíz del proyecto (plantilla: `.env.example`); `docker-compose.yml` solo se la entrega a este servicio. Las demás variables y sus valores por defecto están descritos en la documentación técnica.
 
 Documentación técnica (arquitectura, ingesta, consulta, variables de entorno, operación): [`documentacion/documentacion_chatbot/ARQUITECTURA_RAG_CHATBOT.md`](../documentacion/documentacion_chatbot/ARQUITECTURA_RAG_CHATBOT.md).

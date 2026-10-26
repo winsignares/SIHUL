@@ -30,16 +30,27 @@ El stack de desarrollo se levanta con `docker-compose.yml` (proyecto `sihul`) y 
 |---|---|---|---|
 | `db` | `pgvector/pgvector:pg16` | `5432` | PostgreSQL con extensión `pgvector`; compartido por backend y chatbot. |
 | `backend` | `backend.Dockerfile` | `8000` | Django dev server (`runserver`), hot-reload vía volumen montado, corre `migrate --fake-initial --noinput` al iniciar. |
-| `chatbot` | `chatbot.Dockerfile` | `8001` | FastAPI (`uvicorn --reload`), usa su propio `chatbot/.env`. |
-| `frontend` | `frontend.Dockerfile` | `5173` | Vite dev server con hot-reload (polling), `VITE_API_URL`/`VITE_CHATBOT_URL` apuntan a los otros dos servicios. |
+| `chatbot` | `chatbot.Dockerfile` | `8001` | FastAPI (`uvicorn --reload`), recibe `OPENAI_API_KEY` desde el `.env` de la raíz. |
+| `frontend` | `frontend.Dockerfile` | `5173` | Vite dev server con hot-reload (polling), `VITE_API_URL` apunta al backend. |
 
-Existe además `docker-compose.test.yml`: una copia aislada del stack (puertos y red distintos, cookies de sesión con nombre distinto) pensada para pruebas end-to-end sin interferir con el entorno de desarrollo. Está documentada en detalle en [ENTORNO_PRUEBAS.md](ENTORNO_PRUEBAS.md).
+Los entornos desplegados (pruebas y producción) usan otro compose, en `despliegue/` (ver [ENTORNO_PRUEBAS.md](ENTORNO_PRUEBAS.md) y `despliegue/README.md`).
 
-Variables de entorno:
-- `.env.example` (raíz): solo variables de almacenamiento NAS del módulo financiero. El resto de configuración del stack de desarrollo está hardcodeada en `docker-compose.yml`.
-- `.env.test.example` (raíz): plantilla completa para el stack de test (puertos, credenciales, `DJANGO_SECRET_KEY`, CORS/CSRF, OAuth Microsoft opcional, config. del chatbot, `ETL_PERIODO`).
-- `chatbot/.env`: configuración propia del servicio de chatbot (independiente del `.env` de la raíz).
-- Variables `ORACLE_*` (host/puerto/usuario/password/service): **no** están en ninguna plantilla `.env`; se deben proveer manualmente al ejecutar los comandos ETL (ver [documentacion_oracle/INTEGRACION_ETL_ORACLE.md](documentacion_oracle/INTEGRACION_ETL_ORACLE.md)).
+### Variables de entorno (dónde vive cada una)
+
+| Entorno | Archivo (NO se versiona) | Plantilla (sí se versiona) | Quién lo lee |
+|---|---|---|---|
+| Desarrollo local | `.env` en la raíz | `.env.example` | `docker-compose.yml`: el backend recibe el `.env`; el chatbot recibe solo `OPENAI_API_KEY` y las variables de su base |
+| Pruebas | `despliegue/env/test.env` (permisos 600) | `despliegue/env/test.env.example` | `despliegue/compose/docker-compose.yml` |
+| Producción | `despliegue/env/prod.env` (permisos 600) | `despliegue/env/prod.env.example` | `despliegue/compose/docker-compose.yml` |
+
+- **Un solo archivo de variables por entorno.** Ya no existen `chatbot/.env`, `.env.db` ni `.env.test`.
+- **Mínimo privilegio:** cada contenedor recibe solo las variables que usa (la llave de OpenAI llega únicamente al chatbot; el
+  backend la recibe vacía aunque esté en el `.env`).
+- **Qué se versiona:** solo las plantillas `*.example`. `.gitignore` ignora cualquier otro `.env` o `*.env`.
+- **Nunca** escribir contraseñas, llaves ni usuarios de Oracle o del NAS en el código, en scripts ni en documentos: van en el
+  archivo de variables del entorno.
+- Variables `ORACLE_*` (host, puerto, usuario, contraseña, servicio): no están en las plantillas; se proveen al ejecutar los
+  comandos ETL (ver [documentacion_oracle/INTEGRACION_ETL_ORACLE.md](documentacion_oracle/INTEGRACION_ETL_ORACLE.md)).
 
 ## Módulos de dominio (resumen ejecutivo)
 
