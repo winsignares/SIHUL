@@ -40,8 +40,8 @@ con la misma pantalla del módulo de Asistentes Virtuales en acceso público y u
 
 1. **Desafío invisible:** al abrir la página, el navegador resuelve un cálculo pequeño (1 a 3 segundos) y el servidor
    entrega una sesión firmada de 30 minutos. Sin esa sesión, `POST /api/chatbot/public/pregunta/` responde 401 y no se gasta IA.
-2. **Límites:** 20 preguntas por sesión, 60 por minuto y 1.000 por día por IP (generosos a propósito: detrás del equipo de la
-   Universidad muchos visitantes pueden compartir IP) y **1.500 preguntas por día en total**; al superarlo el chat responde
+2. **Límites:** 50 preguntas por sesión, 300 por minuto y 15.000 por día por IP (altos a propósito: detrás del equipo de la
+   Universidad muchos visitantes pueden compartir IP) y **15.000 preguntas por día en total**; al superarlo el chat responde
    «no disponible por hoy».
 3. **Entrada:** pregunta de 1 a 500 caracteres; identificador de chat validado; errores genéricos (nunca el texto interno).
 4. **Orígenes:** solo `unilibre.edu.co` y `*.unilibre.edu.co` pueden incrustar la página (`frame-ancestors`).
@@ -54,10 +54,11 @@ con la misma pantalla del módulo de Asistentes Virtuales en acceso público y u
 En `despliegue/env/prod.env` (ver `prod.env.example`), y luego `deploy.sh prod <sha>` o reiniciar el backend:
 
 ```
-CHATBOT_PUBLICO_TOPE_DIARIO=1500
-CHATBOT_PUBLICO_MAX_PREGUNTAS_SESION=20
-CHATBOT_PUBLICO_PREGUNTAS_POR_IP_MINUTO=60
-CHATBOT_PUBLICO_PREGUNTAS_POR_IP_DIA=1000
+CHATBOT_PUBLICO_TOPE_DIARIO=15000
+CHATBOT_PUBLICO_MAX_PREGUNTAS_SESION=50
+CHATBOT_PUBLICO_SESIONES_POR_IP_MINUTO=300
+CHATBOT_PUBLICO_PREGUNTAS_POR_IP_MINUTO=300
+CHATBOT_PUBLICO_PREGUNTAS_POR_IP_DIA=15000
 CHATBOT_PUBLICO_DIFICULTAD_BITS=17
 ```
 
