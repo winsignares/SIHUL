@@ -16,6 +16,7 @@ const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sáb
 const ASIGNACION_ESPACIOS_CACHE_KEY = 'asignacion-espacios-seccional';
 
 const getSeccionalIdFromUser = (user: ReturnType<typeof useAuth>['user']) => {
+  if (typeof user?.seccional?.id === 'number') return user.seccional.id;
   if (!user || !user.sede) return null;
   if (typeof user.sede === 'object' && 'seccional_id' in user.sede) {
     const seccionalId = user.sede.seccional_id;

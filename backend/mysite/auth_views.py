@@ -10,7 +10,7 @@ from django.views.decorators.http import require_GET
 from componentes.models import ComponenteRol, ComponenteUsuario
 from espacios.models import EspacioPermitido
 from espacios import alcance as alcance_espacios
-from mysite.auth_helpers import role_supervisa_espacios
+from mysite.auth_helpers import role_supervisa_espacios, seccional_para_sesion
 from usuarios.models import Usuario
 
 
@@ -97,6 +97,7 @@ def user_view(request):
         usuario = Usuario.objects.select_related(
             'sede',
             'sede__seccional',
+            'seccional',
             'rol',
             'facultad',
         ).get(id=auth_user.id)
@@ -140,6 +141,7 @@ def user_view(request):
                 'seccional_ciudad': usuario.sede.seccional.ciudad if usuario.sede.seccional else None,
                 'direccion': usuario.sede.direccion,
             } if usuario.sede else None,
+            'seccional': seccional_para_sesion(usuario),
             'componentes': componentes,
             'espacios_permitidos': espacios_permitidos,
             **alcance_espacios.resumen_sesion(usuario),
