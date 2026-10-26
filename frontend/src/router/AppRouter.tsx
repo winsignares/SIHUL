@@ -19,6 +19,7 @@ const CentroHorarios = lazy(() => import('../pages/gestionAcademica/CentroHorari
 const PrestamosEspacios = lazy(() => import('../pages/espacios/PrestamosEspacios'));
 const PeriodosAcademicos = lazy(() => import('../pages/gestionAcademica/PeriodosAcademicos'));
 const AsistentesVirtuales = lazy(() => import('../pages/chatbot/AsistentesVirtuales'));
+const AsistentePublicoEmbebido = lazy(() => import('../pages/chatbot/AsistentePublicoEmbebido'));
 const GestionChatbots = lazy(() => import('../pages/chatbot/GestionChatbots'));
 const OcupacionSemanal = lazy(() => import('../pages/reporte/OcupacionSemanal'));
 const Reportes = lazy(() => import('../pages/reporte/Reportes'));
@@ -322,6 +323,7 @@ export default function AppRouter() {
     return (
       <Suspense fallback={<PageLoader />}>
         <Routes>
+          <Route path="/asistente/:seccional" element={<AsistentePublicoEmbebido />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/registro-proveedor" element={<RegistroProveedor />} />
@@ -416,6 +418,9 @@ export default function AppRouter() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        {/* Enlace público de una seccional al asistente virtual: sin menú ni sesión */}
+        <Route path="/asistente/:seccional" element={<AsistentePublicoEmbebido />} />
+
         {/* Rutas públicas disponibles incluso si hay sesión activa */}
         <Route path="/public" element={<PublicLayout />}>
           <Route index element={<Navigate to="/public/dashboard" replace />} />

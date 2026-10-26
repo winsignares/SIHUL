@@ -1,4 +1,5 @@
 import { apiClient } from '../../core/apiClient';
+import { obtenerTokenPublico, olvidarTokenPublico } from './accesoPublico';
 import type { AnexoChatbot } from '../../models/chatbot/chatbot';
 
 const DEFAULT_BG_GRADIENT = 'from-blue-500 via-blue-600 to-indigo-600';
@@ -275,6 +276,18 @@ export const chatbotAPI = {
         pregunta_sugerida_id?: number;
         nombre_usuario?: string;
     }): Promise<{ chat_id: string; respuesta: string; timestamp: string; anexos?: AnexoChatbot[] }> => {
-        return apiClient.post('/chatbot/public/pregunta/', data);
+        type Respuesta = { chat_id: string; respuesta: string; timestamp: string; anexos?: AnexoChatbot[] };
+        // requiresAuth: false => un 401 (sesión pública vencida) no manda a la pantalla de login
+        const enviar = (token: string) => apiClient.post<Respuesta>('/chatbot/public/pregunta/', data, {
+            requiresAuth: false,
+            headers: { 'X-Chatbot-Token': token },
+        });
+        try {
+            return await enviar(await obtenerTokenPublico());
+        } catch (error) {
+            if ((error as { status?: number })?.status !== 401) throw error;
+            olvidarTokenPublico();
+            return enviar(await obtenerTokenPublico(true));
+        }
     }
 };

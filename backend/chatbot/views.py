@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.db.models import F, Q
 from django.utils import timezone
+from . import acceso_publico
 from .anexos import anexos_json
 from .sedes import agentes_visibles, ids_seccionales
 from .models import Agente, AnexoRespuesta, PreguntaSugerida, Conversacion
@@ -371,6 +372,38 @@ def listar_conversaciones(request):
 
 # ========== ENDPOINTS PARA USUARIOS PÚBLICOS ==========
 
+def _rechazo_publico(rechazo):
+    return JsonResponse({'error': rechazo.mensaje, 'codigo': rechazo.codigo}, status=rechazo.estado)
+
+
+@csrf_exempt
+def desafio_publico(request):
+    """Entrega un desafío de prueba de trabajo para pedir una sesión pública (ver acceso_publico.py)."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    try:
+        return JsonResponse(acceso_publico.emitir_desafio(request))
+    except acceso_publico.AccesoPublicoError as rechazo:
+        return _rechazo_publico(rechazo)
+
+
+@csrf_exempt
+def sesion_publica(request):
+    """Verifica el desafío resuelto y entrega la sesión firmada que exige la pregunta pública."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    try:
+        data = json.loads(request.body or b'{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    if not isinstance(data, dict):
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    try:
+        return JsonResponse(acceso_publico.crear_sesion(request, data.get('desafio'), data.get('solucion')))
+    except acceso_publico.AccesoPublicoError as rechazo:
+        return _rechazo_publico(rechazo)
+
+
 @csrf_exempt
 def list_agentes_publico(request):
     """Agentes activos disponibles en la seccional elegida (?seccional=); sin ella, solo los de todas."""
@@ -387,16 +420,22 @@ def enviar_pregunta_publico(request):
     
     try:
         data = json.loads(request.body)
+        if not isinstance(data, dict):
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+        # Sesión firmada, tamaño de la pregunta y límites de uso (antes de gastar nada de IA)
+        try:
+            pregunta = acceso_publico.autorizar_pregunta(request, data.get('pregunta'))
+        except acceso_publico.AccesoPublicoError as rechazo:
+            return _rechazo_publico(rechazo)
         agente_id = data.get('agente_id')
-        pregunta = data.get('pregunta')
         pregunta_sugerida_id = data.get('pregunta_sugerida_id')
         seccional_raw = data.get('seccional') or data.get('sede')
-        nombre_usuario = data.get('nombre_usuario') or 'Invitado'
+        nombre_usuario = str(data.get('nombre_usuario') or 'Invitado')[:60]
         client_chat_id = data.get('chat_id')
-        
+
         # Validaciones mínimas
-        if not agente_id or not pregunta:
-            return JsonResponse({'error': 'agente_id y pregunta son requeridos'}, status=400)
+        if not agente_id:
+            return JsonResponse({'error': 'agente_id es requerido'}, status=400)
 
         sede_value = _normalize_sede_value(seccional_raw)
         if not sede_value:
@@ -411,8 +450,11 @@ def enviar_pregunta_publico(request):
             return JsonResponse({'error': 'Este chatbot no está disponible en esta seccional.'}, status=403)
 
         # Generar chat_id temporal (no se guardará)
-        chat_id = str(client_chat_id or uuid.uuid4())
-        
+        try:
+            chat_id = str(uuid.UUID(str(client_chat_id))) if client_chat_id else str(uuid.uuid4())
+        except ValueError:
+            chat_id = str(uuid.uuid4())
+
         _registrar_uso_pregunta_sugerida(pregunta_sugerida_id, agente)
 
         # Enviar pregunta al endpoint RAG (FastAPI); si falla, respuesta_texto ya es
@@ -432,5 +474,6 @@ def enviar_pregunta_publico(request):
         
     except json.JSONDecodeError:
         return JsonResponse({'error': 'JSON inválido'}, status=400)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    except Exception:
+        logger.exception('Error inesperado en el chat público')
+        return JsonResponse({'error': 'No se pudo procesar tu pregunta. Inténtalo de nuevo.'}, status=500)
