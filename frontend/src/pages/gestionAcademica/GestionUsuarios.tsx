@@ -53,6 +53,7 @@ export default function GestionUsuarios() {
     espaciosDisponiblesCreacion,
     espaciosDisponiblesEdicion,
     sedesDisponibles,
+    seccionalesDisponibles,
     tiposEspacioDisponibles,
     espacioSeleccionado, setEspacioSeleccionado,
     espaciosPermitidos,
@@ -80,11 +81,21 @@ export default function GestionUsuarios() {
     eliminarEspacioPermitidoEdit,
     confirmarCorreo, setConfirmarCorreo,
     confirmarPassword, setConfirmarPassword,
-    sedeSeleccionada, setSedeSeleccionada
+    sedeSeleccionada, setSedeSeleccionada,
+    seccionalSeleccionada, setSeccionalSeleccionada
   } = useGestionUsuarios();
 
   const firstUsuarioItemIndex = totalFilteredUsuarios === 0 ? 0 : (currentUsuarioPage - 1) * pageSize + 1;
   const lastUsuarioItemIndex = Math.min(currentUsuarioPage * pageSize, totalFilteredUsuarios);
+
+  // Seccional que se muestra: la asignada al usuario o, si no, la de su sede
+  const getSeccionalNombre = (usuario: { seccional_id?: number | null; sede_id?: number | null }) => {
+    const seccionalId = usuario.seccional_id
+      ?? sedesDisponibles.find((sede) => sede.id === usuario.sede_id)?.seccional_id
+      ?? null;
+    if (!seccionalId) return <span className="text-slate-400">Sin seccional</span>;
+    return seccionalesDisponibles.find((seccional) => seccional.id === seccionalId)?.ciudad ?? `#${seccionalId}`;
+  };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getRolBadge = (usuario: any) => {
@@ -221,7 +232,7 @@ export default function GestionUsuarios() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Sede Universitaria *</Label>
+                    <Label>Sede Universitaria</Label>
                     <div className="relative group">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
                       <SearchableSelect
@@ -233,9 +244,38 @@ export default function GestionUsuarios() {
                         placeholder="Seleccione una sede"
                         searchPlaceholder="Buscar sede..."
                         emptyMessage="No se encontraron sedes."
+                        clearable
+                        onClear={() => setSedeSeleccionada('')}
                         className="pl-10"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Seccional</Label>
+                    <div className="relative group">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
+                      <SearchableSelect
+                        items={seccionalesDisponibles}
+                        value={
+                          sedeSeleccionada
+                            ? (sedesDisponibles.find((s) => s.id.toString() === sedeSeleccionada)?.seccional_id?.toString() ?? '')
+                            : seccionalSeleccionada
+                        }
+                        onSelect={(seccional) => setSeccionalSeleccionada(seccional.id.toString())}
+                        getItemId={(seccional) => seccional.id.toString()}
+                        getItemLabel={(seccional) => seccional.ciudad}
+                        placeholder="Seleccione una seccional"
+                        searchPlaceholder="Buscar seccional..."
+                        emptyMessage="No se encontraron seccionales."
+                        disabled={Boolean(sedeSeleccionada)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      {sedeSeleccionada
+                        ? 'La define la sede elegida.'
+                        : 'Si la persona no tiene sede (por ejemplo, personal de bibliotecas), elige su seccional.'}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Correo Institucional *</Label>
@@ -576,6 +616,7 @@ export default function GestionUsuarios() {
                 <TableHead>Usuario</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Rol</TableHead>
+                <TableHead>Seccional</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -583,7 +624,7 @@ export default function GestionUsuarios() {
             <TableBody>
               {totalFilteredUsuarios === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                     No se encontraron usuarios
                   </TableCell>
                 </TableRow>
@@ -597,6 +638,7 @@ export default function GestionUsuarios() {
                     </TableCell>
                     <TableCell className="text-slate-700">{usuario.correo}</TableCell>
                     <TableCell>{getRolBadge(usuario)}</TableCell>
+                    <TableCell className="text-slate-700">{getSeccionalNombre(usuario)}</TableCell>
                     <TableCell>{getEstadoBadge(usuario.activo)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -761,14 +803,14 @@ export default function GestionUsuarios() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Sede Universitaria *</Label>
+                    <Label>Sede Universitaria</Label>
                     <div className="relative group">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
                       <SearchableSelect
                         items={sedesDisponibles}
                         value={editingUser.sede_id?.toString() || ''}
                         onSelect={(sede) => {
-                          setEditingUser({ ...editingUser, sede_id: sede.id });
+                          setEditingUser({ ...editingUser, sede_id: sede.id, seccional_id: sede.seccional_id ?? null });
                           setEspacioSeleccionadoEdit('');
                           setEspaciosPermitidosEdit(
                             espaciosPermitidosEdit.filter((espacioId) => {
@@ -785,9 +827,41 @@ export default function GestionUsuarios() {
                         placeholder="Seleccione una sede"
                         searchPlaceholder="Buscar sede..."
                         emptyMessage="No se encontraron sedes."
+                        clearable
+                        onClear={() => {
+                          setEditingUser({ ...editingUser, sede_id: null });
+                          setEspacioSeleccionadoEdit('');
+                          setEspaciosPermitidosEdit([]);
+                          setTipoEspacioSeleccionadoEdit('');
+                          setTiposEspacioPermitidosEdit([]);
+                          setAsignarTodosEspaciosPorTipoEdit(false);
+                        }}
                         className="pl-10"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Seccional</Label>
+                    <div className="relative group">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-red-600 transition-colors z-10" />
+                      <SearchableSelect
+                        items={seccionalesDisponibles}
+                        value={editingUser.seccional_id?.toString() || ''}
+                        onSelect={(seccional) => setEditingUser({ ...editingUser, seccional_id: seccional.id })}
+                        getItemId={(seccional) => seccional.id.toString()}
+                        getItemLabel={(seccional) => seccional.ciudad}
+                        placeholder="Seleccione una seccional"
+                        searchPlaceholder="Buscar seccional..."
+                        emptyMessage="No se encontraron seccionales."
+                        disabled={Boolean(editingUser.sede_id)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      {editingUser.sede_id
+                        ? 'La define la sede elegida. Quita la sede para asignar solo la seccional.'
+                        : 'Sin sede, la seccional se asigna directamente (por ejemplo, personal de bibliotecas).'}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Nueva Contraseña (opcional)</Label>
