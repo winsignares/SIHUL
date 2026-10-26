@@ -43,4 +43,6 @@ RUN mkdir -p /app/staticfiles /app/media && chown -R app:app /app/staticfiles /a
 USER app
 EXPOSE 8000
 
-CMD ["sh", "-c", "exec gunicorn \"$DJANGO_WSGI\" --bind 0.0.0.0:8000 --workers \"$GUNICORN_WORKERS\" --worker-class gthread --threads \"$GUNICORN_THREADS\" --timeout \"$GUNICORN_TIMEOUT\" --max-requests \"$GUNICORN_MAX_REQUESTS\" --max-requests-jitter 100 --access-logfile - --error-logfile -"]
+# --no-control-socket: gunicorn 25+ abre por defecto un "panel de control" en ~/.gunicorn y el usuario "app" no tiene carpeta personal
+# (se creó con --no-create-home), así que cada arranque registraba "Control server error: Permission denied: /home/app". No se usa.
+CMD ["sh", "-c", "exec gunicorn \"$DJANGO_WSGI\" --bind 0.0.0.0:8000 --workers \"$GUNICORN_WORKERS\" --worker-class gthread --threads \"$GUNICORN_THREADS\" --timeout \"$GUNICORN_TIMEOUT\" --max-requests \"$GUNICORN_MAX_REQUESTS\" --max-requests-jitter 100 --no-control-socket --access-logfile - --error-logfile -"]
