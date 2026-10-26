@@ -25,6 +25,8 @@ from .api_views import (
 from .views import (
     enviar_pregunta,
     enviar_pregunta_publico,
+    desafio_publico,
+    sesion_publica,
     list_agentes_publico,
     obtener_historial,
 )
@@ -59,6 +61,8 @@ urlpatterns = [
     path('documentos/archivo/', ChatbotDocumentoArchivoView.as_view(), name='api-documento-archivo'),
 
     # Endpoints publicos (sin autenticacion)
+    path('public/desafio/', desafio_publico, name='api-public-desafio'),
+    path('public/sesion/', sesion_publica, name='api-public-sesion'),
     path('public/agentes/', list_agentes_publico, name='api-public-agentes'),
     path('public/pregunta/', enviar_pregunta_publico, name='api-public-pregunta'),
 

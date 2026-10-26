@@ -13,6 +13,7 @@ import zipfile
 from unittest import mock
 
 from django.core import signing
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
@@ -22,6 +23,7 @@ from componentes.models import Componente, ComponenteRol, ComponenteUsuario
 from sedes.models import Seccional, Sede
 from usuarios.models import Rol, Usuario
 
+from . import acceso_publico
 from .anexos import AnexoInvalido, generar_token, leer_token, validar_anexo
 from .models import Agente, AgenteResponsable, AnexoRespuesta, Conversacion, PreguntaRespuesta, PreguntaSugerida
 
@@ -152,6 +154,9 @@ class _BaseAnexos(TestCase):
         patcher = mock.patch('chatbot.preguntas_respuestas_views.sincronizar_rag')
         self.sincronizar = patcher.start()
         self.addCleanup(patcher.stop)
+        # El chat público exige una sesión firmada (ver tests_acceso_publico.py): aquí va ya puesta.
+        cache.clear()
+        self.client.defaults['HTTP_X_CHATBOT_TOKEN'] = signing.dumps({'sid': 'prueba'}, salt=acceso_publico.SAL_SESION)
 
     def entrar(self, usuario):
         sesion = self.client.session

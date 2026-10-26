@@ -102,8 +102,16 @@ const convertirAgenteAPI = (agenteAPI: AgenteAPI): Asistente => {
     };
 };
 
-export function useAsistentesVirtuales() {
-    const { user } = useAuth(); // Obtener usuario autenticado
+export interface OpcionesAsistentesVirtuales {
+    /** Ignora cualquier sesión abierta y funciona siempre como chat público (página embebible). */
+    publicoForzado?: boolean;
+    /** Seccional fija (nombre tal como la espera el servidor): no se puede cambiar desde la pantalla. */
+    seccionalFija?: string;
+}
+
+export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {}) {
+    const { user: usuarioAutenticado } = useAuth();
+    const user = opciones.publicoForzado ? null : usuarioAutenticado;
     const [asistentes, setAsistentes] = useState<Asistente[]>([]);
     const [asistenteActivo, setAsistenteActivo] = useState<Asistente | null>(null);
     const [mensajes, setMensajes] = useState<{ [key: string]: Mensaje[] }>({});
@@ -222,6 +230,13 @@ export function useAsistentesVirtuales() {
             return;
         }
 
+        if (opciones.seccionalFija) {
+            setSeccionalesPublico([opciones.seccionalFija]);
+            setSeccionalPublica(opciones.seccionalFija);
+            setCargandoSeccionales(false);
+            return;
+        }
+
         const stored = localStorage.getItem('sihul_chatbot_public_seccional');
         if (stored) {
             setSeccionalPublica(stored);
@@ -236,7 +251,7 @@ export function useAsistentesVirtuales() {
         }
         setCargandoSeccionales(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id]);
+    }, [user?.id, opciones.seccionalFija]);
 
     // Cargar agentes y datos persistidos desde el backend
     useEffect(() => {

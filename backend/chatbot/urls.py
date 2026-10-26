@@ -12,6 +12,8 @@ urlpatterns = [
     path('conversaciones/', views.listar_conversaciones, name='listar_conversaciones'),
     
     # Endpoints públicos (sin autenticación, sin historial)
+    path('public/desafio/', views.desafio_publico, name='desafio_publico'),
+    path('public/sesion/', views.sesion_publica, name='sesion_publica'),
     path('public/agentes/', views.list_agentes_publico, name='list_agentes_publico'),
     path('public/pregunta/', views.enviar_pregunta_publico, name='enviar_pregunta_publico'),
 ]

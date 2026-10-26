@@ -148,7 +148,7 @@ Regla: **no se toca lo que corre hasta tener inventario, backup verificado y ens
 
 ## Lo que este despliegue NO resuelve todavía
 
-- El chatbot no autentica y sigue expuesto en `/chatbot/` (hallazgo de seguridad pendiente).
+- El chatbot (FastAPI) no autentica: por eso ya no se publica en `/chatbot/` (nginx responde 404) y solo lo usa el backend por la red interna.
 - La contraseña por defecto de la base de datos.
 - Observabilidad y alertas por correo (esperan la ampliación de RAM).
 - Despliegue automático por runner (cuando las reglas de ramas estén activas).
