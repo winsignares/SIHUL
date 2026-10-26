@@ -39,7 +39,7 @@ from usuarios.models import Rol, Usuario
 from notificaciones.signals import crear_notificacion
 from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
-from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effective, user_supervisa_espacios
+from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effective, seccional_para_sesion, user_supervisa_espacios
 from .cache_utils import CachedCatalogMixin
 from .seccional_auth import SeccionalMixin
 from .permissions import (
@@ -769,6 +769,7 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
                 'seccional_ciudad': usuario.sede.seccional.ciudad if usuario.sede.seccional else None,
                 'direccion': usuario.sede.direccion,
             } if usuario.sede else None,
+            'seccional': seccional_para_sesion(usuario),
             'componentes': componentes,
             'espacios_permitidos': espacios_permitidos,
             **alcance_espacios.resumen_sesion(usuario),

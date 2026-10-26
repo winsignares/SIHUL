@@ -46,6 +46,23 @@ def get_role_name(user):
     return (getattr(rol, 'nombre', '') or '').strip().lower()
 
 
+def seccional_de_usuario(user):
+    """Seccional del usuario: la suya propia o, si no la tiene, la de su sede (None si no tiene ninguna)."""
+    if not user:
+        return None
+    seccional = getattr(user, 'seccional', None)
+    if seccional is not None:
+        return seccional
+    sede = getattr(user, 'sede', None)
+    return getattr(sede, 'seccional', None) if sede else None
+
+
+def seccional_para_sesion(user):
+    """Seccional del usuario como la entrega la sesión al frontend: {id, ciudad} o None."""
+    seccional = seccional_de_usuario(user)
+    return {'id': seccional.id, 'ciudad': seccional.ciudad} if seccional else None
+
+
 def get_user_seccional_id(user):
     if not user:
         return None

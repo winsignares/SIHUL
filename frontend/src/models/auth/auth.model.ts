@@ -69,6 +69,8 @@ export interface User {
     rol: Role | null;
     facultad: Faculty | null;
     sede: Sede | null;
+    /** Seccional del usuario: la suya propia o, si no, la de su sede. Opcional: sesiones guardadas antes no la traen. */
+    seccional?: { id: number; ciudad: string } | null;
 }
 
 /**
