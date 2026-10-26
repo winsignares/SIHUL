@@ -14,7 +14,7 @@ Cada comando ETL construye su propia conexión Oracle leyendo variables de entor
 - `ORACLE_PASSWORD`
 - `ORACLE_SERVICE`
 
-**Estas variables no están definidas en `.env.example` ni `.env.test.example`** — deben proveerse manualmente (como variables de entorno del contenedor `backend` o como argumentos del comando) antes de ejecutar cualquier ETL.
+**Estas variables no están definidas en ninguna plantilla de variables (`.env.example`, `despliegue/env/*.example`)** — deben proveerse manualmente (como variables de entorno del contenedor `backend` o como argumentos del comando) antes de ejecutar cualquier ETL.
 
 ## Vistas fuente conocidas (esquema `UHORARIOS`)
 

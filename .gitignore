@@ -39,3 +39,27 @@ despliegue/env/*.env
 
 # Estado local del despliegue (versión actual y anterior por entorno)
 despliegue/.estado/
+
+# Variables de entorno: SOLO las plantillas *.example se versionan. Cualquier otro .env o *.env se ignora.
+.env.*
+*.env
+!.env.example
+!*.env.example
+chatbot/.env
+frontend/.env
+frontend/.env.local
+
+# Editores y herramientas locales
+.idea/
+.vscode/
+
+# Salidas y residuos locales que nunca deben versionarse
+*.log
+*.pyc
+*.backup
+*.bak
+*.orig
+# Rutas de Windows pegadas como carpeta (p. ej. backend/C:\Users\...): archivos subidos de prueba
+/backend/C*Users*
+zap-reports/
+bandit-*.json
