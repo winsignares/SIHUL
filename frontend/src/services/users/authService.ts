@@ -130,6 +130,8 @@ export interface LoginResponse {
     seccional_ciudad?: string | null;
     direccion?: string;
   } | null;
+  /** Seccional del usuario: la suya propia o, si no, la de su sede. */
+  seccional?: { id: number; ciudad: string } | null;
   componentes: Array<{
     id: number;
     nombre: string;
@@ -196,6 +198,8 @@ export interface SessionUserAuthenticatedResponse {
     direccion?: string;
     ciudad?: string;
   } | null;
+  /** Seccional del usuario: la suya propia o, si no, la de su sede. */
+  seccional?: { id: number; ciudad: string } | null;
   componentes: Array<{
     id: number;
     nombre: string;

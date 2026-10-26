@@ -42,7 +42,7 @@ export default function GestionChatbots() {
         </div>
       </motion.section>
 
-      {!loadingSeccional && !seccionalValida && <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">Tu usuario no tiene una seccional compatible asignada. Solicita al administrador global que complete la sede de tu perfil.</div>}
+      {!loadingSeccional && !seccionalValida && <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">Tu usuario no tiene una seccional compatible asignada. Solicita al administrador global que complete la seccional de tu perfil.</div>}
 
       <Tabs defaultValue="documentos" className="w-full space-y-4">
         <TabsList>

@@ -84,7 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             correo: response.correo,
             rol: response.rol,
             facultad: response.facultad,
-            sede: response.sede
+            sede: response.sede,
+            seccional: response.seccional ?? null
         };
 
         localStorage.setItem('auth_token', response.token);
@@ -142,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             rol: response.rol,
             facultad: response.facultad,
             sede: response.sede,
+            seccional: response.seccional ?? null,
         };
 
         localStorage.setItem('auth_token', response.token);

@@ -8,7 +8,7 @@ from werkzeug.security import check_password_hash
 import datetime
 import secrets
 import hashlib
-from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
+from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective, seccional_para_sesion, user_supervisa_espacios
 
 
 def _password_valida(usuario, password_plano):
@@ -344,7 +344,7 @@ def login(request):
         if not correo or not contrasena:
             return JsonResponse({"error": "correo y contrasena son requeridos"}, status=400)
         try:
-            u = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(correo=correo)
+            u = Usuario.objects.select_related('sede', 'sede__seccional', 'seccional', 'rol', 'facultad').get(correo=correo)
         except Usuario.DoesNotExist:
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
         password_ok, es_legacy = _password_valida(u, contrasena)
@@ -411,6 +411,7 @@ def login(request):
                 "seccional_ciudad": u.sede.seccional.ciudad if u.sede.seccional else None,
                 "direccion": u.sede.direccion
             } if u.sede else None,
+            "seccional": seccional_para_sesion(u),
             "componentes": componentes,
             "espacios_permitidos": espacios_permitidos,
             "token": token

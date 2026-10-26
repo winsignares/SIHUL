@@ -111,10 +111,12 @@ export function useGestionChatbots() {
             .replace(/^_+|_+$/g, '')
     ), []);
 
+    // La seccional propia del usuario manda; si no la tiene, la de su sede. Una persona sin sede (por ejemplo el
+    // personal de bibliotecas) también tiene seccional: no se le puede exigir una sede.
     const seccionalUsuario = useMemo(() => {
         const sede = user?.sede;
-        return normalizarSeccional(sede?.seccional_ciudad || sede?.ciudad || sede?.nombre);
-    }, [normalizarSeccional, user?.sede]);
+        return normalizarSeccional(user?.seccional?.ciudad || sede?.seccional_ciudad || sede?.ciudad || sede?.nombre);
+    }, [normalizarSeccional, user?.seccional, user?.sede]);
 
     const seccionalValida = Boolean(
         seccionalUsuario && sedesDisponibles.includes(seccionalUsuario)
