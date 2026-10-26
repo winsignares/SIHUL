@@ -4,6 +4,7 @@ import { userService, rolService, type Usuario, type Rol } from '../../services/
 import { espacioService, espacioPermitidoService, type EspacioFisico, type TipoEspacio } from '../../services/espacios/espaciosAPI';
 import { facultadService } from '../../services/facultades/facultadesAPI';
 import { sedeService } from '../../services/sedes/sedeAPI';
+import { seccionalService, type Seccional } from '../../services/seccionales/seccionalAPI';
 import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
 import { isSpaceSupervisorRole } from '../../context/spaceSupervisorRole';
 import {
@@ -98,12 +99,14 @@ export function useGestionUsuarios() {
     const [confirmarCorreo, setConfirmarCorreo] = useState('');
     const [confirmarPassword, setConfirmarPassword] = useState('');
     const [sedeSeleccionada, setSedeSeleccionada] = useState('');
+    const [seccionalSeleccionada, setSeccionalSeleccionada] = useState('');
 
     // Estados para datos dinámicos desde backend
     const [rolesDisponibles, setRolesDisponibles] = useState<Rol[]>([]);
     const [facultadesDisponibles, setFacultadesDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
     const [espaciosDisponibles, setEspaciosDisponibles] = useState<EspacioAsignable[]>([]);
     const [sedesDisponibles, setSedesDisponibles] = useState<SedeAsignable[]>([]);
+    const [seccionalesDisponibles, setSeccionalesDisponibles] = useState<Seccional[]>([]);
 
     // Estados para espacios permitidos (roles con supervisión de espacios)
     const [espacioSeleccionado, setEspacioSeleccionado] = useState('');
@@ -145,6 +148,7 @@ export function useGestionUsuarios() {
             loadFacultades({ force }),
             loadEspacios({ force }),
             loadSedes({ force }),
+            loadSeccionales(),
             loadTiposEspacio({ force })
         ]);
     };
@@ -284,6 +288,15 @@ export function useGestionUsuarios() {
             setSessionCacheData(GESTION_SEDES_CACHE_KEY, activeToken, sedes);
         } catch (error) {
             console.error('Error cargando sedes:', error);
+        }
+    };
+
+    // Seccionales que se pueden asignar: el administrador global ve todas; quien administra una seccional, solo la suya
+    const loadSeccionales = async () => {
+        try {
+            setSeccionalesDisponibles(await seccionalService.listar());
+        } catch (error) {
+            console.error('Error cargando seccionales:', error);
         }
     };
 
@@ -499,9 +512,9 @@ export function useGestionUsuarios() {
             return;
         }
 
-        // Validar sede seleccionada
-        if (!sedeSeleccionada) {
-            showNotification('Por favor seleccione una sede', 'error');
+        // La seccional sale de la sede; si no se elige sede, hay que elegir la seccional
+        if (!sedeSeleccionada && !seccionalSeleccionada) {
+            showNotification('Seleccione una sede o, si no tiene sede, una seccional', 'error');
             return;
         }
 
@@ -528,7 +541,8 @@ export function useGestionUsuarios() {
                 activo: true,
                 espacios_permitidos: espaciosPayload,
                 tipos_espacio_permitidos: tiposPayload,
-                sede_id: parseInt(sedeSeleccionada)
+                sede_id: sedeSeleccionada ? parseInt(sedeSeleccionada) : null,
+                seccional_id: !sedeSeleccionada && seccionalSeleccionada ? parseInt(seccionalSeleccionada) : undefined
             });
 
             try {
@@ -590,6 +604,8 @@ export function useGestionUsuarios() {
                 rol_id: editingUser.rol_id,
                 facultad_id: facultadSeleccionadaEdit,
                 sede_id: editingUser.sede_id ?? null,
+                // Con sede, la seccional se deriva de ella; sin sede, se envía la elegida (o null para quitarla)
+                seccional_id: editingUser.sede_id ? undefined : (editingUser.seccional_id ?? null),
                 activo: editingUser.activo,
                 espacios_permitidos: espaciosPayload,
                 tipos_espacio_permitidos: tiposPayload
@@ -605,6 +621,9 @@ export function useGestionUsuarios() {
                         rol_id: editingUser.rol_id,
                         facultad_id: facultadSeleccionadaEdit,
                         sede_id: editingUser.sede_id ?? null,
+                        seccional_id: editingUser.sede_id
+                            ? (sedeActualizada?.seccional_id ?? null)
+                            : (editingUser.seccional_id ?? null),
                         rol: rolActualizado ?? u.rol,
                         facultad: facultadActualizada,
                         sede: sedeActualizada
@@ -756,6 +775,7 @@ export function useGestionUsuarios() {
         setConfirmarCorreo('');
         setConfirmarPassword('');
         setSedeSeleccionada('');
+        setSeccionalSeleccionada('');
         setEspaciosPermitidos([]);
         setModoAsignacionSupervisor('individual');
         setTipoEspacioSeleccionado('');
@@ -866,6 +886,7 @@ export function useGestionUsuarios() {
         espaciosDisponiblesCreacion,
         espaciosDisponiblesEdicion,
         sedesDisponibles,
+        seccionalesDisponibles,
         tiposEspacioDisponibles,
         espacioSeleccionado, setEspacioSeleccionado,
         espaciosPermitidos,
@@ -894,6 +915,7 @@ export function useGestionUsuarios() {
         // Campos de validación
         confirmarCorreo, setConfirmarCorreo,
         confirmarPassword, setConfirmarPassword,
-        sedeSeleccionada, setSedeSeleccionada
+        sedeSeleccionada, setSedeSeleccionada,
+        seccionalSeleccionada, setSeccionalSeleccionada
     };
 }

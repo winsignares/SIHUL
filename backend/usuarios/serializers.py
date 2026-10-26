@@ -120,6 +120,28 @@ class UsuarioSerializer(serializers.ModelSerializer):
         else:
             alcance.sincronizar_por_tipos(usuario)
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        sede = attrs.get('sede')
+        seccional = attrs.get('seccional')
+
+        # La seccional de una persona se deriva de su sede: si llegan las dos, deben ser coherentes.
+        if sede is not None and seccional is not None and sede.seccional_id and sede.seccional_id != seccional.id:
+            raise serializers.ValidationError({'seccional': 'La seccional no corresponde a la sede elegida.'})
+
+        # Quien administra una seccional solo puede dejar usuarios en la suya. El administrador global
+        # (superusuario) puede asignar cualquiera.
+        from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective
+
+        request = self.context.get('request')
+        solicitante = (getattr(request, 'user_obj', None) or getattr(request, 'user', None)) if request else None
+        if solicitante and getattr(solicitante, 'is_authenticated', True) and not is_superuser_effective(solicitante):
+            propia = get_user_seccional_id(solicitante)
+            destino = sede.seccional_id if sede is not None else (seccional.id if seccional is not None else None)
+            if propia and destino and destino != propia:
+                raise serializers.ValidationError({'seccional': 'Solo puedes asignar usuarios a tu propia seccional.'})
+        return attrs
+
     def create(self, validated_data):
         espacios_permitidos = validated_data.pop('espacios_permitidos', None)
         tipos_permitidos = validated_data.pop('tipos_espacio_permitidos', None)

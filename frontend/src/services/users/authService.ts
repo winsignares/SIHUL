@@ -20,6 +20,8 @@ export interface Usuario {
   rol_id?: number | null;
   facultad_id?: number | null;
   sede_id?: number | null;
+  /** Seccional del usuario: se deriva de su sede, o se asigna directamente cuando no tiene sede. */
+  seccional_id?: number | null;
   sede?: string | {
     id: number;
     nombre: string;
@@ -58,6 +60,8 @@ interface UsuarioApi {
     direccion?: string;
   } | null;
   sede_id?: number | null;
+  seccional?: number | { id: number; ciudad?: string } | null;
+  seccional_id?: number | null;
   activo: boolean;
   espacios_permitidos?: number[];
   // Asignación por tipo (supervisores de espacios): ids de los tipos que gestiona
@@ -77,6 +81,8 @@ export interface CreateUsuarioPayload {
   sede?: string;
   // Compatibilidad con formularios existentes; backend usa "sede".
   sede_id?: number | null;
+  /** Solo cuando no se elige sede: el backend deriva la seccional de la sede. */
+  seccional_id?: number | null;
 }
 
 export interface UpdateUsuarioPayload {
@@ -88,6 +94,8 @@ export interface UpdateUsuarioPayload {
   rol_id?: number | null;
   facultad_id?: number | null;
   sede_id?: number | null;
+  /** Solo cuando no hay sede: el backend deriva la seccional de la sede. `null` la quita. */
+  seccional_id?: number | null;
   activo?: boolean;
   espacios_permitidos?: number[];
   // Asignación por tipo (supervisores de espacios): ids de los tipos que gestiona
@@ -261,6 +269,11 @@ const toFrontendUsuario = (usuario: UsuarioApi): Usuario => {
     rol_id: rolId,
     facultad_id: facultadId,
     sede_id: sedeId,
+    seccional_id: usuario.seccional_id ?? (
+      typeof usuario.seccional === 'number'
+        ? usuario.seccional
+        : (usuario.seccional && typeof usuario.seccional === 'object' ? usuario.seccional.id : null)
+    ),
     sede: sedeObj,
     activo: usuario.activo,
     rol: rolObj,
@@ -407,7 +420,8 @@ export const userService = {
       activo: usuario.activo ?? true,
       espacios_permitidos: usuario.espacios_permitidos,
       tipos_espacio_permitidos: usuario.tipos_espacio_permitidos,
-      sede
+      sede,
+      seccional: usuario.seccional_id ?? undefined
     });
   },
 
@@ -427,6 +441,7 @@ export const userService = {
       rol: usuario.rol_id,
       facultad: usuario.facultad_id,
       sede: usuario.sede_id,
+      seccional: usuario.seccional_id,
       activo: usuario.activo,
       espacios_permitidos: usuario.espacios_permitidos,
       tipos_espacio_permitidos: usuario.tipos_espacio_permitidos
