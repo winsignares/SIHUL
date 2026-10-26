@@ -41,9 +41,11 @@ interface AsistentesVirtualesProps {
   /** Página embebible del chat público: sin menú de la aplicación, con la seccional fija y pantalla única en celular. */
   modoEmbebido?: boolean;
   seccionalFija?: string;
+  /** Nombre de la seccional para mostrar (con tildes); por defecto, el mismo valor de `seccionalFija`. */
+  seccionalEtiqueta?: string;
 }
 
-export default function AsistentesVirtuales({ modoEmbebido = false, seccionalFija }: AsistentesVirtualesProps = {}) {
+export default function AsistentesVirtuales({ modoEmbebido = false, seccionalFija, seccionalEtiqueta }: AsistentesVirtualesProps = {}) {
   const isMobile = useIsMobile();
   const [verLista, setVerLista] = useState(false);
   const [documentoAbierto, setDocumentoAbierto] = useState<DocumentoAbierto | null>(null);
@@ -164,7 +166,7 @@ export default function AsistentesVirtuales({ modoEmbebido = false, seccionalFij
           {esPublico && seccionalFija && (
             <div className="mb-4 flex items-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-3 py-2.5 shadow-inner backdrop-blur-sm">
               <MapPin className="h-4 w-4 text-yellow-300" />
-              <span className="text-sm font-semibold text-white">Seccional {seccionalFija}</span>
+              <span className="text-sm font-semibold text-white">Seccional {seccionalEtiqueta ?? seccionalFija}</span>
             </div>
           )}
 

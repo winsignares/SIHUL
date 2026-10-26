@@ -340,6 +340,7 @@ export default function AppRouter() {
     return (
       <Suspense fallback={<PageLoader />}>
         <Routes>
+          <Route path="/asistente" element={<AsistentePublicoEmbebido />} />
           <Route path="/asistente/:seccional" element={<AsistentePublicoEmbebido />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -436,6 +437,7 @@ export default function AppRouter() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Enlace público de una seccional al asistente virtual: sin menú ni sesión */}
+        <Route path="/asistente" element={<AsistentePublicoEmbebido />} />
         <Route path="/asistente/:seccional" element={<AsistentePublicoEmbebido />} />
 
         {/* Rutas públicas disponibles incluso si hay sesión activa */}
