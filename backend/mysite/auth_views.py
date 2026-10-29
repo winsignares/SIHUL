@@ -1,11 +1,15 @@
 import hashlib
+import json
+import logging
 import secrets
 
 from django.conf import settings
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
 
 from componentes.models import ComponenteRol, ComponenteUsuario
 from espacios.models import EspacioPermitido
@@ -167,3 +171,47 @@ def login_success(request):
 
     frontend_url = f"{settings.FRONTEND_URL}/login?oauth=success"
     return redirect(frontend_url)
+
+
+# ---- Errores del navegador ---------------------------------------------------------------------
+# Cuando la pantalla muestra «Algo salió mal», el navegador avisa aquí para que el log del servidor diga qué se rompió
+# (sin esto solo lo ve la persona frente a su pantalla). Solo escribe una línea de log: limita por IP y recorta todo.
+
+logger_cliente = logging.getLogger('sihul.cliente')
+ERRORES_CLIENTE_POR_MINUTO = 20
+_LIMITES_CAMPO = {'mensaje': 300, 'pila': 1500, 'ruta': 200, 'navegador': 200, 'origen': 30}
+
+
+def _limpiar_texto(valor, maximo):
+    # Una sola línea y sin caracteres de control: nada de lo que envíe el navegador puede falsear otras líneas del log
+    texto = ' '.join(str(valor or '').split())
+    return ''.join(ch for ch in texto if ch.isprintable())[:maximo]
+
+
+@csrf_exempt
+@require_POST
+def error_cliente(request):
+    ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', 'desconocida')).split(',')[0].strip()
+    clave = f'error-cliente:{ip}'
+    cache.add(clave, 0, 60)
+    try:
+        cuenta = cache.incr(clave)
+    except ValueError:
+        cuenta = 1
+    if cuenta > ERRORES_CLIENTE_POR_MINUTO:
+        return JsonResponse({'ok': False}, status=429)
+
+    try:
+        datos = json.loads(request.body[:8000] or b'{}')
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'ok': False}, status=400)
+    if not isinstance(datos, dict):
+        return JsonResponse({'ok': False}, status=400)
+
+    campos = {nombre: _limpiar_texto(datos.get(nombre), maximo) for nombre, maximo in _LIMITES_CAMPO.items()}
+    logger_cliente.warning(
+        'ERROR_CLIENTE usuario=%s origen=%s ruta=%s mensaje=%s navegador=%s pila=%s',
+        request.session.get('user_id', '-'), campos['origen'], campos['ruta'], campos['mensaje'],
+        campos['navegador'], campos['pila'],
+    )
+    return JsonResponse({'ok': True})
