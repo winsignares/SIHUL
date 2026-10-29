@@ -29,6 +29,7 @@ const SEDES_UPDATED_EVENT = 'sedes-updated';
 export function useEspaciosFisicos() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const { user, espaciosScope } = useAuth();
+    const [cargando, setCargando] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTipo, setFilterTipo] = useState<string>('all');
     const [filterSede, setFilterSede] = useState<string>('all');
@@ -156,6 +157,8 @@ export function useEspaciosFisicos() {
         } catch (error) {
             console.error('Error loading data:', error);
             toast.error('Error al cargar los datos');
+        } finally {
+            setCargando(false);
         }
     };
 
@@ -532,6 +535,7 @@ export function useEspaciosFisicos() {
     );
 
     return {
+        cargando,
         puedeCrearEspacios,
         puedeCrearTipos: !supervisorRestringido,
         tiposParaFormulario,

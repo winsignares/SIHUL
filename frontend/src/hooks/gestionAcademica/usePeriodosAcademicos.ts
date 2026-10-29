@@ -19,7 +19,7 @@ export interface PeriodoUI {
 export function usePeriodosAcademicos() {
     const { notification, showNotification } = useNotification();
 
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // la primera carga empieza al montar: evita mostrar "no hay datos" antes
     const [periodos, setPeriodos] = useState<PeriodoUI[]>([]);
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);

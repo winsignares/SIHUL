@@ -5,6 +5,7 @@ import { Card, CardContent } from '../../share/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../share/dialog';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
+import { FilaVaciaTabla } from '../../components/common/FilaVaciaTabla';
 import { Plus, Edit, Copy, Calendar, CheckCircle2, Clock, TrendingUp, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { NotificationBanner } from '../../share/notificationBanner';
@@ -33,7 +34,8 @@ export default function PeriodosAcademicos() {
     handleCopyPeriodo,
     handleOpenDeleteDialog,
     handleDeletePeriodo,
-    notification
+    notification,
+    loading
   } = usePeriodosAcademicos();
 
   const getEstadoBadge = (estado: string) => {
@@ -122,6 +124,9 @@ export default function PeriodosAcademicos() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {periodosOrdenados.length === 0 && (
+                <FilaVaciaTabla colSpan={6} cargando={loading} mensajeCargando="Cargando periodos..." mensajeVacio="No hay periodos registrados" />
+              )}
               {periodosOrdenados.map((periodo) => (
                 <TableRow key={periodo.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                   <TableCell className="text-slate-900 dark:text-slate-100">{periodo.nombre}</TableCell>

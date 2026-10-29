@@ -1,32 +1,21 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import {
   clearApiError,
   getApiActivitySnapshot,
   subscribeApiActivity,
 } from '../../core/apiActivity';
-import { Loading } from './Loading';
 
 const ERROR_VISIBLE_MS = 7000;
-const LOADING_DELAY_MS = 180;
 
 export function ApiRequestFeedback() {
-  const { pendingRequests, error, backendUnreachable, backendRecovering } = useSyncExternalStore(
+  // Ya no hay aviso global «Cargando datos...»: con las peticiones de fondo (sesión, notificaciones) quedaba
+  // casi siempre a la vista. Cada lista muestra su propio indicador de carga.
+  const { error, backendUnreachable, backendRecovering } = useSyncExternalStore(
     subscribeApiActivity,
     getApiActivitySnapshot,
     getApiActivitySnapshot,
   );
-  const [showLoading, setShowLoading] = useState(false);
-
-  useEffect(() => {
-    if (pendingRequests === 0) {
-      setShowLoading(false);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => setShowLoading(true), LOADING_DELAY_MS);
-    return () => window.clearTimeout(timeoutId);
-  }, [pendingRequests]);
 
   useEffect(() => {
     if (!error) return;
@@ -36,12 +25,6 @@ export function ApiRequestFeedback() {
 
   return (
     <div className="pointer-events-none fixed inset-x-0 top-4 z-[100] flex flex-col items-center gap-2 px-4">
-      {showLoading && (
-        <div className="pointer-events-auto rounded-lg border border-slate-200 bg-white/95 px-4 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
-          <Loading compact message="Cargando datos..." />
-        </div>
-      )}
-
       {error && !backendUnreachable && !backendRecovering && (
         <div
           role="alert"

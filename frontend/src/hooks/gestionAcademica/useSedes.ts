@@ -27,7 +27,7 @@ export function useSedes() {
     const [searchTerm, setSearchTerm] = useState('');
     const [sedes, setSedes] = useState<Sede[]>([]);
     const [seccionales, setSeccionales] = useState<Seccional[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // la primera carga empieza al montar: evita mostrar "no hay datos" antes
     const [currentPage, setCurrentPage] = useState(1);
 
     // Estados de modales

@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
+import { FilaVaciaTabla } from '../../components/common/FilaVaciaTabla';
 import { Plus, Edit, Trash2, Building2, Search, Users, AlertTriangle, BookOpen, MapPin, Boxes, Power, PowerOff, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useMemo } from 'react';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -88,7 +89,8 @@ export default function FacultadesPrograms() {
     getFacultadNombre,
     activeFacultades,
     availableAsignaturas,
-    asignaturasBySemestre
+    asignaturasBySemestre,
+    loading
   } = useFacultadesPrograms();
 
   const firstFacultadItemIndex = totalFilteredFacultades === 0 ? 0 : (currentFacultadPage - 1) * pageSize + 1;
@@ -283,11 +285,7 @@ export default function FacultadesPrograms() {
                   </TableHeader>
                   <TableBody>
                     {totalFilteredFacultades === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-slate-500 py-8">
-                          No se encontraron facultades
-                        </TableCell>
-                      </TableRow>
+                      <FilaVaciaTabla colSpan={4} cargando={loading} mensajeCargando="Cargando facultades..." mensajeVacio="No se encontraron facultades" />
                     ) : (
                       paginatedFacultades.map((facultad) => (
                         <TableRow key={facultad.id}>
@@ -352,11 +350,7 @@ export default function FacultadesPrograms() {
                   </TableHeader>
                   <TableBody>
                     {totalFilteredProgramas === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-slate-500 py-8">
-                          No se encontraron programas
-                        </TableCell>
-                      </TableRow>
+                      <FilaVaciaTabla colSpan={5} cargando={loading} mensajeCargando="Cargando programas..." mensajeVacio="No se encontraron programas" />
                     ) : (
                       paginatedProgramas.map((programa) => (
                         <TableRow key={programa.id}>
