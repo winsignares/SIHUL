@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { SearchableSelect } from '../../share/searchableSelect';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
+import { FilaVaciaTabla } from '../../components/common/FilaVaciaTabla';
 import { Plus, Edit, Trash2, Search, Check, Package, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useEspaciosFisicos } from '../../hooks/gestionAcademica/useEspaciosFisicos';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -52,7 +53,8 @@ export default function EspaciosFisicos() {
     hasNextPageWindow,
     goToPrevPageWindow,
     goToNextPageWindow,
-    getEstadoBadge
+    getEstadoBadge,
+    cargando
   } = useEspaciosFisicos();
 
   const firstItemIndex = totalFilteredEspacios === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -209,11 +211,7 @@ export default function EspaciosFisicos() {
             </TableHeader>
             <TableBody>
               {filteredEspacios.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-slate-500 dark:text-slate-400 py-8">
-                    No se encontraron espacios
-                  </TableCell>
-                </TableRow>
+                <FilaVaciaTabla colSpan={8} cargando={cargando} mensajeCargando="Cargando espacios..." mensajeVacio="No se encontraron espacios" />
               ) : (
                 paginatedEspacios.map((espacio) => {
                   const sede = sedes.find(s => s.id === espacio.sede_id);

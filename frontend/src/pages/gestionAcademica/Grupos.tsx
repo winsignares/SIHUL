@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
+import { FilaVaciaTabla } from '../../components/common/FilaVaciaTabla';
 import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useGrupos } from '../../hooks/gestionAcademica/useGrupos';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -47,7 +48,8 @@ export default function Grupos() {
     periodosDisponibles,
     getProgramaNombre,
     getPeriodoNombre,
-    getSemestresDisponiblesPorPrograma
+    getSemestresDisponiblesPorPrograma,
+    loading
   } = useGrupos();
 
   const firstItemIndex = totalFilteredGrupos === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -153,11 +155,7 @@ export default function Grupos() {
             </TableHeader>
             <TableBody>
               {totalFilteredGrupos === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-slate-500 py-8">
-                    No se encontraron grupos
-                  </TableCell>
-                </TableRow>
+                <FilaVaciaTabla colSpan={6} cargando={loading} mensajeCargando="Cargando grupos..." mensajeVacio="No se encontraron grupos" />
               ) : (
                 paginatedGrupos.map((grupo) => (
                   <TableRow key={grupo.id}>

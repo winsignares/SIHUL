@@ -33,7 +33,7 @@ export interface GrupoAcademico {
 export function useGrupos() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [searchTerm, setSearchTerm] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // la primera carga empieza al montar: evita mostrar "no hay datos" antes
     const [grupos, setGrupos] = useState<GrupoAcademico[]>([]);
     const [programas, setProgramas] = useState<Programa[]>([]);
     const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);

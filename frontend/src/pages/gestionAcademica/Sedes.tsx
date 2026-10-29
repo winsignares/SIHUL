@@ -4,6 +4,7 @@ import { Label } from '../../share/label';
 import { Card, CardContent } from '../../share/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../share/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
+import { FilaVaciaTabla } from '../../components/common/FilaVaciaTabla';
 import { Plus, Edit, Trash2, Search, AlertTriangle, Power, PowerOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Badge } from '../../share/badge';
 import { SearchableSelect } from '../../share/searchableSelect';
@@ -39,6 +40,7 @@ export default function Sedes() {
     goToPrevPageWindow,
     goToNextPageWindow,
     seccionales,
+    loading,
   } = useSedes();
 
   const firstItemIndex = totalFilteredSedes === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -94,11 +96,7 @@ export default function Sedes() {
             </TableHeader>
             <TableBody>
               {totalFilteredSedes === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-slate-500 py-8">
-                    No se encontraron sedes
-                  </TableCell>
-                </TableRow>
+                <FilaVaciaTabla colSpan={5} cargando={loading} mensajeCargando="Cargando sedes..." mensajeVacio="No se encontraron sedes" />
               ) : (
                 paginatedSedes.map((sede) => (
                   <TableRow key={sede.id}>
