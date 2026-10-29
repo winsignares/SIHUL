@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useAuthOptional } from './AuthContext';
 import { obtenerEstadisticas } from '../services/notificaciones/notificacionesAPI';
+import { useSondeoVisible } from '../hooks/useSondeoVisible';
 
 interface NotificacionesContextType {
     contadorNoLeidas: number;
@@ -44,7 +45,7 @@ export function NotificacionesProvider({ children }: { children: ReactNode }) {
     }, [user?.id, isAuthenticated, isAuthLoading]);
 
     /**
-     * Polling automático cada 30 segundos
+     * Carga inicial del contador y actualización cada 30 s solo con la pestaña visible
      */
     useEffect(() => {
         if (!isAuthenticated || !user?.id || isAuthLoading) {
@@ -54,12 +55,9 @@ export function NotificacionesProvider({ children }: { children: ReactNode }) {
 
         // Carga inicial
         actualizarContador();
-
-        // Polling cada 30 segundos
-        const interval = setInterval(actualizarContador, 30000);
-
-        return () => clearInterval(interval);
     }, [actualizarContador, isAuthenticated, user?.id, isAuthLoading]);
+
+    useSondeoVisible(actualizarContador, 30000, isAuthenticated && Boolean(user?.id) && !isAuthLoading);
 
     return (
         <NotificacionesContext.Provider value={{ contadorNoLeidas, actualizarContador }}>
