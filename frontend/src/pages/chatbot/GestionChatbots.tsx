@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../share/tabs';
 import { Textarea } from '../../share/textarea';
 import { useGestionChatbots } from '../../hooks/chatbot/useGestionChatbots';
 import { CHATBOT_ICONOS, CHATBOT_TIPOS, MAX_DOCUMENTOS, MAX_INSTRUCCIONES_ADICIONALES, MIN_DOCUMENTOS, maxDocumentosPorDefecto } from '../../models/chatbot/chatbotAdmin.model';
+import { Loading } from '../../components/common/Loading';
 
 const chipClase = (activo: boolean) => `rounded-full border px-3 py-1 text-sm font-medium transition ${activo ? 'border-red-700 bg-red-700 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-red-300 hover:text-red-700'}`;
 
@@ -64,7 +65,7 @@ export default function GestionChatbots() {
                     <SelectContent>{chatbotsDisponiblesParaCarga.map((chatbot) => <SelectItem key={chatbot.id} value={String(chatbot.id)}>{chatbot.nombre}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>Seccional</Label><Input value={seccionalValida ? mostrarSeccional(seccionalUsuario) : 'Sin seccional asignada'} disabled /></div>
+                <div className="space-y-2"><Label>Seccional</Label><Input value={seccionalValida ? mostrarSeccional(seccionalUsuario) : loadingSeccional ? 'Cargando...' : 'Sin seccional asignada'} disabled /></div>
                 <div className="space-y-2">
                   <Label>Documento PDF (máximo 15 MB) <span className="text-red-600">*</span></Label>
                   <Input key={uploadInputKey} type="file" accept=".pdf,application/pdf" disabled={!seccionalValida || loadingDocumentos || chatbotsDisponiblesParaCarga.length === 0} onChange={(event) => seleccionarArchivoCarga(event.target.files?.[0] ?? null)} />
@@ -89,7 +90,7 @@ export default function GestionChatbots() {
               </div>
             </CardHeader>
             <CardContent className="px-0 sm:px-6">
-              {loadingDocumentos ? <p className="px-6 py-5 text-sm text-slate-500 sm:px-0">Cargando documentos...</p> : (
+              {loadingDocumentos || loadingSeccional ? <Loading compact message="Cargando documentos..." className="justify-start px-6 py-5 sm:px-0" /> : (
                 <div className="overflow-x-auto sm:rounded-xl sm:border"><Table>
                   <TableHeader><TableRow className="bg-slate-50"><TableHead className="text-center">Nombre del documento</TableHead><TableHead className="text-center">Chatbot asignado</TableHead><TableHead className="text-center" title="1 = la más alta: se prefiere cuando los documentos del chatbot se contradicen">Prioridad</TableHead><TableHead className="text-center">Seccional</TableHead><TableHead className="text-center">Acciones</TableHead></TableRow></TableHeader>
                   <TableBody>
@@ -149,7 +150,7 @@ function ChatbotsTable({ state }: { state: GestionState }) {
           <SelectContent><SelectItem value="all">Todos los tipos</SelectItem>{CHATBOT_TIPOS.map((tipo) => <SelectItem key={tipo.value} value={tipo.value}>{tipo.label}</SelectItem>)}</SelectContent>
         </Select>
       </div>
-      {loadingChatbots ? <p className="px-6 py-5 text-sm text-slate-500">Cargando chatbots...</p> : <div className="overflow-x-auto sm:rounded-xl sm:border"><Table className="min-w-[760px] table-fixed">
+      {loadingChatbots ? <Loading compact message="Cargando chatbots..." className="justify-start px-6 py-5" /> : <div className="overflow-x-auto sm:rounded-xl sm:border"><Table className="min-w-[760px] table-fixed">
         <TableHeader><TableRow className="bg-slate-50"><TableHead className="w-[20%] text-center">Nombre</TableHead><TableHead className="w-[48%] text-center">Descripción</TableHead><TableHead className="w-[12%] text-center">Estado</TableHead><TableHead className="w-[20%] text-center">Acciones</TableHead></TableRow></TableHeader>
         <TableBody>{chatbotsFiltrados.length === 0 ? <TableRow><TableCell colSpan={4} className="py-8 text-center text-slate-500">{chatbots.length === 0 ? 'No hay chatbots registrados.' : 'Ningún chatbot coincide con el filtro.'}</TableCell></TableRow> : chatbotsFiltrados.map((chatbot) => <TableRow key={chatbot.id}>
           <TableCell className="whitespace-normal break-words text-center font-medium">{chatbot.nombre}<div className="mt-1"><Badge variant="outline" className="text-[10px] font-normal">{CHATBOT_TIPOS.find((tipo) => tipo.value === (chatbot.tipo ?? 'normativo'))?.label}</Badge></div></TableCell><TableCell className="whitespace-normal break-words px-4 text-left leading-5 text-slate-600">{chatbot.descripcion}<div className="mt-1 text-xs text-slate-500">{chatbot.responsables && chatbot.responsables.length > 0 ? `Responsables de documentación: ${chatbot.responsables.map((persona) => persona.nombre).join(', ')}` : 'Sin responsables asignados (solo quienes administran chatbots pueden cargarle documentos).'}</div><div className="mt-1"><Badge variant="outline" className="text-[10px] font-normal">{chatbot.seccionales && chatbot.seccionales.length > 0 ? `Disponible solo en: ${(chatbot.seccionales_detalle ?? []).map((s) => s.ciudad).join(', ')}` : 'Disponible en todas las seccionales'}</Badge></div></TableCell>

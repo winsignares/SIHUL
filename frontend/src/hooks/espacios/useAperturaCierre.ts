@@ -14,6 +14,7 @@ import {
   PAGE_SIZE_DEFAULT
 } from '../gestionAcademica/paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { useSondeoVisible } from '../useSondeoVisible';
 
 const APERTURA_CIERRE_CACHE_KEY = 'espacios-apertura-cierre';
 const APERTURA_CIERRE_CATALOGOS_CACHE_KEY = 'espacios-apertura-cierre-catalogos';
@@ -275,14 +276,8 @@ export function useAperturaCierre() {
         cargarCatalogosEspacios();
     }, [cargarCatalogosEspacios]);
 
-    // Auto-refresh cada 30 segundos (más frecuente para contador en tiempo real)
-    useEffect(() => {
-        const interval = setInterval(() => {
-            cargarDatos({ force: true });
-        }, 30000);
-
-        return () => clearInterval(interval);
-    }, [cargarDatos]);
+    // Auto-refresh cada 30 segundos (más frecuente para contador en tiempo real), solo con la pestaña visible
+    useSondeoVisible(() => cargarDatos({ force: true }), 30000);
 
     /**
      * Función para refrescar manualmente
