@@ -32,6 +32,7 @@ import HorariosFusionados from './HorariosFusionados';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useCentroHorarios } from '../../hooks/gestionAcademica/useCentroHorarios';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { Loading } from '../../components/common/Loading';
 
 export default function CentroHorarios() {
   const isMobile = useIsMobile();
@@ -333,7 +334,9 @@ export default function CentroHorarios() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {gruposAgrupados.length === 0 ? (
+              {loading && gruposAgrupados.length === 0 ? (
+                <Loading message="Cargando grupos..." />
+              ) : gruposAgrupados.length === 0 ? (
                 <div className="text-center py-12">
                   <Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
                   <p className="text-slate-600 mb-2">No se encontraron grupos</p>
@@ -605,7 +608,9 @@ export default function CentroHorarios() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {gruposAgrupados.length === 0 ? (
+              {loading && gruposAgrupados.length === 0 ? (
+                <Loading message="Cargando grupos..." />
+              ) : gruposAgrupados.length === 0 ? (
                 <div className="text-center py-12">
                   <Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
                   <p className="text-slate-600 mb-2">No se encontraron grupos</p>

@@ -4,11 +4,12 @@ import { Calendar, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useConsultorEstudiante } from '../../hooks/dashboard/useConsultorEstudiante';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { Loading } from '../../components/common/Loading';
 
 export default function ConsultorEstudianteHome() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { stats } = useConsultorEstudiante();
+  const { stats, loading } = useConsultorEstudiante();
 
   const getGradient = (color: string) => {
     switch (color) {
@@ -54,7 +55,7 @@ export default function ConsultorEstudianteHome() {
                     </div>
                     <div className="flex-1">
                       <p className="text-slate-600 dark:text-slate-400 mb-1">{stat.label}</p>
-                      <h3 className="text-slate-900 dark:text-slate-100">{stat.value}</h3>
+                      {loading ? <Loading compact message="Cargando..." className="justify-start py-0" /> : <h3 className={`text-slate-900 dark:text-slate-100 ${isMobile ? 'text-lg' : ''}`}>{stat.value}</h3>}
                     </div>
                   </div>
                 </CardContent>

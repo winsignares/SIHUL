@@ -53,7 +53,7 @@ export function useDocentePrestamos() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterEstado, setFilterEstado] = useState('todos');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // la primera carga empieza al montar: evita mostrar "no hay datos" antes
     const [error, setError] = useState<string | null>(null);
     const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
@@ -63,6 +63,7 @@ export function useDocentePrestamos() {
     const [recursosDisponibles, setRecursosDisponibles] = useState<Recurso[]>([]);
     const [sedes, setSedes] = useState<Sede[]>([]);
     const [espaciosDisponibles, setEspaciosDisponibles] = useState<EspacioDisponibleAPI[]>([]);
+    const [cargandoEspacios, setCargandoEspacios] = useState(false);
 
     // Estado para recursos seleccionados (con cantidad)
     const [recursosSeleccionados, setRecursosSeleccionados] = useState<RecursoPrestamo[]>([]);
@@ -133,6 +134,7 @@ export function useDocentePrestamos() {
             return;
         }
 
+        setCargandoEspacios(true);
         try {
             const response = await prestamosPublicAPI.listarEspaciosDisponibles(
                 fecha,
@@ -144,6 +146,8 @@ export function useDocentePrestamos() {
         } catch (err) {
             console.error('Error fetching espacios disponibles:', err);
             setEspaciosDisponibles([]);
+        } finally {
+            setCargandoEspacios(false);
         }
     };
 
@@ -486,6 +490,7 @@ export function useDocentePrestamos() {
         goToNextPageWindow,
         estadisticas,
         loading,
+        cargandoEspacios,
         error,
         refetch: () => fetchPrestamos({ force: true }),
         // Funciones de edición
