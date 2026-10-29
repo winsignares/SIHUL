@@ -93,7 +93,7 @@ export function useCentroHorarios() {
         ? 'consulta'
         : (modeParam === 'modificacion' ? 'modificacion' : 'crear');
     const [activeTab, setActiveTab] = useState<TabMode>(initialMode);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // la primera carga empieza al montar: evita mostrar "no hay datos" antes
     const [horarios, setHorarios] = useState<HorarioExtendido[]>([]);
     const [horariosFusionados, setHorariosFusionados] = useState<HorarioFusionadoExtendido[]>([]);
     const [grupos, setGrupos] = useState<Grupo[]>([]);
