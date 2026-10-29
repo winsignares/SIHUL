@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { reportesFinancieroService, type AdminDashboardResponse } from '../../../services/financiero';
 import { useAuth } from '../../../context/AuthContext';
+import { useSondeoVisible } from '../../../hooks/useSondeoVisible';
 
 interface AdminFinancieroHomeProps {
   onNavigate: (menu: string) => void;
@@ -66,9 +67,10 @@ export default function AdminFinancieroHomeReal({ onNavigate }: AdminFinancieroH
 
   useEffect(() => {
     void fetchDashboard();
-    const interval = window.setInterval(() => void fetchDashboard(true), 60000);
-    return () => window.clearInterval(interval);
   }, [fetchDashboard]);
+
+  // Refresca cada 60 s, solo con la pestaña visible
+  useSondeoVisible(() => fetchDashboard(true), 60000);
 
   const KANBAN_PER_PAGE = 5;
 

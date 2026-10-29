@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import type { NotificacionUsuario, NotificacionBackend, FiltroTiempo, CategoriaNotificacion } from '../../models/users/notification.model';
 import { useAuth } from '../../context/AuthContext';
 import { useNotificacionesContext } from '../../context/NotificacionesContext';
+import { useSondeoVisible } from '../useSondeoVisible';
 import {
     obtenerMisNotificaciones,
     obtenerEstadisticas,
@@ -230,14 +231,10 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
      */
     useEffect(() => {
         cargarEstadisticas();
-
-        // Polling cada 30 segundos solo para estadísticas
-        const interval = setInterval(() => {
-            cargarEstadisticas();
-        }, 30000);
-
-        return () => clearInterval(interval);
     }, [cargarEstadisticas]);
+
+    // Estadísticas cada 30 s, solo con la pestaña visible
+    useSondeoVisible(cargarEstadisticas, 30000);
 
     /**
      * Función para cambiar de página

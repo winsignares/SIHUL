@@ -10,6 +10,7 @@ import { buildTimelineFromSeguimiento, TIMELINE_BLUEPRINT } from '../../../share
 import type { SeguimientoLike } from '../../../share/timeline-builder';
 import { displayDate, displayRadicado } from '../../../share/field-placeholders';
 import { downloadDocumentosConsolidadosPdf } from '../../../share/documentos-consolidados';
+import { useSondeoVisible } from '../../../hooks/useSondeoVisible';
 
 
 const toList = <T,>(data: unknown): T[] => {
@@ -101,41 +102,36 @@ export default function ConsultarFacturas() {
     void load();
   }, []);
 
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      void (async () => {
-        try {
-          const latest = await loadRows();
-          setRows((prev) => {
-            const previousMap = new Map(prev.map((p) => [p.facturaId, p]));
-            const changes: FuncionarioEstadoChange[] = [];
+  // Revisa cambios de estado cada 25 s, solo con la pestaña visible
+  useSondeoVisible(async () => {
+    try {
+      const latest = await loadRows();
+      setRows((prev) => {
+        const previousMap = new Map(prev.map((p) => [p.facturaId, p]));
+        const changes: FuncionarioEstadoChange[] = [];
 
-            latest.forEach((next) => {
-              const old = previousMap.get(next.facturaId);
-              if (old && old.estado !== next.estado) {
-                changes.push({
-                  id: next.facturaId,
-                  numeroFactura: next.idTramite,
-                  estadoAnterior: old.estado,
-                  estadoNuevo: next.estado,
-                });
-              }
+        latest.forEach((next) => {
+          const old = previousMap.get(next.facturaId);
+          if (old && old.estado !== next.estado) {
+            changes.push({
+              id: next.facturaId,
+              numeroFactura: next.idTramite,
+              estadoAnterior: old.estado,
+              estadoNuevo: next.estado,
             });
+          }
+        });
 
-            if (changes.length > 0) {
-              setEstadoChanges(changes);
-            }
-
-            return latest;
-          });
-        } catch {
-          // Polling silencioso para no interrumpir la experiencia si falla temporalmente.
+        if (changes.length > 0) {
+          setEstadoChanges(changes);
         }
-      })();
-    }, 25000);
 
-    return () => window.clearInterval(interval);
-  }, []);
+        return latest;
+      });
+    } catch {
+      // Polling silencioso para no interrumpir la experiencia si falla temporalmente.
+    }
+  }, 25000);
 
   const estados = useMemo(() => Array.from(new Set(rows.map((r) => r.estado))), [rows]);
 

@@ -6,6 +6,7 @@ import { Badge } from '../../share/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../../share/dialog';
 import SearchableSelect from '../../share/searchableSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
+import { FilaVaciaTabla } from '../../components/common/FilaVaciaTabla';
 import { Search, UserPlus, Edit, Trash2, UserCog, CheckCircle, XCircle, Plus, X, Eye, EyeOff, Mail, MapPin, ChevronLeft, ChevronRight, User, Lock, Shield } from 'lucide-react';
 import { NotificationBanner } from '../../share/notificationBanner';
 import { useGestionUsuarios } from '../../hooks/gestionAcademica/useGestionUsuarios';
@@ -624,11 +625,7 @@ export default function GestionUsuarios() {
             </TableHeader>
             <TableBody>
               {totalFilteredUsuarios === 0 || cargandoUsuarios ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                    {cargandoUsuarios ? 'Cargando usuarios...' : 'No se encontraron usuarios'}
-                  </TableCell>
-                </TableRow>
+                <FilaVaciaTabla colSpan={6} cargando={cargandoUsuarios} mensajeCargando="Cargando usuarios..." mensajeVacio="No se encontraron usuarios" />
               ) : (
                 paginatedUsuarios.map((usuario) => (
                   <TableRow key={usuario.id}>
