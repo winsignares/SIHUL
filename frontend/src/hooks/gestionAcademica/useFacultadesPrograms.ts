@@ -71,7 +71,7 @@ export function useFacultadesPrograms() {
     const [programas, setProgramas] = useState<Programa[]>([]);
     const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
     const [asignaturasPrograma, setAsignaturasPrograma] = useState<AsignaturaPrograma[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // la primera carga empieza al montar: evita mostrar "no hay datos" antes
 
     // Estados de modales
     const [showCreateFacultad, setShowCreateFacultad] = useState(false);
