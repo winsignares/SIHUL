@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNotification } from '../../share/notificationBanner';
 import { userService, rolService, type Usuario, type Rol } from '../../services/users/authService';
 import { espacioService, espacioPermitidoService, type EspacioFisico, type TipoEspacio } from '../../services/espacios/espaciosAPI';
@@ -10,7 +10,6 @@ import { isSpaceSupervisorRole } from '../../context/spaceSupervisorRole';
 import {
     PAGE_SIZE_DEFAULT,
     getPageNumbers,
-    getPageSlice,
     getTotalPages,
     hasNextPageWindow,
     hasPrevPageWindow,
@@ -19,7 +18,9 @@ import {
     getTargetPageForPrevWindow,
 } from './paginacion';
 
-const GESTION_USUARIOS_CACHE_KEY = 'gestion-academica-usuarios';
+// El servidor entrega los usuarios en bloques de 100; la tabla los muestra de PAGE_SIZE en PAGE_SIZE
+const USUARIOS_POR_BLOQUE = 100;
+const BUSQUEDA_ESPERA_MS = 300;
 const GESTION_ROLES_CACHE_KEY = 'gestion-academica-roles-v3';
 const GESTION_FACULTADES_CACHE_KEY = 'gestion-academica-facultades-usuarios';
 const GESTION_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios-v4';
@@ -74,10 +75,16 @@ export function useGestionUsuarios() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const { notification, showNotification } = useNotification();
 
+    // Bloque de usuarios cargado (hasta 100), su número y el total que coincide con la búsqueda
     const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+    const [bloqueCargado, setBloqueCargado] = useState(0);
+    const [totalUsuarios, setTotalUsuarios] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterRol, setFilterRol] = useState('todos');
+    const [busquedaAplicada, setBusquedaAplicada] = useState('');
+    const [filterRol, setFilterRolState] = useState('todos');
     const [currentUsuarioPage, setCurrentUsuarioPage] = useState(1);
+    const consultaUsuariosRef = useRef({ clave: '', numero: 0 });
+    const consultaActualRef = useRef({ bloque: 1, busqueda: '', rol: 'todos' });
 
     // Estados de diálogos
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -154,27 +161,28 @@ export function useGestionUsuarios() {
     };
 
     const setUsuariosAndCache = useCallback((updater: (prev: Usuario[]) => Usuario[]) => {
-        setUsuarios((prev) => {
-            const next = updater(prev);
-            setSessionCacheData(GESTION_USUARIOS_CACHE_KEY, localStorage.getItem('auth_token'), next);
-            return next;
-        });
+        setUsuarios(updater);
     }, []);
 
-    // Cargar usuarios desde backend
-    const loadUsuarios = async ({ force = false }: { force?: boolean } = {}) => {
+    // Cargar desde el servidor el bloque de 100 que contiene la página actual, con la búsqueda y el rol vigentes.
+    // Si llegan dos respuestas, solo cuenta la de la última consulta.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const loadUsuarios = async (_opciones: { force?: boolean } = {}) => {
+        const { bloque, busqueda, rol } = consultaActualRef.current;
+        const consulta = consultaUsuariosRef.current;
+        consulta.clave = `${bloque}|${busqueda}|${rol}`;
+        const numero = ++consulta.numero;
         try {
-            const activeToken = localStorage.getItem('auth_token');
-            const cachedUsuarios = force ? null : getSessionCacheData<Usuario[]>(GESTION_USUARIOS_CACHE_KEY, activeToken);
-
-            if (cachedUsuarios) {
-                setUsuarios(cachedUsuarios);
-                return;
-            }
-
-            const response = await userService.listarUsuarios();
-            setUsuarios(response.usuarios || []);
-            setSessionCacheData(GESTION_USUARIOS_CACHE_KEY, activeToken, response.usuarios || []);
+            const response = await userService.listarUsuariosPagina({
+                page: bloque,
+                pageSize: USUARIOS_POR_BLOQUE,
+                search: busqueda,
+                rol,
+            });
+            if (numero !== consulta.numero) return;
+            setUsuarios(response.usuarios);
+            setTotalUsuarios(response.total);
+            setBloqueCargado(bloque);
         } catch (error) {
             console.error('Error cargando usuarios:', error);
             showNotification('Error al cargar usuarios', 'error');
@@ -795,31 +803,46 @@ export function useGestionUsuarios() {
         setFacultadSeleccionadaEdit(null);
     };
 
-    // Usuarios filtrados (memoizado para evitar recálculos innecesarios)
-    const filteredUsuarios = useMemo(() => {
-        return usuarios.filter(user => {
-            const matchesSearch = (user.nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (user.correo ?? '').toLowerCase().includes(searchTerm.toLowerCase());
-            const rolNombre = user.rol?.nombre || rolesDisponibles.find(r => r.id === user.rol_id)?.nombre;
-            const matchesRol = filterRol === 'todos' || rolNombre === filterRol;
-            return matchesSearch && matchesRol;
-        });
-    }, [usuarios, searchTerm, filterRol, rolesDisponibles]);
-
-    const totalFilteredUsuarios = filteredUsuarios.length;
+    // El servidor ya filtra por búsqueda y rol: aquí solo se parte el bloque cargado en páginas de PAGE_SIZE
+    const totalFilteredUsuarios = totalUsuarios;
     const totalUsuarioPages = getTotalPages(totalFilteredUsuarios, PAGE_SIZE);
     const usuarioPageNumbers = useMemo(
         () => getPageNumbers(totalUsuarioPages, currentUsuarioPage),
         [totalUsuarioPages, currentUsuarioPage]
     );
 
-    const paginatedUsuarios = useMemo(() => {
-        return getPageSlice(filteredUsuarios, currentUsuarioPage, PAGE_SIZE);
-    }, [filteredUsuarios, currentUsuarioPage, PAGE_SIZE]);
+    const bloqueNecesario = Math.floor(((currentUsuarioPage - 1) * PAGE_SIZE) / USUARIOS_POR_BLOQUE) + 1;
+    consultaActualRef.current = { bloque: bloqueNecesario, busqueda: busquedaAplicada, rol: filterRol };
+    const cargandoUsuarios = bloqueCargado !== bloqueNecesario;
 
+    const paginatedUsuarios = useMemo(() => {
+        if (bloqueCargado !== bloqueNecesario) return [];
+        const inicio = (currentUsuarioPage - 1) * PAGE_SIZE - (bloqueCargado - 1) * USUARIOS_POR_BLOQUE;
+        return usuarios.slice(inicio, inicio + PAGE_SIZE);
+    }, [usuarios, bloqueCargado, bloqueNecesario, currentUsuarioPage, PAGE_SIZE]);
+
+    // Pedir al servidor otro bloque cuando cambia el bloque que se necesita, la búsqueda o el rol
     useEffect(() => {
+        const { bloque, busqueda, rol } = consultaActualRef.current;
+        if (consultaUsuariosRef.current.clave !== `${bloque}|${busqueda}|${rol}`) {
+            void loadUsuarios();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [bloqueNecesario, busquedaAplicada, filterRol]);
+
+    // La búsqueda se aplica al dejar de escribir; al cambiarla se vuelve a la página 1
+    useEffect(() => {
+        const espera = setTimeout(() => {
+            setBusquedaAplicada(searchTerm);
+            setCurrentUsuarioPage(1);
+        }, BUSQUEDA_ESPERA_MS);
+        return () => clearTimeout(espera);
+    }, [searchTerm]);
+
+    const setFilterRol = (rol: string) => {
+        setFilterRolState(rol);
         setCurrentUsuarioPage(1);
-    }, [searchTerm, filterRol]);
+    };
 
     useEffect(() => {
         setCurrentUsuarioPage((prev) => normalizePage(prev, totalUsuarioPages));
@@ -864,7 +887,7 @@ export function useGestionUsuarios() {
         abrirEdicion,
         cambiarEstadoUsuario,
         confirmarEliminarUsuario,
-        filteredUsuarios,
+        cargandoUsuarios,
         paginatedUsuarios,
         totalFilteredUsuarios,
         currentUsuarioPage,
