@@ -1,5 +1,7 @@
 import React from 'react';
 import { clearStaleClientState } from '../core/clearStaleState';
+import { esErrorDeCarga } from '../core/cargaConReintento';
+import { reportarErrorDeCliente } from '../core/reportarError';
 
 interface Props {
   children: React.ReactNode;
@@ -38,14 +40,29 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error capturado por ErrorBoundary:', error);
     console.error('Error Info:', errorInfo);
+    reportarErrorDeCliente(
+      esErrorDeCarga(error) ? 'carga' : 'pantalla',
+      error,
+      (errorInfo.componentStack ?? '').trim().split('\n').slice(0, 6).join(' <- '),
+    );
 
     this.setState(prevState => ({
       ...prevState,
       errorInfo,
     }));
+
+    // Si fue por la conexión, recargar sola cuando el navegador vuelva a tener red
+    if (esErrorDeCarga(error)) {
+      window.addEventListener('online', () => window.location.reload(), { once: true });
+    }
   }
 
   handleReset = () => {
+    // Una pantalla que no se pudo descargar queda en error dentro de React: solo una recarga la recupera
+    if (esErrorDeCarga(this.state.error)) {
+      window.location.reload();
+      return;
+    }
     this.setState(prevState => ({
       hasError: false,
       error: null,
@@ -62,6 +79,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       const showClearOption = this.state.retryCount >= RETRIES_BEFORE_SUGGESTING_RESET;
+      const sinConexion = esErrorDeCarga(this.state.error);
 
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex items-center justify-center p-4">
@@ -84,11 +102,13 @@ export default class ErrorBoundary extends React.Component<Props, State> {
               </div>
 
               <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                Algo salió mal
+                {sinConexion ? 'No se pudo cargar la pantalla' : 'Algo salió mal'}
               </h2>
 
               <p className="text-slate-600 mb-4">
-                Lo sentimos, ocurrió un error inesperado en la aplicación.
+                {sinConexion
+                  ? 'Se perdió la conexión un momento o el sitio se actualizó. Se recargará sola cuando vuelva la conexión, o pulsa Reintentar.'
+                  : 'Lo sentimos, ocurrió un error inesperado en la aplicación.'}
               </p>
 
               {showClearOption && (
