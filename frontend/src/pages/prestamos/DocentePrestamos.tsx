@@ -13,6 +13,8 @@ import { Calendar, Clock, MapPin, FileText, Search, Plus, Trash2, AlertCircle, E
 import { Toaster } from '../../share/sonner';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../../share/alert';
+import { FilaVaciaTabla } from '../../components/common/FilaVaciaTabla';
+import { Loading } from '../../components/common/Loading';
 import { useDocentePrestamos } from '../../hooks/prestamos/useDocentePrestamos';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useAuth } from '../../context/AuthContext';
@@ -64,7 +66,9 @@ export default function DocentePrestamos() {
     iniciarEdicion,
     cancelarEdicion,
     guardarEdicion,
-    eliminarPrestamo
+    eliminarPrestamo,
+    loading,
+    cargandoEspacios
   } = useDocentePrestamos();
 
   // Mostrar error con toast cuando cambie
@@ -267,6 +271,8 @@ export default function DocentePrestamos() {
                         {espaciosDisponibles.length} espacio(s) disponible(s) para este horario
                       </p>
                     </div>
+                  ) : cargandoEspacios ? (
+                    <Loading compact message="Buscando espacios disponibles..." />
                   ) : (
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
@@ -469,11 +475,7 @@ export default function DocentePrestamos() {
             </TableHeader>
             <TableBody>
               {totalFilteredPrestamos === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-slate-500 dark:text-slate-400">
-                    No hay solicitudes que mostrar
-                  </TableCell>
-                </TableRow>
+                <FilaVaciaTabla colSpan={6} cargando={loading} mensajeCargando="Cargando solicitudes..." mensajeVacio="No hay solicitudes que mostrar" />
               ) : (
                 paginatedPrestamos.map((prestamo) => (
                   <TableRow key={prestamo.id}>
