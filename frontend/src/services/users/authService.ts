@@ -389,6 +389,23 @@ export const userService = {
   },
 
   /**
+   * Obtiene un bloque de usuarios (hasta 100) ya filtrado por el servidor, con el total que coincide
+   */
+  listarUsuariosPagina: async (params: {
+    page: number;
+    pageSize?: number;
+    search?: string;
+    rol?: string;
+  }): Promise<{ usuarios: Usuario[]; total: number }> => {
+    const searchParams = new URLSearchParams({ page: String(params.page) });
+    if (params.pageSize) searchParams.set('page_size', String(params.pageSize));
+    if (params.search?.trim()) searchParams.set('search', params.search.trim());
+    if (params.rol && params.rol !== 'todos') searchParams.set('rol', params.rol);
+    const response = await apiClient.get<{ results: UsuarioApi[]; count: number }>(`/usuarios/?${searchParams.toString()}`);
+    return { usuarios: response.results.map(toFrontendUsuario), total: response.count };
+  },
+
+  /**
    * Obtiene la lista de docentes activos
    */
   listarDocentes: async (): Promise<{ usuarios: Usuario[] }> => {

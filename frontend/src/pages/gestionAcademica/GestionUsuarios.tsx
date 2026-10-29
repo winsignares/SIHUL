@@ -35,6 +35,7 @@ export default function GestionUsuarios() {
     confirmarEliminarUsuario,
     paginatedUsuarios,
     totalFilteredUsuarios,
+    cargandoUsuarios,
     currentUsuarioPage,
     totalUsuarioPages,
     usuarioPageNumbers,
@@ -622,10 +623,10 @@ export default function GestionUsuarios() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {totalFilteredUsuarios === 0 ? (
+              {totalFilteredUsuarios === 0 || cargandoUsuarios ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                    No se encontraron usuarios
+                    {cargandoUsuarios ? 'Cargando usuarios...' : 'No se encontraron usuarios'}
                   </TableCell>
                 </TableRow>
               ) : (

@@ -6,6 +6,7 @@ import unicodedata
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -651,6 +652,33 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
                 )
             return super().get_queryset().filter(activo=True, rol__nombre__iexact='docente')
         return super().get_queryset()
+
+    PAGINA_MAX = 100
+
+    def list(self, request, *args, **kwargs):
+        # Sin `page` devuelve la lista completa como siempre (otras pantallas dependen de ella);
+        # con `page` devuelve un bloque filtrado por `search` y `rol`, para no traer todos de golpe.
+        if 'page' not in request.query_params:
+            return super().list(request, *args, **kwargs)
+
+        queryset = self.get_queryset()
+        rol = (request.query_params.get('rol') or '').strip()
+        if rol and rol != 'todos':
+            queryset = queryset.filter(rol__nombre=rol)
+        for termino in (request.query_params.get('search') or '').split():
+            queryset = queryset.filter(Q(nombre__icontains=termino) | Q(correo__icontains=termino))
+        queryset = queryset.order_by('nombre', 'id')
+
+        try:
+            tamano = min(max(int(request.query_params.get('page_size', self.PAGINA_MAX)), 1), self.PAGINA_MAX)
+            pagina = max(int(request.query_params.get('page', 1)), 1)
+        except ValueError:
+            return Response({'error': 'page y page_size deben ser números'}, status=status.HTTP_400_BAD_REQUEST)
+
+        total = queryset.count()
+        inicio = (pagina - 1) * tamano
+        serializer = self.get_serializer(queryset[inicio:inicio + tamano], many=True)
+        return Response({'count': total, 'page': pagina, 'page_size': tamano, 'results': serializer.data})
 
     def _build_componentes(self, usuario):
         from mysite.auth_helpers import construir_componentes
