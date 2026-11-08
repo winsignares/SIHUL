@@ -601,6 +601,17 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
+    def get_object(self):
+        usuario = super().get_object()
+        # Quien no es administrador general no edita ni elimina a uno (evita tomar su cuenta).
+        if (
+            self.request.method not in permissions.SAFE_METHODS
+            and is_admin_global(usuario)
+            and not is_admin_global(self.get_current_user())
+        ):
+            raise PermissionDenied('Solo el administrador general puede modificar a otro administrador general.')
+        return usuario
+
     def get_serializer_class(self):
         if self.action in ('list',):
             user = self.get_current_user()

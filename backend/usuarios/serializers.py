@@ -131,7 +131,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
         # Quien administra una seccional solo puede dejar usuarios en la suya. El administrador global
         # (superusuario) puede asignar cualquiera.
-        from mysite.auth_helpers import get_user_seccional_id, is_superuser_effective
+        from mysite.auth_helpers import get_user_seccional_id, is_admin_global, is_superuser_effective
 
         request = self.context.get('request')
         solicitante = (getattr(request, 'user_obj', None) or getattr(request, 'user', None)) if request else None
@@ -140,6 +140,15 @@ class UsuarioSerializer(serializers.ModelSerializer):
             destino = sede.seccional_id if sede is not None else (seccional.id if seccional is not None else None)
             if propia and destino and destino != propia:
                 raise serializers.ValidationError({'seccional': 'Solo puedes asignar usuarios a tu propia seccional.'})
+
+        # Solo el administrador general crea otros administradores generales: ni el indicador de
+        # superusuario ni el rol admin_global se pueden otorgar desde una seccional.
+        if solicitante and getattr(solicitante, 'is_authenticated', True) and not is_admin_global(solicitante):
+            rol = attrs.get('rol')
+            if attrs.get('es_superusuario') or (rol is not None and (rol.nombre or '').strip().lower() == 'admin_global'):
+                raise serializers.ValidationError(
+                    {'rol': 'Solo el administrador general puede crear o asignar administradores generales.'}
+                )
         return attrs
 
     def create(self, validated_data):
