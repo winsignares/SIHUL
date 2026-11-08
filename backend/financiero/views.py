@@ -2,7 +2,7 @@
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from .permissions import EsUsuarioFinanciero
 from rest_framework.pagination import PageNumberPagination
 from django.db import IntegrityError, transaction, close_old_connections
 from django.db.models import Count, Q, Sum
@@ -364,7 +364,7 @@ def _convertir_archivo_plano_a_pdf(content_bytes, nombre_original):
 class ProveedorViewSet(viewsets.ModelViewSet):
     queryset = models.Proveedor.objects.select_related('usuario').all()
     serializer_class = serializers.ProveedorSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['estado', 'tipo_proveedor']
     search_fields = ['nit', 'razon_social', 'email']
@@ -671,7 +671,7 @@ class CiudadViewSet(viewsets.ReadOnlyModelViewSet):
 class DepartamentoViewSet(viewsets.ModelViewSet):
     queryset = models.Departamento.objects.all()
     serializer_class = serializers.DepartamentoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['tipo', 'estado']
     search_fields = ['codigo', 'nombre']
@@ -690,7 +690,7 @@ class DepartamentoViewSet(viewsets.ModelViewSet):
 class CuentaContableViewSet(viewsets.ModelViewSet):
     queryset = models.CuentaContable.objects.all()
     serializer_class = serializers.CuentaContableSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['tipo_cuenta', 'nivel', 'estado']
     search_fields = ['codigo', 'nombre']
@@ -705,7 +705,7 @@ class CuentaContableViewSet(viewsets.ModelViewSet):
 class CentroCostoViewSet(viewsets.ModelViewSet):
     queryset = models.CentroCosto.objects.all()
     serializer_class = serializers.CentroCostoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['tipo', 'estado']
     search_fields = ['codigo', 'nombre']
@@ -720,7 +720,7 @@ class CentroCostoViewSet(viewsets.ModelViewSet):
 class ParametroSLAViewSet(viewsets.ModelViewSet):
     queryset = models.ParametroSLA.objects.all()
     serializer_class = serializers.ParametroSLASerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     filter_backends = [filters.SearchFilter]
     search_fields = ['etapa', 'rol_responsable']
 
@@ -734,7 +734,7 @@ class ParametroSLAViewSet(viewsets.ModelViewSet):
 class ParametrosFinancieroViewSet(viewsets.ModelViewSet):
     queryset = models.ParametrosFinanciero.objects.all()
     serializer_class = serializers.ParametrosFinancieroSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['categoria']
 
@@ -763,7 +763,7 @@ class ParametrosFinancieroViewSet(viewsets.ModelViewSet):
 class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = models.ReporteGenerado.objects.all()
     serializer_class = serializers.ReporteGeneradoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['tipo_reporte', 'formato']
     ordering = ['-fecha_generacion']
@@ -1012,7 +1012,7 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
 
 class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.DocumentoAdjuntoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['factura', 'factura_id', 'tipo_documento']
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
@@ -1101,7 +1101,7 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
 
 class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.HistorialFacturaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['factura', 'accion']
     ordering = ['-fecha_accion']
@@ -1115,7 +1115,7 @@ class HistorialFacturaViewSet(viewsets.ReadOnlyModelViewSet):
 
 class ComentarioFacturaViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.ComentarioFacturaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['factura', 'tipo']
     ordering = ['fecha_creacion']
@@ -1135,7 +1135,7 @@ class ComentarioFacturaViewSet(viewsets.ModelViewSet):
 
 class RechazoDevolacionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.RechazoDevolacionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['factura', 'tipo', 'estado_devolucion']
 
@@ -1151,7 +1151,7 @@ class RechazoDevolacionViewSet(viewsets.ReadOnlyModelViewSet):
 # ============================================================
 
 class FacturaViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsUsuarioFinanciero]
     pagination_class = FacturaPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['estado', 'indicador_riesgo', 'proveedor', 'departamento', 'urgente']
