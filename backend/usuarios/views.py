@@ -350,6 +350,9 @@ def login(request):
         password_ok, es_legacy = _password_valida(u, contrasena)
         if not password_ok:
             return JsonResponse({"error": "Credenciales inválidas"}, status=401)
+        if not u.activo:
+            from mysite.auth_helpers import CUENTA_DESACTIVADA
+            return JsonResponse({"error": CUENTA_DESACTIVADA}, status=403)
         if es_legacy:
             nuevo_hash = make_password(contrasena)
             u.contrasena_hash = nuevo_hash
