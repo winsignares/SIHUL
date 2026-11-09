@@ -224,6 +224,19 @@ const toPrestamoPublicoItem = (item: PrestamoPublicoApi): PrestamoPublicoItem =>
     prestamo_padre_id: item.prestamo_padre ?? null,
 });
 
+/** Correo e identificación con los que se hizo una solicitud pública: sin sesión, así se identifica quien la gestiona. */
+export interface CredencialesSolicitante {
+    correo?: string | null;
+    identificacion?: string | null;
+}
+
+const credencialesQuery = (credenciales?: CredencialesSolicitante): string => {
+    const correo = (credenciales?.correo || '').trim();
+    const identificacion = (credenciales?.identificacion || '').trim();
+    if (!correo || !identificacion) return '';
+    return `?${new URLSearchParams({ correo, identificacion }).toString()}`;
+};
+
 const toPrestamoPublicoListado = (item: PrestamoPublicoApi): PrestamoPublicoListado => ({
     id: item.id,
     espacio_id: item.espacio,
@@ -331,7 +344,8 @@ export const prestamosPublicAPI = {
         identificacion: string,
         correo: string
     ): Promise<{ prestamos: PrestamoPublicoItem[] }> => {
-        const prestamos = await apiClient.get<PrestamoPublicoApi[]>('/prestamos/publicos/');
+        // El servidor entrega solo las solicitudes de quien consulta (correo + identificación)
+        const prestamos = await apiClient.get<PrestamoPublicoApi[]>(`/prestamos/publicos/${credencialesQuery({ correo, identificacion })}`);
         const correoNormalizado = correo.trim().toLowerCase();
         const identificacionNormalizada = identificacion.trim();
         const prestamosNormalizados = prestamos.map(toPrestamoPublicoItem);
@@ -350,7 +364,10 @@ export const prestamosPublicAPI = {
     actualizarSolicitud: async (
         payload: ActualizarPrestamoPublicoPayload
     ): Promise<{ message: string; id: number }> => {
-        const updated = await apiClient.put<PrestamoPublicoApi>(`/prestamos/publicos/${payload.id}/`, {
+        const updated = await apiClient.put<PrestamoPublicoApi>(`/prestamos/publicos/${payload.id}/${credencialesQuery({
+            correo: payload.correo_solicitante,
+            identificacion: payload.identificacion_solicitante,
+        })}`, {
             espacio: payload.espacio_id,
             nombre_solicitante: payload.nombre_solicitante,
             correo_solicitante: payload.correo_solicitante,
@@ -380,8 +397,8 @@ export const prestamosPublicAPI = {
     /**
      * Obtiene el detalle de una solicitud pública por ID
      */
-    obtenerSolicitud: async (id: number): Promise<PrestamoPublicoDetalle> => {
-        const item = await apiClient.get<PrestamoPublicoApi>(`/prestamos/publicos/${id}/`);
+    obtenerSolicitud: async (id: number, credenciales?: CredencialesSolicitante): Promise<PrestamoPublicoDetalle> => {
+        const item = await apiClient.get<PrestamoPublicoApi>(`/prestamos/publicos/${id}/${credencialesQuery(credenciales)}`);
         const normalizado = toPrestamoPublicoItem(item);
         return {
             id: normalizado.id,
@@ -415,9 +432,10 @@ export const prestamosPublicAPI = {
      * Elimina una solicitud pública
      */
     eliminarSolicitud: async (
-        id: number
+        id: number,
+        credenciales?: CredencialesSolicitante
     ): Promise<{ message: string }> => {
-        await apiClient.delete(`/prestamos/publicos/${id}/`);
+        await apiClient.delete(`/prestamos/publicos/${id}/${credencialesQuery(credenciales)}`);
         notifyPrestamosChanged();
         return { message: 'Solicitud eliminada' };
     }

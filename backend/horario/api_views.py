@@ -638,6 +638,24 @@ def horarios_por_periodo(request):
         if es_consulta_publica:
             horarios_qs = horarios_qs.filter(estado='aprobado')
 
+        # Con sesión, cada seccional ve solo sus horarios (por el espacio o, si aún no tiene, por el programa del grupo).
+        # El administrador general ve todo. La consulta pública puede acotar con `seccional_id`.
+        usuario = _get_request_user(request)
+        seccional_pedida = request.GET.get('seccional_id')
+        if usuario is not None and not is_superuser_effective(usuario):
+            seccional_id = get_user_seccional_id(usuario)
+            if not seccional_id:
+                return _missing_seccional_response()
+            horarios_qs = horarios_qs.filter(
+                Q(espacio__sede__seccional_id=seccional_id)
+                | Q(espacio__isnull=True, grupo__programa__facultad__sede__seccional_id=seccional_id)
+            )
+        elif seccional_pedida and str(seccional_pedida).isdigit():
+            horarios_qs = horarios_qs.filter(
+                Q(espacio__sede__seccional_id=int(seccional_pedida))
+                | Q(espacio__isnull=True, grupo__programa__facultad__sede__seccional_id=int(seccional_pedida))
+            )
+
         # Filtro opcional por rango de fecha_inicio (mismo criterio que el
         # frontend en useConsultaEspacios.ts): sin esto, esta consulta trae
         # TODOS los horarios del periodo completo (una fila por semana por

@@ -11,6 +11,8 @@ from mysite.permissions import CanManagePrestamosEspacios
 from espacios import alcance
 from espacios.models import EspacioPermitido
 
+from . import privacidad
+
 from .models import PrestamoEspacio, PrestamoEspacioPublico, PrestamoRecurso, TipoActividad
 from .serializers import (
     PrestamoEspacioPublicoSerializer,
@@ -71,7 +73,7 @@ class TipoActividadDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyA
     seccional_lookup = None
 
 
-class PrestamoEspacioListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView):
+class PrestamoEspacioListCreateAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.ListCreateAPIView):
     queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -106,7 +108,7 @@ class PrestamoEspacioDetailAPIView(RestringirASupervisorMixin, SeccionalMixin, g
         return super().update(request, *args, **kwargs)
 
 
-class PrestamoEspacioPublicoListCreateAPIView(SeccionalMixin, generics.ListCreateAPIView):
+class PrestamoEspacioPublicoListCreateAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.ListCreateAPIView):
     queryset = PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioPublicoSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -120,8 +122,14 @@ class PrestamoEspacioPublicoListCreateAPIView(SeccionalMixin, generics.ListCreat
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
-        return super().get_queryset()
+            queryset = PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
+        else:
+            queryset = super().get_queryset()
+        # «Mis solicitudes»: con su correo y su identificación el solicitante recibe solo las suyas
+        correo, identificacion = privacidad.credenciales_de_solicitante(self.request)
+        if correo and identificacion:
+            queryset = queryset.filter(correo_solicitante__iexact=correo, identificacion_solicitante=identificacion)
+        return queryset
 
 
 class PrestamoEspacioPublicoDetailAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -144,6 +152,13 @@ class PrestamoEspacioPublicoDetailAPIView(RestringirASupervisorMixin, SeccionalM
         if not user:
             return PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
         return super().get_queryset()
+
+    def get_object(self):
+        prestamo = super().get_object()
+        # Sin sesión, solo quien hizo la solicitud (correo + identificación) la consulta, edita o cancela
+        if not self.get_current_user() and not privacidad.coincide_solicitante_publico(self.request, prestamo):
+            raise PermissionDenied('Indica el correo y la identificación con los que hiciste la solicitud.')
+        return prestamo
 
 
 class PrestamoRecursoListCreateAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.ListCreateAPIView):

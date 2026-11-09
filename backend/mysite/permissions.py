@@ -35,11 +35,9 @@ class IsAuthenticatedReadOnlyOrAdminWrite(BasePermission):
         user = getattr(request, 'user', None)
         if request.method in SAFE_METHODS:
             return is_authenticated_user(user)
-        role_name = get_role_name(user)
         return (
             is_admin_global(user)
             or is_admin_sistema(user)
-            or role_name == 'admin financiero'
             or user_can_edit_componente(user, 'Centro Institucional')
         )
 

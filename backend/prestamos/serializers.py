@@ -1,7 +1,8 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from mysite.auth_helpers import user_can_edit_componente
+from mysite.auth_helpers import is_authenticated_user, user_can_edit_componente
+from . import privacidad
 from .availability import validar_disponibilidad_prestamo
 from .models import (
     PrestamoEspacio,
@@ -15,14 +16,16 @@ from recursos.models import Recurso
 COMPONENTE_DISPONIBILIDAD_ESPACIOS = 'Disponibilidad de Espacios'
 
 
-def _reevaluar_estado_si_estaba_aprobado(instance, validated_data, request):
+def _reevaluar_estado_si_estaba_aprobado(instance, validated_data, request, estado_original=None):
     """Si se edita un préstamo que estaba Aprobado y el estado enviado sigue
     siendo Aprobado (es decir, no es una acción explícita de aprobar/rechazar
     a otro estado), lo mantiene Aprobado solo cuando quien edita tiene
     permiso EDITAR en "Disponibilidad de Espacios"; de lo contrario lo
     regresa a Pendiente para que sea reaprobado.
     """
-    if instance.estado != 'Aprobado':
+    # `validate` copia los datos nuevos sobre la instancia para validar disponibilidad: se compara con el estado
+    # que tenía antes de la edición, no con el ya sobrescrito (si no, aprobar uno pendiente lo devolvía a pendiente).
+    if (estado_original if estado_original is not None else instance.estado) != 'Aprobado':
         return
 
     nuevo_estado = validated_data.get('estado', instance.estado)
@@ -32,6 +35,29 @@ def _reevaluar_estado_si_estaba_aprobado(instance, validated_data, request):
     user = getattr(request, 'user', None) if request else None
     if not user_can_edit_componente(user, COMPONENTE_DISPONIBILIDAD_ESPACIOS):
         validated_data['estado'] = 'Pendiente'
+
+
+def _proteger_aprobacion(attrs, instance, request):
+    """Solo quien gestiona préstamos aprueba o asigna administrador. Quien solicita (docente, público) crea el
+    préstamo «Pendiente», y si edita uno ya aprobado vuelve a quedar pendiente para que se reapruebe."""
+    if request is None:
+        return
+    if privacidad.puede_aprobar_prestamos(getattr(request, 'user', None)):
+        return
+    attrs.pop('administrador', None)
+    if instance is None:
+        attrs['estado'] = 'Pendiente'
+    else:
+        attrs['estado'] = 'Pendiente' if instance.estado == 'Aprobado' else instance.estado
+
+
+def _administra_prestamos(request):
+    """Si quien consulta administra préstamos (se calcula una vez por petición)."""
+    valor = getattr(request, '_administra_prestamos', None)
+    if valor is None:
+        valor = privacidad.administra_prestamos(getattr(request, 'user', None))
+        request._administra_prestamos = valor
+    return valor
 
 
 class TipoActividadSerializer(serializers.ModelSerializer):
@@ -68,7 +94,18 @@ class PrestamoEspacioSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['periodo']
 
+    def to_representation(self, instance):
+        datos = super().to_representation(instance)
+        request = self.context.get('request')
+        if request is not None and not _administra_prestamos(request):
+            user = getattr(request, 'user', None)
+            if not (is_authenticated_user(user) and instance.usuario_id == user.id):
+                privacidad.ocultar_campos(datos, privacidad.CAMPOS_PERSONALES_PRIVADO)
+        return datos
+
     def validate(self, attrs):
+        self._estado_original = getattr(self.instance, 'estado', None)
+        _proteger_aprobacion(attrs, self.instance, self.context.get('request'))
         instance = self.instance or PrestamoEspacio()
         for field, value in attrs.items():
             if field == 'prestamo_recursos':
@@ -104,7 +141,8 @@ class PrestamoEspacioSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         recursos = validated_data.pop('prestamo_recursos', None)
-        _reevaluar_estado_si_estaba_aprobado(instance, validated_data, self.context.get('request'))
+        _reevaluar_estado_si_estaba_aprobado(
+            instance, validated_data, self.context.get('request'), getattr(self, '_estado_original', None))
         prestamo = super().update(instance, validated_data)
         if recursos is not None:
             prestamo.prestamo_recursos.all().delete()
@@ -133,7 +171,18 @@ class PrestamoEspacioPublicoSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['periodo']
 
+    def to_representation(self, instance):
+        datos = super().to_representation(instance)
+        request = self.context.get('request')
+        if request is not None:
+            privacidad.ocultar_campos(datos, ('token_publico',))
+            if not _administra_prestamos(request) and not privacidad.coincide_solicitante_publico(request, instance):
+                privacidad.ocultar_campos(datos, privacidad.CAMPOS_PERSONALES_PUBLICO)
+        return datos
+
     def validate(self, attrs):
+        self._estado_original = getattr(self.instance, 'estado', None)
+        _proteger_aprobacion(attrs, self.instance, self.context.get('request'))
         instance = self.instance or PrestamoEspacioPublico()
         for field, value in attrs.items():
             if field == 'prestamo_recursos':
@@ -169,7 +218,8 @@ class PrestamoEspacioPublicoSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         recursos = validated_data.pop('prestamo_recursos', None)
-        _reevaluar_estado_si_estaba_aprobado(instance, validated_data, self.context.get('request'))
+        _reevaluar_estado_si_estaba_aprobado(
+            instance, validated_data, self.context.get('request'), getattr(self, '_estado_original', None))
         prestamo = super().update(instance, validated_data)
         if recursos is not None:
             prestamo.prestamo_recursos.all().delete()
