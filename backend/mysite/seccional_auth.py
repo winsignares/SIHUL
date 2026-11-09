@@ -64,6 +64,9 @@ class SeccionalMixin:
 
         return getattr(self.request, 'seccional', None)
 
+    def filtrar_por_seccional(self, queryset, seccional):
+        return queryset.filter(**{self.seccional_lookup: seccional})
+
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.get_current_user()
@@ -80,7 +83,7 @@ class SeccionalMixin:
             return queryset
 
         if seccional is not None:
-            return queryset.filter(**{lookup: seccional})
+            return self.filtrar_por_seccional(queryset, seccional)
 
         raise PermissionDenied({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE})
 

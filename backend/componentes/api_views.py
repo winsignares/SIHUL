@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from mysite.auth_helpers import (
     get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_authenticated_user,
+    q_usuarios_de_seccional,
 )
 from financiero.permissions import es_componente_financiero, es_rol_financiero
 from mysite.permissions import IsAdminOnly
@@ -227,8 +228,9 @@ def _componentes_visibles(queryset, user):
         propia = get_user_seccional_id(user)
         if propia is None:
             return queryset.none()
-        return queryset.filter(Q(usuario__seccional_id=propia) | Q(usuario__sede__seccional_id=propia))
-    return queryset  # administrador financiero: se limita por rol financiero (ver parámetro ?financiero=1)
+        return queryset.filter(q_usuarios_de_seccional(propia, prefijo='usuario__'))
+    # Administrador financiero: solo los permisos del equipo financiero
+    return queryset.filter(usuario__rol__nombre__in=FINANCIAL_ROLE_NAMES)
 
 
 class _EscrituraPorPersonaMixin:
