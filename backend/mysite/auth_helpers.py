@@ -45,6 +45,9 @@ def is_admin_sistema(user):
     rol_nombre = (getattr(rol, 'nombre', '') or '').strip().lower()
     return rol_nombre in {'admin'}
 
+CUENTA_DESACTIVADA = 'Tu cuenta está desactivada. Comunícate con el administrador del sistema.'
+
+
 def is_authenticated_user(user):
     if not user:
         return False

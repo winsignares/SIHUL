@@ -41,7 +41,7 @@ from notificaciones.signals import crear_notificacion
 from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
 from .auth_helpers import (
-    is_admin_global, is_admin_sistema, is_superuser_effective, seccional_para_sesion, seccional_publica,
+    CUENTA_DESACTIVADA, is_admin_global, is_admin_sistema, is_superuser_effective, seccional_para_sesion, seccional_publica,
     user_supervisa_espacios,
 )
 from financiero.permissions import es_solo_admin_financiero
@@ -799,6 +799,9 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
 
         cache.delete(f"login_attempts:{correo_normalizado}:{ip_cliente}")
+
+        if not usuario.activo:
+            return Response({'error': CUENTA_DESACTIVADA}, status=status.HTTP_403_FORBIDDEN)
 
         if es_legacy:
             nuevo_hash = make_password(contrasena)
