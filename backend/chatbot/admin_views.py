@@ -6,7 +6,10 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from mysite.auth_helpers import is_admin_global, is_admin_sistema, is_authenticated_user, user_can_edit_componente
+from mysite.auth_helpers import (
+    get_user_seccional_id, is_admin_global, is_admin_sistema, is_authenticated_user, q_usuarios_de_seccional,
+    user_can_edit_componente,
+)
 from usuarios.models import Usuario
 
 from .models import Agente, AgenteResponsable, ChatbotDocument
@@ -321,8 +324,14 @@ class ResponsablesCandidatosView(APIView):
             .filter(Q(seccional__isnull=False) | Q(sede__seccional__isnull=False))
             .exclude(rol__nombre__iexact='estudiante')
             .select_related('seccional', 'sede__seccional')
-            .order_by('nombre')[:20]
         )
+        if not is_admin_global(request.user):
+            # Quien no es administrador general solo ofrece personas de su propia seccional
+            propia = get_user_seccional_id(request.user)
+            if propia is None:
+                return Response([])
+            usuarios = usuarios.filter(q_usuarios_de_seccional(propia))
+        usuarios = usuarios.order_by('nombre')[:20]
         return Response([
             {
                 'id': u.id,

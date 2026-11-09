@@ -41,7 +41,7 @@ from notificaciones.signals import crear_notificacion
 from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
 from .auth_helpers import (
-    CUENTA_DESACTIVADA, is_admin_global, is_admin_sistema, is_superuser_effective, seccional_para_sesion, seccional_publica,
+    CUENTA_DESACTIVADA, is_admin_global, puede_ver_usuario, q_usuarios_de_seccional, is_admin_sistema, is_superuser_effective, seccional_para_sesion, seccional_publica,
     user_supervisa_espacios,
 )
 from financiero.permissions import es_solo_admin_financiero
@@ -81,6 +81,13 @@ def _get_client_ip(request):
     if forwarded_for:
         return forwarded_for.split(',')[0].strip()
     return request.META.get('REMOTE_ADDR', 'unknown')
+
+
+def _exigir_ver_usuario(solicitante, usuario_id):
+    """Los espacios y horarios de una persona los consulta ella misma o quien la administra."""
+    objetivo = Usuario.objects.select_related('sede').filter(pk=usuario_id).first()
+    if objetivo is not None and not puede_ver_usuario(solicitante, objetivo):
+        raise PermissionDenied('No puedes consultar los datos de esta persona.')
 
 
 class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
@@ -308,10 +315,12 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path=r'horarios/supervisor/(?P<usuario_id>\d+)')
     def horarios_supervisor(self, request, usuario_id=None):
+        _exigir_ver_usuario(self.get_current_user(), usuario_id)
         return espacios_api.list_supervisor_espacios_with_horarios(request._request, usuario_id=usuario_id)
 
     @action(detail=False, methods=['get'], url_path=r'horarios/disponibles/supervisor/(?P<usuario_id>\d+)')
     def horarios_disponibles_supervisor(self, request, usuario_id=None):
+        _exigir_ver_usuario(self.get_current_user(), usuario_id)
         return espacios_api.list_supervisor_espacios_disponibles_with_horarios(request._request, usuario_id=usuario_id)
 
     @action(detail=False, methods=['get'], url_path='apertura-cierre/proximos')
@@ -395,6 +404,7 @@ class EspacioPermitidoViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path=r'usuario/(?P<usuario_id>\d+)')
     def por_usuario(self, request, usuario_id=None):
+        _exigir_ver_usuario(self.get_current_user(), usuario_id)
         return espacios_api.list_espacios_by_usuario(request._request, usuario_id=usuario_id)
 
 
@@ -605,6 +615,10 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     serializer_class = UsuarioSerializer
     seccional_lookup = 'seccional'
     permission_classes = [IsAdminUserManagement]
+
+    def filtrar_por_seccional(self, queryset, seccional):
+        # También las personas sin seccional propia cuya sede es de esta seccional
+        return queryset.filter(q_usuarios_de_seccional(getattr(seccional, 'pk', seccional)))
 
     FINANCIAL_ROLE_NAMES = (
         'Funcionario',
