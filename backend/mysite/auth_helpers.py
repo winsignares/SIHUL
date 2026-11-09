@@ -92,6 +92,30 @@ def get_user_seccional_id(user):
     return getattr(sede, 'seccional_id', None)
 
 
+def q_usuarios_de_seccional(seccional_id, prefijo=''):
+    """Personas que pertenecen a una seccional: por su seccional o, si no la tienen, por la de su sede."""
+    from django.db.models import Q
+
+    return Q(**{f'{prefijo}seccional_id': seccional_id}) | Q(
+        **{f'{prefijo}seccional__isnull': True, f'{prefijo}sede__seccional_id': seccional_id}
+    )
+
+
+def puede_ver_usuario(solicitante, objetivo):
+    """True si `solicitante` puede consultar los datos de `objetivo`: los propios, o los de las personas que
+    administra (el administrador general, todas; el de una seccional, solo las de su seccional)."""
+    if not solicitante or not objetivo:
+        return False
+    if getattr(solicitante, 'pk', None) == getattr(objetivo, 'pk', None):
+        return True
+    if is_admin_global(solicitante):
+        return True
+    if is_admin_sistema(solicitante):
+        propia = get_user_seccional_id(solicitante)
+        return propia is not None and get_user_seccional_id(objetivo) == propia
+    return False
+
+
 def role_supervisa_espacios(rol):
     if not rol:
         return False
