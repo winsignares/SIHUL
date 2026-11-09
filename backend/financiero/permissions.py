@@ -8,7 +8,9 @@ import unicodedata
 
 from rest_framework.permissions import BasePermission
 
-from mysite.auth_helpers import construir_componentes, is_authenticated_user, is_superuser_effective
+from mysite.auth_helpers import (
+    construir_componentes, is_admin_global, is_admin_sistema, is_authenticated_user, is_superuser_effective,
+)
 
 # Mismo criterio que `normalizeFinancialRole` del frontend (frontend/src/context/financialRoleUtils.ts)
 _PALABRAS_DE_ROL_FINANCIERO = (
@@ -40,6 +42,35 @@ def es_rol_financiero(nombre):
     """True si el rol es de los del módulo financiero (incluye al administrador financiero)."""
     nombre = _normalizar(nombre)
     return any(palabra in nombre for palabra in _PALABRAS_DE_ROL_FINANCIERO)
+
+
+# Roles de las personas que el administrador financiero puede crear, editar y eliminar (y solo esas).
+ROLES_FINANCIEROS_GESTIONABLES = (
+    'Funcionario',
+    'Contabilidad',
+    'Tesorería',
+    'Auditoría',
+    'Dirección Financiera',
+    'Rectoría',
+    'Admin Financiero',
+)
+_ROLES_GESTIONABLES_NORMALIZADOS = {_normalizar(nombre) for nombre in ROLES_FINANCIEROS_GESTIONABLES}
+
+
+def es_solo_admin_financiero(usuario):
+    """True si el usuario es administrador financiero y NO es administrador general ni de una seccional.
+    Su alcance es el equipo financiero (usuarios con roles financieros, SLA y proveedores): no administra
+    usuarios académicos, ni roles, ni el catálogo de componentes."""
+    if not is_authenticated_user(usuario):
+        return False
+    if is_admin_global(usuario) or is_admin_sistema(usuario):
+        return False
+    return _normalizar(getattr(getattr(usuario, 'rol', None), 'nombre', '')) == 'admin financiero'
+
+
+def es_rol_gestionable_por_admin_financiero(rol):
+    """True si `rol` es uno de los roles financieros que el administrador financiero puede asignar."""
+    return rol is not None and _normalizar(getattr(rol, 'nombre', '')) in _ROLES_GESTIONABLES_NORMALIZADOS
 
 
 def es_usuario_financiero(usuario):

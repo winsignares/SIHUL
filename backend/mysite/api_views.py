@@ -41,6 +41,7 @@ from notificaciones.signals import crear_notificacion
 from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
 from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effective, seccional_para_sesion, user_supervisa_espacios
+from financiero.permissions import es_solo_admin_financiero
 from .cache_utils import CachedCatalogMixin
 from .seccional_auth import SeccionalMixin
 from .permissions import (
@@ -641,7 +642,16 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             role_name_normalized = role_name_normalized.replace('_', ' ')
             role_name_normalized = ' '.join(role_name_normalized.split())
 
-            if is_admin_global(user) or is_admin_sistema(user) or role_name_normalized == 'admin financiero':
+            if es_solo_admin_financiero(user):
+                # El administrador financiero (sin ser administrador general) gestiona solo al equipo financiero,
+                # de todas las seccionales: nunca ve ni toca usuarios académicos.
+                if self.action == 'list_docentes':
+                    return Usuario.objects.none()
+                return Usuario.objects.select_related(
+                    'rol', 'facultad', 'sede', 'seccional',
+                ).prefetch_related('tipos_espacio_permitidos').filter(rol__nombre__in=self.FINANCIAL_ROLE_NAMES)
+
+            if is_admin_global(user) or is_admin_sistema(user):
                 # Acceso administrativo, pero restringido a la seccional del
                 # usuario salvo que sea superusuario real (SeccionalMixin.get_queryset).
                 base_queryset = super().get_queryset()
