@@ -30,6 +30,18 @@ def _normalizar(texto):
     return ' '.join(''.join(c if c.isalnum() else ' ' for c in sin_tildes.lower().replace('_', ' ').replace('-', ' ')).split())
 
 
+def es_componente_financiero(nombre):
+    """True si el componente pertenece al módulo financiero (da acceso a facturas, pagos, proveedores…)."""
+    nombre = _normalizar(nombre)
+    return any(palabra in nombre for palabra in _PALABRAS_DE_COMPONENTE_FINANCIERO)
+
+
+def es_rol_financiero(nombre):
+    """True si el rol es de los del módulo financiero (incluye al administrador financiero)."""
+    nombre = _normalizar(nombre)
+    return any(palabra in nombre for palabra in _PALABRAS_DE_ROL_FINANCIERO)
+
+
 def es_usuario_financiero(usuario):
     """True si el usuario pertenece al módulo financiero por su rol o por sus componentes."""
     if not is_authenticated_user(usuario):

@@ -4,6 +4,7 @@ import {
   componenteRolService
 } from '../../services/componentes/componentesAPI';
 import type {
+  AlcancePermisos,
   Componente,
   ComponenteRol,
   CreateComponenteRolPayload,
@@ -12,10 +13,23 @@ import type {
 import { rolService } from '../../services/users/authService';
 import type { Rol } from '../../services/users/authService';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
+import { esComponenteFinanciero, normalizeFinancialRole } from '../../context/financialRoleUtils';
 
 const COMPONENTES_ROLES_CACHE_KEY = 'permisos-componentes-roles';
 
+/** Roles que solo administra el administrador general (financieros y de administración general). */
+const esRolReservado = (nombre: string): boolean =>
+  normalizeFinancialRole(nombre) !== undefined || nombre.trim().toLowerCase() === 'admin_global';
+
 interface UseComponentesRolesReturn {
+  // Alcance: administrador general (elige plantilla o seccional) o de una seccional (trabaja con la suya)
+  alcance: AlcancePermisos | null;
+  /** Seccional cuyos ajustes se editan; null = plantilla general (solo el administrador general). */
+  seccionalActiva: number | null;
+  seleccionarSeccional: (seccionalId: number | null) => void;
+  /** Todas las filas cargadas de un rol: la plantilla general y, si hay seccional activa, sus ajustes. */
+  obtenerFilasPorRol: (rolId: number) => ComponenteRol[];
+
   // Estados
   componentes: Componente[];
   roles: Rol[];
@@ -55,6 +69,11 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
   const [asignaciones, setAsignaciones] = useState<ComponenteRol[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [alcance, setAlcance] = useState<AlcancePermisos | null>(null);
+  const [seccionElegida, setSeccionElegida] = useState<number | null>(null);
+
+  // El administrador de una seccional siempre trabaja con la suya; el general elige (o la plantilla general).
+  const seccionalActiva = alcance && !alcance.es_general ? (alcance.seccional?.id ?? null) : seccionElegida;
   
   // Estados de paginación y búsqueda
   const [paginaActual, setPaginaActual] = useState<number>(1);
@@ -65,14 +84,15 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
    * Filtrar roles por término de búsqueda
    */
   const rolesFiltrados = useMemo(() => {
-    if (!terminoBusqueda.trim()) return roles;
+    const visibles = alcance && !alcance.es_general ? roles.filter(rol => !esRolReservado(rol.nombre)) : roles;
+    if (!terminoBusqueda.trim()) return visibles;
     
     const termino = terminoBusqueda.toLowerCase();
-    return roles.filter(rol => 
+    return visibles.filter(rol => 
       rol.nombre.toLowerCase().includes(termino) ||
       (rol.descripcion && rol.descripcion.toLowerCase().includes(termino))
     );
-  }, [roles, terminoBusqueda]);
+  }, [roles, terminoBusqueda, alcance]);
 
   /**
    * Calcular total de páginas
@@ -115,13 +135,17 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
     
     try {
       const activeToken = localStorage.getItem('auth_token');
+      const alcanceActual = alcance ?? await componenteRolService.alcance();
+      if (!alcance) setAlcance(alcanceActual);
+      const seccionDeseada = alcanceActual.es_general ? seccionElegida : (alcanceActual.seccional?.id ?? null);
+      const claveCache = `${COMPONENTES_ROLES_CACHE_KEY}-${seccionDeseada ?? 'general'}`;
       const cachedData = force
         ? null
         : getSessionCacheData<{
             componentes: Componente[];
             roles: Rol[];
             asignaciones: ComponenteRol[];
-          }>(COMPONENTES_ROLES_CACHE_KEY, activeToken);
+          }>(claveCache, activeToken);
 
       if (cachedData) {
         setComponentes(cachedData.componentes);
@@ -133,18 +157,22 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
       const [componentesRes, rolesRes, asignacionesRes] = await Promise.all([
         componenteService.list(),
         rolService.listarRoles(),
-        componenteRolService.list()
+        componenteRolService.list(seccionDeseada ? { seccional: seccionDeseada } : undefined)
       ]);
 
       const componentesData = componentesRes.componentes || [];
       const rolesData = rolesRes.roles || [];
       const asignacionesData = asignacionesRes.componente_roles || [];
 
-      setComponentes(componentesData);
+      // Los componentes financieros los asigna solo el administrador general
+      const componentesVisibles = alcanceActual.es_general
+        ? componentesData
+        : componentesData.filter(c => !esComponenteFinanciero(c.nombre));
+      setComponentes(componentesVisibles);
       setRoles(rolesData);
       setAsignaciones(asignacionesData);
-      setSessionCacheData(COMPONENTES_ROLES_CACHE_KEY, activeToken, {
-        componentes: componentesData,
+      setSessionCacheData(claveCache, activeToken, {
+        componentes: componentesVisibles,
         roles: rolesData,
         asignaciones: asignacionesData
       });
@@ -216,8 +244,20 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
   /**
    * Obtener asignaciones por rol
    */
-  const obtenerAsignacionesPorRol = (rolId: number): ComponenteRol[] => {
+  const obtenerFilasPorRol = (rolId: number): ComponenteRol[] => {
     return asignaciones.filter(a => a.rol_id === rolId);
+  };
+
+  /**
+   * Permisos que el rol tiene de verdad: la plantilla general, con los ajustes de la seccional activa encima
+   * (un ajuste «Sin acceso» quita el componente).
+   */
+  const obtenerAsignacionesPorRol = (rolId: number): ComponenteRol[] => {
+    const porComponente = new Map<number, ComponenteRol>();
+    const filas = obtenerFilasPorRol(rolId);
+    filas.filter(f => !f.seccional_id).forEach(f => porComponente.set(f.componente_id, f));
+    filas.filter(f => !!f.seccional_id).forEach(f => porComponente.set(f.componente_id, f));
+    return Array.from(porComponente.values()).filter(f => f.permiso !== 'NINGUNO');
   };
 
   /**
@@ -236,12 +276,17 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
     );
   };
 
-  // Cargar datos al montar el componente
+  // Cargar datos al montar el componente y cada vez que el administrador general cambia de seccional
   useEffect(() => {
     cargarDatos();
-  }, []);
+  }, [seccionElegida]);
 
   return {
+    alcance,
+    seccionalActiva,
+    seleccionarSeccional: setSeccionElegida,
+    obtenerFilasPorRol,
+
     // Estados
     componentes,
     roles,

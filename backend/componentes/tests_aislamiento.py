@@ -76,9 +76,9 @@ class RolesYComponentesTests(AislamientoBase):
         self.assertTrue(Rol.objects.filter(pk=self.rol_docente.pk).exists())
         self.assertFalse(Rol.objects.filter(nombre='nuevo').exists())
 
-    def test_el_administrador_de_seccional_no_cambia_componentes_de_un_rol(self):
+    def test_el_administrador_de_seccional_no_cambia_la_plantilla_general_de_un_rol(self):
         c = _cliente(self.admin_bq)
-        datos = {'componente': self.componente.id, 'rol': self.rol_docente.id, 'permiso': 'EDITAR'}
+        datos = {'componente': self.componente.id, 'rol': self.rol_docente.id, 'permiso': 'EDITAR', 'seccional': None}
         self.assertEqual(c.post('/api/componentes/roles/', datos, format='json').status_code, 403)
         existente = ComponenteRol.objects.create(componente=self.componente, rol=self.rol_docente, permiso='VER')
         self.assertEqual(c.patch(f'/api/componentes/roles/{existente.id}/', {'permiso': 'EDITAR'}, format='json').status_code, 403)
@@ -96,7 +96,7 @@ class RolesYComponentesTests(AislamientoBase):
         c = _cliente(self.gestor_bq)
         self.assertEqual(c.post('/api/roles/', {'nombre': 'otro'}, format='json').status_code, 403)
         datos = {'componente': self.componente.id, 'rol': self.rol_docente.id, 'permiso': 'EDITAR'}
-        self.assertEqual(c.post('/api/componentes/roles/', datos, format='json').status_code, 403)
+        self.assertEqual(c.post('/api/componentes/roles/', datos, format='json').status_code, 403)  # no es administrador
 
     def test_los_demas_roles_tampoco(self):
         for usuario in (self.docente_bq, self.admin_fin, self.contador):

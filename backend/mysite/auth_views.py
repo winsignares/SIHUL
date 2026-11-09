@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from componentes.models import ComponenteRol, ComponenteUsuario
 from espacios.models import EspacioPermitido
 from espacios import alcance as alcance_espacios
-from mysite.auth_helpers import role_supervisa_espacios, seccional_para_sesion
+from mysite.auth_helpers import componentes_de_rol_efectivos, role_supervisa_espacios, seccional_para_sesion
 from usuarios.models import Usuario
 
 
@@ -22,7 +22,7 @@ def _build_componentes(usuario: Usuario):
     if not usuario.rol:
         return []
 
-    componentes_rol = ComponenteRol.objects.filter(rol=usuario.rol).select_related('componente')
+    componentes_rol = componentes_de_rol_efectivos(usuario)
     componentes_usuario = ComponenteUsuario.objects.filter(usuario=usuario).select_related('componente')
     overrides = {item.componente_id: item for item in componentes_usuario}
 
