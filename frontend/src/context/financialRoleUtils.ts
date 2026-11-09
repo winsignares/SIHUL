@@ -23,6 +23,19 @@ export function normalizeFinancialText(value: string): string {
     .replace(/\s+/g, ' ');
 }
 
+/** Mismas palabras que usa el servidor (backend/financiero/permissions.py) para reconocer un componente financiero. */
+const PALABRAS_COMPONENTE_FINANCIERO = [
+  'factur', 'financier', 'pendient', 'tesorer', 'alistar pago', 'registrar pago', 'pago aplicado', 'comprobante egreso',
+  'direccion financiera', 'sindicatura', 'revisar pagos', 'confirmacion pagos', 'control de pago', 'enviar rectoria',
+  'enviar a rectoria', 'auditor', 'control previo', 'rector', 'autorizar pago', 'aprobacion rectoria',
+  'gestion proveedores', 'parametrizacion sla', 'reportes consolidados', 'configuracion sistema',
+];
+
+export function esComponenteFinanciero(nombre?: string): boolean {
+  const texto = normalizeFinancialText(nombre ?? '');
+  return PALABRAS_COMPONENTE_FINANCIERO.some(palabra => texto.includes(palabra));
+}
+
 export function normalizeFinancialRole(roleName?: string): CanonicalFinancialRole | undefined {
   if (!roleName) {
     return undefined;

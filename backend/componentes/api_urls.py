@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .api_views import (
+    AlcancePermisosView,
     ComponenteDetailAPIView,
     ComponenteListCreateAPIView,
     ComponenteRolDetailAPIView,
@@ -10,6 +11,7 @@ from .api_views import (
 )
 
 urlpatterns = [
+    path('alcance/', AlcancePermisosView.as_view(), name='api-componente-alcance'),
     path('', ComponenteListCreateAPIView.as_view(), name='api-componente-list-create'),
     path('<int:pk>/', ComponenteDetailAPIView.as_view(), name='api-componente-detail'),
     path('roles/', ComponenteRolListCreateAPIView.as_view(), name='api-componente-rol-list-create'),

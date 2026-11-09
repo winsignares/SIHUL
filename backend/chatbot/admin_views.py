@@ -53,7 +53,8 @@ class PuedeGestionarDocumentosChatbots(permissions.BasePermission):
 
 
 def puede_todas_las_sedes(user):
-    return is_admin_global(user) or is_admin_sistema(user)
+    """Solo el administrador general trabaja con cualquier seccional; el resto, con la suya."""
+    return is_admin_global(user)
 
 
 def ids_chatbots_permitidos(request):

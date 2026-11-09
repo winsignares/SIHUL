@@ -135,7 +135,7 @@ class _BaseAnexos(TestCase):
         rol_estudiante = Rol.objects.create(nombre='estudiante')
         cls.admin = Usuario.objects.create(
             nombre='Admin', correo='admin.test@unilibre.edu.co', contrasena_hash='x',
-            rol=rol_admin, sede=sede, seccional=barranquilla,
+            rol=rol_admin, sede=sede, seccional=barranquilla, es_superusuario=True,  # administrador general
         )
         cls.coordinador_cali = Usuario.objects.create(
             nombre='Coordinador Cali', correo='coord.test@unilibre.edu.co', contrasena_hash='x',
@@ -811,6 +811,8 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         self.assertEqual(respuesta.json()['responsables'][0]['correo'], self.cargador.correo)
 
     def test_gestor_cambia_los_responsables_al_editar(self):
+        # Un gestor de seccional solo edita chatbots de su seccional (los nacionales los edita el administrador general)
+        self.agente.seccionales.set([self.gestor.seccional])
         self.entrar(self.gestor)
         detalle = reverse('api-agente-detail', args=[self.agente.id])
         self.assertEqual(
@@ -853,6 +855,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         self.assertFalse(agentes[self.otro_agente.id]['puede_gestionar_documentos'])
 
     def test_eliminar_el_chatbot_elimina_sus_asignaciones(self):
+        self.agente.seccionales.set([self.gestor.seccional])
         self.entrar(self.gestor)
         self.client.delete(reverse('api-agente-detail', args=[self.agente.id]))
         self.assertFalse(AgenteResponsable.objects.filter(usuario=self.cargador).exists())
