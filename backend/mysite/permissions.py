@@ -35,29 +35,26 @@ class IsAuthenticatedReadOnlyOrAdminWrite(BasePermission):
         user = getattr(request, 'user', None)
         if request.method in SAFE_METHODS:
             return is_authenticated_user(user)
-        role_name = get_role_name(user)
         return (
             is_admin_global(user)
             or is_admin_sistema(user)
-            or role_name == 'admin financiero'
             or user_can_edit_componente(user, 'Centro Institucional')
         )
 
 
 class IsAdminOnly(BasePermission):
-    """Permite escritura solo para admins (global, sistema, financiero),
-    sin bypass vía componentes. Usar para endpoints que administran el
-    propio sistema de permisos (p. ej. Gestión de Componentes) para evitar
-    que un rol se auto-conceda o conceda a otros más acceso del que
-    debería tener."""
+    """Permite escritura solo al administrador general (superusuario o rol admin_global).
+
+    Los roles y los componentes de cada rol son compartidos por todas las seccionales: si
+    el administrador de una seccional los cambiara, el cambio llegaría a las demás. Por eso
+    solo el administrador general los administra. Sin bypass vía componentes, para evitar
+    que un rol se auto-conceda o conceda a otros más acceso del que debería tener."""
 
     def has_permission(self, request, view):
         user = getattr(request, 'user', None)
         if not is_authenticated_user(user):
             return False
-
-        role_name = get_role_name(user)
-        return is_admin_global(user) or is_admin_sistema(user) or role_name == 'admin financiero'
+        return is_admin_global(user)
 
 
 class IsAdminUserManagement(BasePermission):
@@ -80,22 +77,12 @@ class IsAdminUserManagement(BasePermission):
 
 
 class IsAdminRoleManagement(BasePermission):
-    """Permite escritura para admins (global, sistema, financiero) o para
-    cualquier usuario con permiso EDITAR en 'Gestión de Roles' vía el
-    sistema de componentes."""
+    """Crear, editar o eliminar roles: solo el administrador general (los roles son
+    compartidos por todas las seccionales, ver IsAdminOnly)."""
 
     def has_permission(self, request, view):
         user = getattr(request, 'user', None)
-        if not is_authenticated_user(user):
-            return False
-
-        role_name = get_role_name(user)
-        return (
-            is_admin_global(user)
-            or is_admin_sistema(user)
-            or role_name == 'admin financiero'
-            or user_can_edit_componente(user, 'Gestión de Roles')
-        )
+        return is_authenticated_user(user) and is_admin_global(user)
 
 
 class IsCoordinador(BasePermission):

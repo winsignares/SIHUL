@@ -40,7 +40,11 @@ from usuarios.models import Rol, Usuario
 from notificaciones.signals import crear_notificacion
 from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
-from .auth_helpers import is_admin_global, is_admin_sistema, is_superuser_effective, seccional_para_sesion, user_supervisa_espacios
+from .auth_helpers import (
+    CUENTA_DESACTIVADA, is_admin_global, is_admin_sistema, is_superuser_effective, seccional_para_sesion, seccional_publica,
+    user_supervisa_espacios,
+)
+from financiero.permissions import es_solo_admin_financiero
 from .cache_utils import CachedCatalogMixin
 from .seccional_auth import SeccionalMixin
 from .permissions import (
@@ -85,10 +89,18 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
     seccional_lookup = 'id'
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
 
+    def get_permissions(self):
+        # El portal público pide elegir la seccional: el listado (id y ciudad) es público
+        if self.action == 'list':
+            return [permissions.AllowAny()]
+        return [permission() for permission in self.permission_classes]
+
     def get_queryset(self):
         user = self.get_current_user()
 
         if self.request.method == 'GET':
+            if not user and self.action == 'list':
+                return Seccional.objects.all().order_by('ciudad')
             if user and is_superuser_effective(user):
                 return Seccional.objects.all()
 
@@ -154,8 +166,18 @@ class ProgramaViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet)
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return Programa.objects.all().order_by('nombre') if self.action == 'list' else Programa.objects.none()
+            if self.action != 'list':
+                return Programa.objects.none()
+            programas = Programa.objects.all().order_by('nombre')
+            seccional_id = seccional_publica(self.request)
+            return programas.filter(facultad__sede__seccional_id=seccional_id) if seccional_id else programas
         return super().get_queryset()
+
+    def get_cache_scope(self):
+        # El listado público cambia según la seccional elegida: cada una con su propia entrada de caché
+        if not self.get_current_user():
+            return f'anon-{seccional_publica(self.request) or "todas"}'
+        return super().get_cache_scope()
 
 
 class GrupoViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
@@ -601,6 +623,17 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
+    def get_object(self):
+        usuario = super().get_object()
+        # Quien no es administrador general no edita ni elimina a uno (evita tomar su cuenta).
+        if (
+            self.request.method not in permissions.SAFE_METHODS
+            and is_admin_global(usuario)
+            and not is_admin_global(self.get_current_user())
+        ):
+            raise PermissionDenied('Solo el administrador general puede modificar a otro administrador general.')
+        return usuario
+
     def get_serializer_class(self):
         if self.action in ('list',):
             user = self.get_current_user()
@@ -630,7 +663,16 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             role_name_normalized = role_name_normalized.replace('_', ' ')
             role_name_normalized = ' '.join(role_name_normalized.split())
 
-            if is_admin_global(user) or is_admin_sistema(user) or role_name_normalized == 'admin financiero':
+            if es_solo_admin_financiero(user):
+                # El administrador financiero (sin ser administrador general) gestiona solo al equipo financiero,
+                # de todas las seccionales: nunca ve ni toca usuarios académicos.
+                if self.action == 'list_docentes':
+                    return Usuario.objects.none()
+                return Usuario.objects.select_related(
+                    'rol', 'facultad', 'sede', 'seccional',
+                ).prefetch_related('tipos_espacio_permitidos').filter(rol__nombre__in=self.FINANCIAL_ROLE_NAMES)
+
+            if is_admin_global(user) or is_admin_sistema(user):
                 # Acceso administrativo, pero restringido a la seccional del
                 # usuario salvo que sea superusuario real (SeccionalMixin.get_queryset).
                 base_queryset = super().get_queryset()
@@ -757,6 +799,9 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
 
         cache.delete(f"login_attempts:{correo_normalizado}:{ip_cliente}")
+
+        if not usuario.activo:
+            return Response({'error': CUENTA_DESACTIVADA}, status=status.HTTP_403_FORBIDDEN)
 
         if es_legacy:
             nuevo_hash = make_password(contrasena)

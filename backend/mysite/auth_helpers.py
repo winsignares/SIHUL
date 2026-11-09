@@ -2,6 +2,20 @@ COMPONENTE_DOCUMENTACION_CHATBOTS = 'Gestión de Documentación de Chatbots'
 
 MISSING_SECCIONAL_MESSAGE = 'Usuario sin sede o seccional asignada. Asignarle una sede para consultar datos por seccional.'
 
+SECCIONAL_PUBLICA_REQUERIDA = {'code': 'seccional_publica_requerida', 'error': 'Elige una seccional para consultar.'}
+
+
+def seccional_publica(request):
+    """Seccional que eligió el visitante del portal público (sin sesión): la envía el frontend en la cabecera
+    `X-Seccional-Publica` (o como `?seccional_id=`). None si no eligió ninguna o el valor no es válido."""
+    meta = getattr(request, 'META', {}) or {}
+    params = getattr(request, 'GET', {}) or {}
+    valor = meta.get('HTTP_X_SECCIONAL_PUBLICA') or params.get('seccional_id')
+    try:
+        return int(valor) if valor not in (None, '') else None
+    except (TypeError, ValueError):
+        return None
+
 
 def is_superuser_effective(user):
     if not user:
@@ -30,6 +44,9 @@ def is_admin_sistema(user):
     rol = getattr(user, 'rol', None)
     rol_nombre = (getattr(rol, 'nombre', '') or '').strip().lower()
     return rol_nombre in {'admin'}
+
+CUENTA_DESACTIVADA = 'Tu cuenta está desactivada. Comunícate con el administrador del sistema.'
+
 
 def is_authenticated_user(user):
     if not user:
@@ -112,6 +129,30 @@ def es_responsable_de_chatbots(user):
     return AgenteResponsable.objects.filter(usuario_id=user.id).exists()
 
 
+def componentes_de_rol_efectivos(usuario):
+    """Filas de ComponenteRol que valen para el usuario: la plantilla general de su rol más los ajustes de
+    su seccional. Para un mismo componente el ajuste de la seccional reemplaza a la plantilla, y un ajuste
+    «Sin acceso» lo quita. Los ajustes de otras seccionales no cuentan."""
+    rol = getattr(usuario, 'rol', None)
+    if not rol:
+        return []
+
+    from django.db.models import Q
+
+    from componentes.models import ComponenteRol
+
+    filtro = Q(seccional__isnull=True)
+    seccional_id = get_user_seccional_id(usuario)
+    if seccional_id:
+        filtro |= Q(seccional_id=seccional_id)
+    filas = sorted(
+        ComponenteRol.objects.filter(rol=rol).filter(filtro).select_related('componente'),
+        key=lambda f: (f.seccional_id is not None, f.id),  # la plantilla primero; el ajuste de la seccional gana
+    )
+    por_componente = {fila.componente_id: fila for fila in filas}
+    return [fila for fila in por_componente.values() if fila.permiso != 'NINGUNO']
+
+
 def get_componente_permiso(user, nombre_componente):
     """Resuelve el permiso efectivo ('VER'/'EDITAR'/None) de `user` sobre el
     Componente `nombre_componente`, replicando la precedencia usada por
@@ -143,7 +184,7 @@ def get_componente_permiso(user, nombre_componente):
     override = ComponenteUsuario.objects.filter(usuario=user, componente=componente).first()
 
     rol = getattr(user, 'rol', None)
-    cr = ComponenteRol.objects.filter(rol=rol, componente=componente).first() if rol else None
+    cr = next((f for f in componentes_de_rol_efectivos(user) if f.componente_id == componente.id), None) if rol else None
 
     if cr:
         if override and not override.activo:
@@ -179,7 +220,7 @@ def construir_componentes(usuario):
 
     from componentes.models import Componente, ComponenteRol, ComponenteUsuario
 
-    componentes_rol = ComponenteRol.objects.filter(rol=usuario.rol).select_related('componente')
+    componentes_rol = componentes_de_rol_efectivos(usuario)
     componentes_usuario = list(ComponenteUsuario.objects.filter(usuario=usuario).select_related('componente'))
     overrides = {item.componente_id: item for item in componentes_usuario}
 

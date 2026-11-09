@@ -1,6 +1,7 @@
 import { handleApiError } from './errorHandler.ts';
 import { resolveApiBaseUrl } from './backendUrl.ts';
 import { beginApiRequest, reportApiError, reportBackendReachable } from './apiActivity.ts';
+import { obtenerSeccionalPublica } from './seccionalPublica.ts';
 
 const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
@@ -27,6 +28,12 @@ class ApiClient {
     const token = localStorage.getItem('auth_token');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Portal público: la seccional elegida acota las consultas (con sesión el backend la ignora)
+    const seccionalPublica = obtenerSeccionalPublica();
+    if (seccionalPublica) {
+      headers['X-Seccional-Publica'] = String(seccionalPublica.id);
     }
 
     return headers;

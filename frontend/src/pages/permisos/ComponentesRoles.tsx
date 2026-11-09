@@ -3,12 +3,16 @@ import { useComponentesRoles } from '../../hooks/permisos/useComponentesRoles';
 import type { ComponenteRol, Componente } from '../../services/componentes/componentesAPI';
 import type { Rol } from '../../services/users/authService';
 import { Search, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
+import { tieneNivelesDePermiso } from '../../config/componentesConNiveles';
 
 type PermisoType = 'VER' | 'EDITAR';
 
 interface PermisoComponente {
   componente: Componente;
+  /** Fila que se edita: la plantilla general, o el ajuste de la seccional cuando se trabaja con una. */
   asignacion?: ComponenteRol;
+  /** Fila de la plantilla general (solo para comparar cuando se trabaja con una seccional). */
+  plantilla?: ComponenteRol;
   seleccionado: boolean;
   permiso: PermisoType;
 }
@@ -25,10 +29,19 @@ export default function ComponentesRoles() {
     terminoBusqueda,
     setTerminoBusqueda,
     obtenerAsignacionesPorRol,
+    obtenerFilasPorRol,
+    alcance,
+    seccionalActiva,
+    seleccionarSeccional,
     crearAsignacion,
     actualizarAsignacion,
     eliminarAsignacion
   } = useComponentesRoles();
+
+  const trabajaPorSeccional = seccionalActiva !== null;
+  const nombreSeccional = alcance?.es_general
+    ? alcance.seccionales.find(s => s.id === seccionalActiva)?.ciudad
+    : alcance?.seccional?.ciudad;
 
   // Estados para modal de Permisos
   const [mostrarModalPermisos, setMostrarModalPermisos] = useState(false);
@@ -41,15 +54,29 @@ export default function ComponentesRoles() {
    */
   const abrirModalPermisos = (rol: Rol) => {
     setRolPermisos(rol);
-    const asignaciones = obtenerAsignacionesPorRol(rol.id);
+    const filas = obtenerFilasPorRol(rol.id);
     
     const permisos: PermisoComponente[] = componentes.map(componente => {
-      const asignacion = asignaciones.find(a => a.componente_id === componente.id);
+      const plantilla = filas.find(a => a.componente_id === componente.id && !a.seccional_id);
+      if (!trabajaPorSeccional) {
+        return {
+          componente,
+          asignacion: plantilla,
+          plantilla,
+          seleccionado: !!plantilla,
+          permiso: (plantilla?.permiso === 'EDITAR' ? 'EDITAR' : 'VER') as PermisoType
+        };
+      }
+      // Con una seccional: el ajuste de la seccional manda; si no hay, se hereda de la plantilla general
+      const ajuste = filas.find(a => a.componente_id === componente.id && a.seccional_id === seccionalActiva);
+      const vigente = ajuste ?? plantilla;
+      const seleccionado = !!vigente && vigente.permiso !== 'NINGUNO';
       return {
         componente,
-        asignacion,
-        seleccionado: !!asignacion,
-        permiso: asignacion?.permiso || 'VER'
+        asignacion: ajuste,
+        plantilla,
+        seleccionado,
+        permiso: (vigente?.permiso === 'EDITAR' ? 'EDITAR' : 'VER') as PermisoType
       };
     });
     
@@ -75,7 +102,13 @@ export default function ComponentesRoles() {
    */
   const toggleComponente = (index: number) => {
     const nuevosPermisos = [...permisosComponentes];
-    nuevosPermisos[index].seleccionado = !nuevosPermisos[index].seleccionado;
+    const fila = nuevosPermisos[index];
+    fila.seleccionado = !fila.seleccionado;
+    // Sin niveles, VER y EDITAR dan el mismo acceso: se conserva el de la plantilla para que no cuente como ajuste
+    const dePlantilla = fila.plantilla?.permiso;
+    if (fila.seleccionado && !tieneNivelesDePermiso(fila.componente.nombre) && (dePlantilla === 'VER' || dePlantilla === 'EDITAR')) {
+      fila.permiso = dePlantilla;
+    }
     setPermisosComponentes(nuevosPermisos);
   };
 
@@ -97,7 +130,29 @@ export default function ComponentesRoles() {
     try {
       // Procesar cada componente
       for (const permiso of permisosComponentes) {
-        const { componente, asignacion, seleccionado, permiso: permisoTipo } = permiso;
+        const { componente, asignacion, plantilla, seleccionado, permiso: permisoTipo } = permiso;
+
+        if (trabajaPorSeccional) {
+          // Solo se guardan las diferencias con la plantilla general; lo igual a ella se hereda
+          const deseado = seleccionado ? permisoTipo : null;
+          const deLaPlantilla = plantilla && plantilla.permiso !== 'NINGUNO' ? plantilla.permiso : null;
+          if (deseado === deLaPlantilla) {
+            if (asignacion) await eliminarAsignacion(asignacion.id!);
+          } else {
+            const permisoAjuste = deseado ?? 'NINGUNO';
+            if (!asignacion) {
+              await crearAsignacion({
+                componente_id: componente.id!,
+                rol_id: rolPermisos.id,
+                permiso: permisoAjuste,
+                seccional_id: seccionalActiva
+              });
+            } else if (asignacion.permiso !== permisoAjuste) {
+              await actualizarAsignacion({ id: asignacion.id!, permiso: permisoAjuste });
+            }
+          }
+          continue;
+        }
 
         if (seleccionado && !asignacion) {
           // Crear nueva asignación
@@ -148,6 +203,39 @@ export default function ComponentesRoles() {
             Asigna componentes del sistema a cada rol y configura sus permisos de acceso
           </p>
         </div>
+
+        {/* Ámbito: plantilla general o una seccional */}
+        {alcance && (
+          <div className="mb-6 p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3">
+            {alcance.es_general ? (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <label htmlFor="ambito-permisos" className="text-sm font-semibold text-gray-700">
+                  Permisos que estás editando
+                </label>
+                <select
+                  id="ambito-permisos"
+                  value={seccionalActiva ?? ''}
+                  onChange={(e) => seleccionarSeccional(e.target.value ? Number(e.target.value) : null)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="">Plantilla general (todas las seccionales)</option>
+                  {alcance.seccionales.map(s => (
+                    <option key={s.id} value={s.id}>Ajustes de {s.ciudad}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <p className="text-sm font-semibold text-gray-700">
+                Seccional: {alcance.seccional?.ciudad ?? 'sin seccional asignada'}
+              </p>
+            )}
+            <p className="text-sm text-gray-600">
+              {trabajaPorSeccional
+                ? `Los cambios aquí solo aplican a las personas de ${nombreSeccional}. Lo que no cambies se hereda de la plantilla general y no afecta a otras seccionales.`
+                : 'Estos permisos valen para todas las seccionales, salvo en los componentes que una seccional haya ajustado por su cuenta.'}
+            </p>
+          </div>
+        )}
 
         {/* Error */}
         {error && (
@@ -295,7 +383,9 @@ export default function ComponentesRoles() {
                 Permisos de "{rolPermisos.nombre}"
               </h2>
               <p className="text-gray-600 text-sm mb-4">
-                Selecciona los componentes que puede acceder este rol y el tipo de permiso
+                {trabajaPorSeccional
+                  ? `Permisos de este rol para ${nombreSeccional}. «Heredado» viene de la plantilla general; «Ajustado» solo aplica a esta seccional.`
+                  : 'Selecciona los componentes que puede acceder este rol y el tipo de permiso'}
               </p>
 
               {/* Búsqueda de componentes */}
@@ -345,6 +435,11 @@ export default function ComponentesRoles() {
                       <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
                         Permiso
                       </th>
+                      {trabajaPorSeccional && (
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                          Origen
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -372,7 +467,13 @@ export default function ComponentesRoles() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          {permiso.seleccionado ? (
+                          {permiso.seleccionado && !tieneNivelesDePermiso(permiso.componente.nombre) ? (
+                            <div className="flex justify-center" title="En este componente ver y editar dan el mismo acceso">
+                              <span className="px-3 py-1 text-xs font-medium rounded border bg-blue-50 text-blue-800 border-blue-200">
+                                Acceso
+                              </span>
+                            </div>
+                          ) : permiso.seleccionado ? (
                             <div className="flex gap-2 justify-center">
                               <button
                                 type="button"
@@ -403,13 +504,29 @@ export default function ComponentesRoles() {
                             <span className="text-gray-400 text-sm">—</span>
                           )}
                         </td>
+                        {trabajaPorSeccional && (
+                          <td className="px-4 py-3 text-center">
+                            {(() => {
+                              const deLaPlantilla = permiso.plantilla && permiso.plantilla.permiso !== 'NINGUNO' ? permiso.plantilla.permiso : null;
+                              const deseado = permiso.seleccionado ? permiso.permiso : null;
+                              const personalizado = deseado !== deLaPlantilla;
+                              return (
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  personalizado ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {personalizado ? 'Ajustado' : 'Heredado'}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                        )}
                       </tr>
                       );
                     })}
 
                     {componentesFiltrados.length === 0 && (
                       <tr>
-                        <td colSpan={3} className="px-4 py-8 text-center text-gray-500 text-sm">
+                        <td colSpan={trabajaPorSeccional ? 4 : 3} className="px-4 py-8 text-center text-gray-500 text-sm">
                           No se encontraron componentes que coincidan con la búsqueda
                         </td>
                       </tr>

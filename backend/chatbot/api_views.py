@@ -41,12 +41,13 @@ _RESPONSABLES = Prefetch(
 
 
 class _AgentesVisiblesMixin:
-    """Quien no administra chatbots solo ve los disponibles en su seccional (más los que tiene asignados)."""
+    """Solo el administrador general ve todos los chatbots; los demás, los disponibles en su seccional
+    (más los que tienen asignados), incluso quienes administran chatbots."""
 
     def get_queryset(self):
         queryset = super().get_queryset()
         request = self.request
-        if request.method not in permissions.SAFE_METHODS or PuedeGestionarChatbots().has_permission(request, self):
+        if puede_todas_las_sedes(request.user):
             return queryset
         visibles = agentes_visibles(queryset, _resolve_user_sede_value(request.user))
         propios = ids_chatbots_permitidos(request)
@@ -55,13 +56,57 @@ class _AgentesVisiblesMixin:
         return visibles
 
 
-class AgenteListCreateAPIView(_AgentesVisiblesMixin, generics.ListCreateAPIView):
+def _seccionales_propias(request):
+    return set(ids_seccionales(_resolve_user_sede_value(request.user)))
+
+
+def _seccionales_dentro_de_las_propias(request, seccionales):
+    """True si hay seccionales y todas son de quien escribe (un chatbot sin seccionales es nacional)."""
+    ids = {s.id for s in seccionales}
+    return bool(ids) and ids <= _seccionales_propias(request)
+
+
+class _EscrituraDeAgentePorSeccionalMixin:
+    """El administrador general escribe cualquier chatbot. Quien administra chatbots en una seccional
+    solo crea, edita o elimina los de su seccional: no toca los nacionales, ni los compartidos con
+    otras seccionales, ni puede dejar un chatbot disponible fuera de la suya."""
+
+    def perform_create(self, serializer):
+        if puede_todas_las_sedes(self.request.user):
+            return serializer.save()
+        propias = list(Seccional.objects.filter(id__in=_seccionales_propias(self.request)))
+        if not propias:
+            raise PermissionDenied('Tu usuario no tiene seccional asignada.')
+        pedidas = serializer.validated_data.get('seccionales')
+        if pedidas and not _seccionales_dentro_de_las_propias(self.request, pedidas):
+            raise PermissionDenied('Solo puedes crear chatbots para tu propia seccional.')
+        serializer.save(seccionales=pedidas or propias)
+
+    def perform_update(self, serializer):
+        if puede_todas_las_sedes(self.request.user):
+            return serializer.save()
+        if not _seccionales_dentro_de_las_propias(self.request, serializer.instance.seccionales.all()):
+            raise PermissionDenied('Este chatbot no es solo de tu seccional: lo administra el administrador general.')
+        nuevas = serializer.validated_data.get('seccionales')
+        if nuevas is not None and not _seccionales_dentro_de_las_propias(self.request, nuevas):
+            raise PermissionDenied('Solo puedes dejar el chatbot disponible en tu propia seccional.')
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not puede_todas_las_sedes(self.request.user) and not _seccionales_dentro_de_las_propias(
+            self.request, instance.seccionales.all()
+        ):
+            raise PermissionDenied('Este chatbot no es solo de tu seccional: lo administra el administrador general.')
+        instance.delete()
+
+
+class AgenteListCreateAPIView(_EscrituraDeAgentePorSeccionalMixin, _AgentesVisiblesMixin, generics.ListCreateAPIView):
     queryset = Agente.objects.prefetch_related(_RESPONSABLES, 'seccionales').order_by(Lower('nombre'))
     serializer_class = AgenteSerializer
     permission_classes = [LecturaAutenticadaEscrituraGestor]
 
 
-class AgenteDetailAPIView(_AgentesVisiblesMixin, generics.RetrieveUpdateDestroyAPIView):
+class AgenteDetailAPIView(_EscrituraDeAgentePorSeccionalMixin, _AgentesVisiblesMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = Agente.objects.prefetch_related(_RESPONSABLES, 'seccionales')
     serializer_class = AgenteSerializer
     permission_classes = [LecturaAutenticadaEscrituraGestor]

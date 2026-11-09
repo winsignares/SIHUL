@@ -405,7 +405,7 @@ export function usePublicPrestamo() {
     const eliminarSolicitud = async (id: number) => {
         try {
             setSubmitting(true);
-            await prestamosPublicAPI.eliminarSolicitud(id);
+            await prestamosPublicAPI.eliminarSolicitud(id, consultaCredenciales);
             await cargarMisSolicitudes();
             setSuccessMessage('Solicitud eliminada correctamente');
             setShowSuccess(true);

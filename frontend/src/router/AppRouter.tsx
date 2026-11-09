@@ -8,6 +8,8 @@ import { useAuth } from '../context/AuthContext';
 import { getRouteForComponent } from '../config/componentRoutes';
 import { normalizeFinancialRole, normalizeFinancialText, resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
 import { isSpaceSupervisorRole } from '../context/spaceSupervisorRole';
+import { obtenerSeccionalPublica, olvidarSeccionalPublica } from '../core/seccionalPublica';
+import { BarraSeccionalPublica, SeleccionSeccionalPublica } from '../components/public/SeleccionSeccionalPublica';
 
 // Lazy load de componentes para mejorar el rendimiento
 const DashboardHome = lazyConReintento(() => import('../pages/dashboard/DashboardHome'));
@@ -143,9 +145,11 @@ function isReferrerUnilibre(): boolean {
 function PublicLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const [verified, setVerified] = useState(
     localStorage.getItem('public_access_verified') === 'true'
   );
+  const [seccional, setSeccional] = useState(obtenerSeccionalPublica);
 
   const handlePublicLogout = () => {
     localStorage.clear();
@@ -160,7 +164,24 @@ function PublicLayout() {
     return <PublicCaptchaGate onVerified={() => setVerified(true)} />;
   }
 
-  return <AdminDashboard onLogout={handlePublicLogout}><Outlet /></AdminDashboard>;
+  // Sin sesión, las consultas muestran solo la seccional que elige el visitante (el asistente virtual no la necesita)
+  const esAsistente = location.pathname.replace(/\/+$/, '') === PUBLIC_ASISTENTE_VIRTUAL_PATH;
+  const pideSeccional = !isAuthenticated && !esAsistente;
+  if (pideSeccional && !seccional) {
+    return <SeleccionSeccionalPublica onElegida={setSeccional} />;
+  }
+
+  const cambiarSeccional = () => {
+    olvidarSeccionalPublica();
+    setSeccional(null);
+  };
+
+  return (
+    <AdminDashboard onLogout={handlePublicLogout}>
+      {pideSeccional && seccional && <BarraSeccionalPublica seccional={seccional} onCambiar={cambiarSeccional} />}
+      <Outlet />
+    </AdminDashboard>
+  );
 }
 
 // Componente para proteger rutas por componentes del backend

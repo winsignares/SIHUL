@@ -9,7 +9,10 @@ from .models import EspacioFisico, EspacioPermitido
 from horario.models import Horario
 from prestamos.models import PrestamoEspacio
 from usuarios.models import Usuario
-from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective, user_supervisa_espacios
+from mysite.auth_helpers import (
+    MISSING_SECCIONAL_MESSAGE, SECCIONAL_PUBLICA_REQUERIDA, get_user_seccional_id, is_superuser_effective, seccional_publica,
+    user_supervisa_espacios,
+)
 
 
 def _filtrar_horarios_por_rango_fecha(request, queryset):
@@ -90,6 +93,12 @@ def list_all_espacios_with_horarios(request):
             return _missing_seccional_response()
 
         base = _filtrar_espacios_por_sede_usuario(request, EspacioFisico.objects.all())
+        if getattr(request, 'user_obj', None) is None:
+            # Consulta pública: solo los espacios de la seccional que eligió el visitante
+            seccional_id = seccional_publica(request)
+            if not seccional_id:
+                return JsonResponse(SECCIONAL_PUBLICA_REQUERIDA, status=400)
+            base = base.filter(sede__seccional_id=seccional_id)
 
         espacios = base.select_related('sede', 'tipo').prefetch_related(
             Prefetch(

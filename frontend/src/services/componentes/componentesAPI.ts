@@ -49,8 +49,11 @@ export interface ComponenteRol {
     componente_nombre?: string;
     rol_id: number;
     rol_nombre?: string;
-    permiso: 'VER' | 'EDITAR';
+    /** 'NINGUNO' solo existe en el ajuste de una seccional: quita un componente que la plantilla da. */
+    permiso: 'VER' | 'EDITAR' | 'NINGUNO';
     permiso_display?: string;
+    /** Vacío = plantilla general; con valor = ajuste que solo aplica a esa seccional. */
+    seccional_id?: number | null;
 }
 
 /**
@@ -59,7 +62,9 @@ export interface ComponenteRol {
 export interface CreateComponenteRolPayload {
     componente_id: number;
     rol_id: number;
-    permiso?: 'VER' | 'EDITAR';
+    permiso?: 'VER' | 'EDITAR' | 'NINGUNO';
+    /** Sin valor, el servidor usa la seccional de quien guarda (o la plantilla si es administrador general). */
+    seccional_id?: number | null;
 }
 
 /**
@@ -67,7 +72,7 @@ export interface CreateComponenteRolPayload {
  */
 export interface UpdateComponenteRolPayload {
     id: number;
-    permiso?: 'VER' | 'EDITAR';
+    permiso?: 'VER' | 'EDITAR' | 'NINGUNO';
 }
 
 /**
@@ -108,7 +113,8 @@ interface ComponenteRolApi {
     id?: number;
     componente: number;
     rol: number;
-    permiso: 'VER' | 'EDITAR';
+    permiso: 'VER' | 'EDITAR' | 'NINGUNO';
+    seccional?: number | null;
 }
 
 const toFrontendComponenteRol = (item: ComponenteRolApi): ComponenteRol => ({
@@ -116,7 +122,16 @@ const toFrontendComponenteRol = (item: ComponenteRolApi): ComponenteRol => ({
     componente_id: item.componente,
     rol_id: item.rol,
     permiso: item.permiso,
+    seccional_id: item.seccional ?? null,
 });
+
+/** Qué puede hacer quien abre la pantalla de permisos por rol. */
+export interface AlcancePermisos {
+    es_general: boolean;
+    puede_ajustar: boolean;
+    seccional: { id: number; ciudad: string } | null;
+    seccionales: { id: number; ciudad: string }[];
+}
 
 const toFrontendComponenteUsuario = (item: ComponenteUsuarioApi): ComponenteUsuario => ({
     id: item.id,
@@ -187,6 +202,7 @@ export const componenteRolService = {
             componente: payload.componente_id,
             rol: payload.rol_id,
             permiso: payload.permiso,
+            ...(payload.seccional_id !== undefined ? { seccional: payload.seccional_id } : {}),
         });
         const normalized = toFrontendComponenteRol(created);
         return {
@@ -201,12 +217,18 @@ export const componenteRolService = {
     /**
      * Lista todos los ComponenteRoles
      */
-    list: async (params?: { financiero?: boolean }): Promise<ListComponenteRolesResponse> => {
-        const query = params?.financiero ? '?financiero=1' : '';
-        const componenteRolesApi = await apiClient.get<ComponenteRolApi[]>(`/componentes/roles/${query}`);
+    list: async (params?: { financiero?: boolean; seccional?: number }): Promise<ListComponenteRolesResponse> => {
+        const query = new URLSearchParams();
+        if (params?.financiero) query.set('financiero', '1');
+        if (params?.seccional) query.set('seccional', String(params.seccional));
+        const texto = query.toString();
+        const componenteRolesApi = await apiClient.get<ComponenteRolApi[]>(`/componentes/roles/${texto ? `?${texto}` : ''}`);
         const componente_roles = componenteRolesApi.map(toFrontendComponenteRol);
         return { componente_roles };
     },
+
+    /** Si la persona es administradora general o de una seccional (define qué ve la pantalla de permisos). */
+    alcance: async (): Promise<AlcancePermisos> => apiClient.get<AlcancePermisos>('/componentes/alcance/'),
 
     /**
      * Obtiene un ComponenteRol por ID
