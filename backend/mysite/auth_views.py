@@ -104,7 +104,7 @@ def user_view(request):
             'seccional',
             'rol',
             'facultad',
-        ).get(id=auth_user.id)
+        ).get(id=auth_user.id, activo=True)
     except Usuario.DoesNotExist:
         # Cookies are shared by host, not by port. A session from another
         # environment can therefore reference a user absent from this DB.

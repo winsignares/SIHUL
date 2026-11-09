@@ -21,6 +21,10 @@ class SedeFilterMiddleware(MiddlewareMixin):
             try:
                 from usuarios.models import Usuario
                 usuario = Usuario.objects.select_related('sede').get(id=user_id)
+                if not usuario.activo:
+                    # Una cuenta desactivada pierde la sesión que tuviera abierta
+                    request.session.flush()
+                    raise Usuario.DoesNotExist
                 
                 # Agregar información de sede al request
                 request.sede_id = usuario.sede_id if usuario.sede else None
@@ -29,7 +33,7 @@ class SedeFilterMiddleware(MiddlewareMixin):
                 request.user_obj = usuario  # También agregar el usuario completo
                 
             except Usuario.DoesNotExist:
-                # Usuario no encontrado, establecer valores por defecto
+                # Usuario no encontrado o desactivado, establecer valores por defecto
                 request.sede_id = None
                 request.sede = None
                 request.seccional = None
