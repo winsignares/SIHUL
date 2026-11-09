@@ -2,6 +2,7 @@ from django.db import transaction
 from django.db.models import Count
 from rest_framework import serializers
 
+from mysite.auth_helpers import is_admin_global
 from usuarios.models import Usuario
 
 from .admin_views import PuedeGestionarChatbots, ids_chatbots_permitidos
@@ -116,18 +117,30 @@ class AgenteSerializer(serializers.ModelSerializer):
         permitidos = self._chatbots_permitidos()
         data['puede_gestionar_documentos'] = permitidos is None or instance.id in permitidos
 
-        # Quiénes son los responsables: solo lo ve quien administra chatbots.
+        # Quiénes son los responsables: solo lo ve quien administra chatbots, y quien no es administrador
+        # general solo ve los de su seccional (los chatbots compartidos solo los edita el general).
         if administra:
+            general = is_admin_global(request.user)
+            propia = None if general else self._seccional_propia()
             data['responsables'] = [
                 {
                     'id': r.usuario_id,
                     'nombre': r.usuario.nombre,
                     'correo': r.usuario.correo,
-                    'seccional': _resolve_user_sede_value(r.usuario),
+                    'seccional': seccional,
                 }
                 for r in instance.responsables.all()
+                for seccional in [_resolve_user_sede_value(r.usuario)]
+                if general or (propia and seccional == propia)
             ]
         return data
+
+    def _seccional_propia(self):
+        contexto = self.context
+        if '_seccional_propia' not in contexto:
+            request = contexto.get('request')
+            contexto['_seccional_propia'] = _resolve_user_sede_value(request.user) if request else None
+        return contexto['_seccional_propia']
 
 
 class PreguntaSugeridaSerializer(serializers.ModelSerializer):

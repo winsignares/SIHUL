@@ -87,6 +87,20 @@ class UsuariosPorSeccionalTests(TestCase):
         correos = {u['correo'] for u in self.entrar(self.general).get(url).json()}
         self.assertIn(self.docente_cali.correo, correos)
 
+    def test_responsables_de_un_chatbot_compartido(self):
+        from chatbot.models import Agente, AgenteResponsable
+
+        agente = Agente.objects.create(nombre='Nacional', descripcion='d', endpoint_url='http://x.test', mensaje_bienvenida='hola')
+        for u in (self.docente_bq, self.docente_cali):
+            AgenteResponsable.objects.create(agente=agente, usuario=u)
+
+        def responsables(usuario):
+            datos = self.entrar(usuario).get(f'/api/chatbot/agentes/{agente.id}/').json()
+            return {r['correo'] for r in datos['responsables']}
+
+        self.assertEqual(responsables(self.admin_bq), {self.docente_bq.correo})
+        self.assertEqual(responsables(self.general), {self.docente_bq.correo, self.docente_cali.correo})
+
     def test_el_admin_financiero_solo_ve_permisos_del_equipo_financiero(self):
         componente = Componente.objects.create(nombre='Componente de prueba')
         ComponenteUsuario.objects.create(usuario=self.docente_bq, componente=componente, permiso='VER', activo=True)
