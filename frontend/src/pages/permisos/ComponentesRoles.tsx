@@ -3,6 +3,7 @@ import { useComponentesRoles } from '../../hooks/permisos/useComponentesRoles';
 import type { ComponenteRol, Componente } from '../../services/componentes/componentesAPI';
 import type { Rol } from '../../services/users/authService';
 import { Search, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
+import { tieneNivelesDePermiso } from '../../config/componentesConNiveles';
 
 type PermisoType = 'VER' | 'EDITAR';
 
@@ -101,7 +102,13 @@ export default function ComponentesRoles() {
    */
   const toggleComponente = (index: number) => {
     const nuevosPermisos = [...permisosComponentes];
-    nuevosPermisos[index].seleccionado = !nuevosPermisos[index].seleccionado;
+    const fila = nuevosPermisos[index];
+    fila.seleccionado = !fila.seleccionado;
+    // Sin niveles, VER y EDITAR dan el mismo acceso: se conserva el de la plantilla para que no cuente como ajuste
+    const dePlantilla = fila.plantilla?.permiso;
+    if (fila.seleccionado && !tieneNivelesDePermiso(fila.componente.nombre) && (dePlantilla === 'VER' || dePlantilla === 'EDITAR')) {
+      fila.permiso = dePlantilla;
+    }
     setPermisosComponentes(nuevosPermisos);
   };
 
@@ -460,7 +467,13 @@ export default function ComponentesRoles() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          {permiso.seleccionado ? (
+                          {permiso.seleccionado && !tieneNivelesDePermiso(permiso.componente.nombre) ? (
+                            <div className="flex justify-center" title="En este componente ver y editar dan el mismo acceso">
+                              <span className="px-3 py-1 text-xs font-medium rounded border bg-blue-50 text-blue-800 border-blue-200">
+                                Acceso
+                              </span>
+                            </div>
+                          ) : permiso.seleccionado ? (
                             <div className="flex gap-2 justify-center">
                               <button
                                 type="button"

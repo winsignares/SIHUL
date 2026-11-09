@@ -13,7 +13,7 @@ from usuarios.models import Usuario
 from espacios.models import EspacioFisico
 
 from .models import Horario, HorarioEstudiante, SolicitudEspacio
-from mysite.auth_helpers import is_superuser_effective
+from mysite.auth_helpers import SECCIONAL_PUBLICA_REQUERIDA, is_superuser_effective, seccional_publica
 
 logger = logging.getLogger(__name__)
 
@@ -219,6 +219,13 @@ def list_horarios_extendidos(request):
         qs = qs.filter(estado__in=['aprobado', 'pendiente'])
     else:
         qs = qs.filter(estado='aprobado')
+
+    if es_consulta_publica:
+        # Consulta pública: solo los horarios de la seccional que eligió el visitante
+        seccional_elegida = seccional_publica(request)
+        if not seccional_elegida:
+            return JsonResponse(SECCIONAL_PUBLICA_REQUERIDA, status=400)
+        qs = qs.filter(espacio__sede__seccional_id=seccional_elegida)
 
     seccional_scope_id, is_superuser = _get_authenticated_seccional_scope(request)
     if not es_consulta_publica and not is_superuser:
@@ -637,6 +644,26 @@ def horarios_por_periodo(request):
         # Ningún usuario público puede descubrir horarios pendientes ni rechazados, aunque el frontend los pida.
         if es_consulta_publica:
             horarios_qs = horarios_qs.filter(estado='aprobado')
+
+        # Con sesión, cada seccional ve solo sus horarios (por el espacio o, si aún no tiene, por el programa del grupo).
+        # El administrador general ve todo. La consulta pública puede acotar con `seccional_id`.
+        usuario = _get_request_user(request)
+        seccional_pedida = seccional_publica(request)
+        if usuario is None and not seccional_pedida:
+            return JsonResponse(SECCIONAL_PUBLICA_REQUERIDA, status=400)
+        if usuario is not None and not is_superuser_effective(usuario):
+            seccional_id = get_user_seccional_id(usuario)
+            if not seccional_id:
+                return _missing_seccional_response()
+            horarios_qs = horarios_qs.filter(
+                Q(espacio__sede__seccional_id=seccional_id)
+                | Q(espacio__isnull=True, grupo__programa__facultad__sede__seccional_id=seccional_id)
+            )
+        elif usuario is None:
+            horarios_qs = horarios_qs.filter(
+                Q(espacio__sede__seccional_id=seccional_pedida)
+                | Q(espacio__isnull=True, grupo__programa__facultad__sede__seccional_id=seccional_pedida)
+            )
 
         # Filtro opcional por rango de fecha_inicio (mismo criterio que el
         # frontend en useConsultaEspacios.ts): sin esto, esta consulta trae

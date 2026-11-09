@@ -6,7 +6,7 @@ pendientes o rechazados, ni consultar otros recursos protegidos.
 import datetime
 import json
 
-from django.test import TestCase
+from django.test import Client, TestCase
 
 from asignaturas.models import Asignatura
 from espacios.models import EspacioFisico, TipoEspacio
@@ -28,6 +28,7 @@ class ConsultasPublicasTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         seccional, _ = Seccional.objects.get_or_create(ciudad='Barranquilla')
+        cls.seccional = seccional
         sede = Sede.objects.create(nombre='Sede Centro Prueba', seccional=seccional)
         facultad = Facultad.objects.create(nombre='Ingeniería', sede=sede)
         cls.programa = Programa.objects.create(facultad=facultad, nombre='Ingeniería de Sistemas', activo=False)
@@ -45,6 +46,10 @@ class ConsultasPublicasTests(TestCase):
         cls.admin = Usuario.objects.create(
             nombre='Admin', correo='admin.publico@unilibre.edu.co', contrasena_hash='x',
             rol=Rol.objects.get_or_create(nombre='admin')[0], es_superusuario=True)
+
+    def setUp(self):
+        # El portal público envía la seccional que eligió el visitante
+        self.client = Client(HTTP_X_SECCIONAL_PUBLICA=str(self.seccional.id))
 
     def _entrar(self, usuario):
         sesion = self.client.session

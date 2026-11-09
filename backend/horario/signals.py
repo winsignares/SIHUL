@@ -111,6 +111,11 @@ def validar_horario(sender, instance, **kwargs):
         except Horario.DoesNotExist:
             pass
     
+    # Sin espacio asignado (pendiente de asignación) no puede chocar con otro horario ni con un préstamo:
+    # antes se comparaba con todos los demás horarios sin espacio y fallaba al buscar el espacio inexistente.
+    if instance.espacio_id is None:
+        return
+
     periodo_id = instance.grupo.periodo_id
 
     conflicto_prestamo = obtener_conflicto_prestamo(instance)
@@ -208,6 +213,11 @@ def crear_horario_fusionado(sender, instance, created, **kwargs):
     """
     if not created:
         # Solo procesar cuando se crea un nuevo horario
+        return
+
+    # Una clase compartida se fusiona por espacio: sin espacio asignado no hay nada que fusionar
+    # (HorarioFusionado exige espacio, y el intento fallido rompía la transacción del guardado).
+    if instance.espacio_id is None:
         return
     
     # Buscar horarios que compartan la misma clase
