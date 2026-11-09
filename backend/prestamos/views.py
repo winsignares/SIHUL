@@ -11,7 +11,10 @@ from espacios.models import EspacioFisico
 from usuarios.models import Usuario
 from recursos.models import Recurso
 from horario.models import Horario
-from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_user_seccional_id, is_superuser_effective
+from mysite.auth_helpers import (
+    MISSING_SECCIONAL_MESSAGE, SECCIONAL_PUBLICA_REQUERIDA, get_user_seccional_id, is_superuser_effective,
+    seccional_publica,
+)
 from mysite.xss_protection import sanitize_dict, TIPO_ACTIVIDAD_SCHEMA, PRESTAMO_SCHEMA, PRESTAMO_PUBLICO_SCHEMA
 import json
 import datetime
@@ -1408,6 +1411,15 @@ def list_espacios_disponibles_publico(request):
 
             # Obtener todos los espacios (opcionalmente filtrados por sede)
             espacios_query = EspacioFisico.objects.select_related('tipo', 'sede')
+            # Sin sesión, solo los espacios de la seccional que eligió el visitante; con sesión, los de la suya
+            usuario = getattr(request, 'user_obj', None)
+            if usuario is None:
+                seccional_id = seccional_publica(request)
+                if not seccional_id:
+                    return JsonResponse(SECCIONAL_PUBLICA_REQUERIDA, status=400)
+                espacios_query = espacios_query.filter(sede__seccional_id=seccional_id)
+            elif not is_superuser_effective(usuario):
+                espacios_query = espacios_query.filter(sede__seccional_id=get_user_seccional_id(usuario))
             if sede_id:
                 espacios_query = espacios_query.filter(sede_id=sede_id)
 

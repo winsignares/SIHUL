@@ -395,11 +395,6 @@ export default function GestionUsuariosReal() {
     return componenteRoles.filter((item) => item.rol_id === rolId);
   }, [editarUsuario.rolId, componenteRoles]);
 
-  const permisosPorComponente = useMemo(
-    () => new Map(permisosRolSeleccionado.map((item) => [item.componente_id, item.permiso])),
-    [permisosRolSeleccionado]
-  );
-
   const componentesOrdenados = useMemo(
     () => [...componentes].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es')),
     [componentes]
@@ -443,10 +438,6 @@ export default function GestionUsuariosReal() {
     });
   };
 
-  const setPermisoComponenteNuevo = (componenteId: number, permiso: PermisoTipo) => {
-    setComponentesNuevoUsuario((prev) => ({ ...prev, [componenteId]: permiso }));
-  };
-
   const toggleComponenteEditar = (componenteId: number) => {
     setComponentesEditarUsuario((prev) => {
       const next = { ...prev };
@@ -457,10 +448,6 @@ export default function GestionUsuariosReal() {
       }
       return next;
     });
-  };
-
-  const setPermisoComponenteEditar = (componenteId: number, permiso: PermisoTipo) => {
-    setComponentesEditarUsuario((prev) => ({ ...prev, [componenteId]: permiso }));
   };
 
   const limpiarFiltros = () => {
@@ -709,7 +696,6 @@ export default function GestionUsuariosReal() {
                   componentesDelRolNuevo.map((componente) => {
                     const componenteId = componente.id || -1;
                     const activo = Boolean(componentesNuevoUsuario[componenteId]);
-                    const permiso = componentesNuevoUsuario[componenteId] || 'VER';
                     return (
                       <div key={componenteId} className="rounded-lg border bg-white p-3 space-y-2">
                         <p className="text-sm font-medium text-slate-800 truncate">{componente.nombre}</p>
@@ -717,15 +703,7 @@ export default function GestionUsuariosReal() {
                           <Button size="sm" variant={activo ? 'default' : 'outline'} onClick={() => toggleComponenteNuevo(componenteId)}>
                             {activo ? 'Activo' : 'Inactivo'}
                           </Button>
-                          <Select value={permiso} onValueChange={(value) => setPermisoComponenteNuevo(componenteId, value as PermisoTipo)} disabled={!activo}>
-                            <SelectTrigger className="h-8 w-28">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="VER">VER</SelectItem>
-                              <SelectItem value="EDITAR">EDITAR</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <span className="text-xs text-slate-500">{activo ? 'Con acceso' : 'Sin acceso'}</span>
                         </div>
                       </div>
                     );
@@ -829,8 +807,6 @@ export default function GestionUsuariosReal() {
                     componentesDelRolSeleccionado.map((componente) => {
                       const componenteId = componente.id || -1;
                       const activo = Boolean(componentesEditarUsuario[componenteId]);
-                      const permisoBase = permisosPorComponente.get(componenteId) || 'VER';
-                      const permiso = componentesEditarUsuario[componenteId] || permisoBase;
                       return (
                         <div key={componente.id} className="rounded-lg border bg-white p-3 shadow-sm space-y-2">
                           <div className="min-w-0">
@@ -842,15 +818,7 @@ export default function GestionUsuariosReal() {
                               <Checkbox checked={activo} aria-label={`Permiso para ${componente.nombre}`} />
                               <span className="text-xs">{activo ? 'Habilitado' : 'Inactivo'}</span>
                             </div>
-                            <Select value={permiso} onValueChange={(value) => setPermisoComponenteEditar(componenteId, value as PermisoTipo)} disabled={!activo}>
-                              <SelectTrigger className="h-8 w-28">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="VER">VER</SelectItem>
-                                <SelectItem value="EDITAR">EDITAR</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <span className="text-xs text-slate-500">{activo ? 'Con acceso' : 'Sin acceso'}</span>
                           </div>
                         </div>
                       );

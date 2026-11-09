@@ -77,11 +77,52 @@ class HorariosPorPeriodoPorSeccionalTests(TestCase):
         ids = self._ids(_cliente(self.general))
         self.assertEqual(len(ids), 6)
 
-    def test_el_publico_ve_solo_aprobados_y_puede_acotar_por_seccional(self):
-        todos = self._ids(_cliente())
-        self.assertEqual(todos, {self.horarios[c]['aprobado'].id for c in ('Barranquilla', 'Cali')})
-        cali = self._ids(_cliente(), seccional_id=self.seccional_cali.id)
-        self.assertEqual(cali, {self.horarios['Cali']['aprobado'].id})
+    def test_el_publico_ve_solo_aprobados_de_la_seccional_que_elige(self):
+        publico = Client(HTTP_X_SECCIONAL_PUBLICA=str(self.seccional_cali.id))
+        self.assertEqual(self._ids(publico), {self.horarios['Cali']['aprobado'].id})
+        self.assertEqual(self._ids(_cliente(), seccional_id=self.seccional_cali.id), {self.horarios['Cali']['aprobado'].id})
+
+    def test_el_publico_sin_elegir_seccional_no_recibe_horarios(self):
+        r = _cliente().get('/api/horarios/por-periodo/', {'periodo_id': self.periodo.id}, **H)
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(json.loads(r.content)['code'], 'seccional_publica_requerida')
+
+
+class PortalPublicoPorSeccionalTests(HorariosPorPeriodoPorSeccionalTests):
+    """El resto de consultas del portal público también se acotan a la seccional elegida."""
+
+    def _publico(self, seccional=None):
+        return Client(HTTP_X_SECCIONAL_PUBLICA=str(seccional.id)) if seccional else Client()
+
+    def test_lista_de_seccionales_es_publica(self):
+        r = self._publico().get('/api/seccionales/', **H)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual({s['ciudad'] for s in json.loads(r.content)}, {'Barranquilla', 'Cali'})
+
+    def test_horarios_extendidos(self):
+        self.assertEqual(self._publico().get('/api/horarios/list/extendidos/', **H).status_code, 400)
+        r = self._publico(self.seccional_cali).get('/api/horarios/list/extendidos/', **H)
+        self.assertEqual({h['id'] for h in json.loads(r.content)['horarios']}, {self.horarios['Cali']['aprobado'].id})
+
+    def test_espacios_con_horarios(self):
+        self.assertEqual(self._publico().get('/api/espacios/horarios/all/', **H).status_code, 400)
+        r = self._publico(self.seccional_cali).get('/api/espacios/horarios/all/', **H)
+        self.assertEqual([e['nombre'] for e in json.loads(r.content)['espacios']], ['A Cali'])
+
+    def test_programas(self):
+        r = self._publico(self.seccional_cali).get('/api/programas/', **H)
+        datos = json.loads(r.content)
+        nombres = {p['nombre'] for p in (datos if isinstance(datos, list) else datos['results'])}
+        self.assertEqual(nombres, {'Programa Cali'})
+        r = self._publico(Seccional.objects.get(ciudad='Barranquilla')).get('/api/programas/', **H)
+        datos = json.loads(r.content)
+        self.assertEqual({p['nombre'] for p in (datos if isinstance(datos, list) else datos['results'])}, {'Programa Barranquilla'})
+
+    def test_con_sesion_la_cabecera_no_cambia_nada(self):
+        c = _cliente(self.admins['Barranquilla'])
+        c.defaults['HTTP_X_SECCIONAL_PUBLICA'] = str(self.seccional_cali.id)
+        ids = self._ids(c)
+        self.assertEqual(ids, {h.id for h in self.horarios['Barranquilla'].values()})
 
 
 class AdminFinancieroNoEscribeCatalogoAcademicoTests(TestCase):

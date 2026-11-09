@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from mysite.cache_utils import CachedCatalogMixin
 from mysite.seccional_auth import SeccionalMixin
-from mysite.auth_helpers import is_authenticated_user, user_supervisa_espacios
+from mysite.auth_helpers import is_authenticated_user, seccional_publica, user_supervisa_espacios
 from mysite.permissions import CanManagePrestamosEspacios
 from espacios import alcance
 from espacios.models import EspacioPermitido
@@ -87,7 +87,9 @@ class PrestamoEspacioListCreateAPIView(RestringirASupervisorMixin, SeccionalMixi
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
+            # Calendario público: solo la seccional que eligió el visitante
+            return PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').filter(
+                espacio__sede__seccional_id=seccional_publica(self.request))
         return super().get_queryset()
 
     def create(self, request, *args, **kwargs):
@@ -129,6 +131,9 @@ class PrestamoEspacioPublicoListCreateAPIView(RestringirASupervisorMixin, Seccio
         correo, identificacion = privacidad.credenciales_de_solicitante(self.request)
         if correo and identificacion:
             queryset = queryset.filter(correo_solicitante__iexact=correo, identificacion_solicitante=identificacion)
+        elif not user:
+            # Calendario público: solo la seccional que eligió el visitante
+            queryset = queryset.filter(espacio__sede__seccional_id=seccional_publica(self.request))
         return queryset
 
 

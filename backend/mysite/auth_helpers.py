@@ -2,6 +2,20 @@ COMPONENTE_DOCUMENTACION_CHATBOTS = 'Gestión de Documentación de Chatbots'
 
 MISSING_SECCIONAL_MESSAGE = 'Usuario sin sede o seccional asignada. Asignarle una sede para consultar datos por seccional.'
 
+SECCIONAL_PUBLICA_REQUERIDA = {'code': 'seccional_publica_requerida', 'error': 'Elige una seccional para consultar.'}
+
+
+def seccional_publica(request):
+    """Seccional que eligió el visitante del portal público (sin sesión): la envía el frontend en la cabecera
+    `X-Seccional-Publica` (o como `?seccional_id=`). None si no eligió ninguna o el valor no es válido."""
+    meta = getattr(request, 'META', {}) or {}
+    params = getattr(request, 'GET', {}) or {}
+    valor = meta.get('HTTP_X_SECCIONAL_PUBLICA') or params.get('seccional_id')
+    try:
+        return int(valor) if valor not in (None, '') else None
+    except (TypeError, ValueError):
+        return None
+
 
 def is_superuser_effective(user):
     if not user:

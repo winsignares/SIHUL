@@ -40,6 +40,7 @@ class PrestamosBase(TestCase):
     @classmethod
     def setUpTestData(cls):
         bq = Seccional.objects.create(ciudad='Barranquilla')
+        cls.bq = bq
         cali = Seccional.objects.create(ciudad='Cali')
         sede_bq = Sede.objects.create(nombre='Sede BQ', seccional=bq)
         sede_cali = Sede.objects.create(nombre='Sede Cali', seccional=cali)
@@ -113,16 +114,20 @@ class SupervisorSoloVeSusEspaciosTests(PrestamosBase):
 
 
 class DatosPersonalesTests(PrestamosBase):
-    def test_sin_sesion_el_calendario_no_trae_datos_personales(self):
-        publicos = _json(_cliente().get('/api/prestamos/publicos/', **H))
-        self.assertEqual({p['id'] for p in publicos}, {self.pub1.id, self.pub2.id, self.pub_cali.id})
+    def test_sin_sesion_el_calendario_es_de_la_seccional_elegida_y_sin_datos_personales(self):
+        self.assertEqual(_json(_cliente().get('/api/prestamos/publicos/', **H)), [])  # sin elegir seccional
+        publico = _cliente()
+        publico.defaults['HTTP_X_SECCIONAL_PUBLICA'] = str(self.bq.id)
+        publicos = _json(publico.get('/api/prestamos/publicos/', **H))
+        self.assertEqual({p['id'] for p in publicos}, {self.pub1.id, self.pub2.id})
+        self.assertEqual(_ids(publico.get('/api/prestamos/espacios/', **H)), {self.p1.id, self.p2.id})
         for p in publicos:
             for campo in ('nombre_solicitante', 'correo_solicitante', 'telefono_solicitante',
                           'identificacion_solicitante', 'token_publico'):
                 self.assertEqual(p[campo], '', campo)
             self.assertTrue(p['fecha'] and p['hora_inicio'] and p['espacio'])  # lo que pinta el calendario
-        privados = _json(_cliente().get('/api/prestamos/espacios/', **H))
-        self.assertTrue(all(p['usuario_correo'] == '' for p in privados))
+        privados = _json(publico.get('/api/prestamos/espacios/', **H))
+        self.assertTrue(privados and all(p['usuario_correo'] == '' for p in privados))
 
     def test_el_solicitante_publico_ve_solo_lo_suyo_con_correo_e_identificacion(self):
         r = _cliente().get('/api/prestamos/publicos/', {'correo': 'ANA@externo.co', 'identificacion': '111'}, **H)
