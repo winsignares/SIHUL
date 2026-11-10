@@ -553,7 +553,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         self.assertEqual(self._crear_agente().status_code, 403)  # y no administra chatbots
 
     def test_el_responsable_recibe_el_componente_en_su_lista(self):
-        from mysite.api_views import UsuarioViewSet
+        from usuarios.viewsets import UsuarioViewSet
 
         nombres = lambda usuario: [c['nombre'] for c in UsuarioViewSet()._build_componentes(usuario)]
         self.assertNotIn('Gestión de Documentación de Chatbots', nombres(self.sin_rol_util))
@@ -605,7 +605,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
             self.assertEqual(self._subir().status_code, 200)
 
     def test_una_revocacion_expresa_gana_a_la_asignacion(self):
-        from mysite.api_views import UsuarioViewSet
+        from usuarios.viewsets import UsuarioViewSet
 
         AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_rol_util)
         ComponenteUsuario.objects.create(
