@@ -9,7 +9,11 @@ from django.utils import timezone
 from collections import defaultdict
 import unicodedata
 
-from .api_views import _calcular_interseccion_horas, _filtrar_espacios_por_sede_usuario
+from .api_views import (
+    _calcular_duracion_horas,
+    _distribuir_horas_en_jornadas,
+    _filtrar_espacios_por_sede_usuario,
+)
 
 
 def _env_bool_param(value):
@@ -149,78 +153,6 @@ def list_espacios_disponibles_por_horario(request):
         })
 
     return JsonResponse({"espacios": lst}, status=200)
-
-
-
-
-def _calcular_duracion_horas(hora_inicio, hora_fin):
-    """Calcula la duración en horas entre dos tiempos."""
-    from datetime import datetime, time
-    
-    # Convertir a datetime si son objetos time
-    if isinstance(hora_inicio, time):
-        inicio_dt = datetime.combine(datetime.today(), hora_inicio)
-    else:
-        inicio_dt = hora_inicio
-    
-    if isinstance(hora_fin, time):
-        fin_dt = datetime.combine(datetime.today(), hora_fin)
-    else:
-        fin_dt = hora_fin
-    
-    duracion = (fin_dt - inicio_dt).total_seconds() / 3600
-    return max(0, duracion)  # Asegurar que no sea negativo
-
-
-def _distribuir_horas_en_jornadas(hora_inicio, hora_fin):
-    """
-    Distribuye las horas ocupadas en las jornadas: Mañana (6-12), Tarde (12-18), Noche (18-22).
-    Retorna un diccionario con horas en cada jornada.
-    """
-    from datetime import time, datetime
-    
-    # Definir horas de jornadas
-    hora_6 = time(6, 0)
-    hora_12 = time(12, 0)
-    hora_18 = time(18, 0)
-    hora_22 = time(22, 0)
-    
-    # Convertir a datetime para cálculos
-    if isinstance(hora_inicio, time):
-        inicio_dt = datetime.combine(datetime.today(), hora_inicio)
-    else:
-        inicio_dt = hora_inicio
-    
-    if isinstance(hora_fin, time):
-        fin_dt = datetime.combine(datetime.today(), hora_fin)
-    else:
-        fin_dt = hora_fin
-    
-    horas_manana = 0
-    horas_tarde = 0
-    horas_noche = 0
-    
-    # Calcular intersección en cada jornada
-    # MAÑANA (6:00 - 12:00)
-    manana_inicio = datetime.combine(datetime.today(), hora_6)
-    manana_fin = datetime.combine(datetime.today(), hora_12)
-    horas_manana = _calcular_interseccion_horas(inicio_dt, fin_dt, manana_inicio, manana_fin)
-    
-    # TARDE (12:00 - 18:00)
-    tarde_inicio = datetime.combine(datetime.today(), hora_12)
-    tarde_fin = datetime.combine(datetime.today(), hora_18)
-    horas_tarde = _calcular_interseccion_horas(inicio_dt, fin_dt, tarde_inicio, tarde_fin)
-    
-    # NOCHE (18:00 - 22:00)
-    noche_inicio = datetime.combine(datetime.today(), hora_18)
-    noche_fin = datetime.combine(datetime.today(), hora_22)
-    horas_noche = _calcular_interseccion_horas(inicio_dt, fin_dt, noche_inicio, noche_fin)
-    
-    return {
-        'manana': horas_manana,
-        'tarde': horas_tarde,
-        'noche': horas_noche
-    }
 
 
 @csrf_exempt
