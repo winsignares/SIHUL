@@ -133,3 +133,25 @@ class ConsultasDeListadosTests(TestCase):
         filas = cuerpo['results'] if isinstance(cuerpo, dict) else cuerpo
         self.assertEqual(len(filas), 5)
         self.assertTrue(all(fila['espacio_tipo'] == 'Aula' and fila['periodo_nombre'] == '2026-2' for fila in filas))
+
+    # ------------------------------------------------- orden de los listados
+    # Sede y PrestamoEspacio no definen orden: la base los devuelve en el orden que elija su plan.
+    # Un JOIN más en la consulta principal puede cambiar ese plan y con él el orden de la respuesta,
+    # por eso las relaciones nuevas se precargan aparte y la consulta principal queda como estaba.
+    def consulta_principal(self, ruta, modelo):
+        cache.clear()
+        with CaptureQueriesContext(connection) as ctx:
+            self.assertEqual(self.client.get(ruta).status_code, 200)
+        desde = f'FROM "{modelo._meta.db_table}"'
+        principales = [q['sql'] for q in ctx.captured_queries if desde in q['sql'] and 'COUNT(' not in q['sql']]
+        self.assertTrue(principales, f'no se encontró la consulta de {modelo.__name__}')
+        return principales[0]
+
+    def test_listado_de_sedes_no_agrega_joins_a_su_consulta(self):
+        self.assertNotIn('JOIN', self.consulta_principal('/api/sedes/', Sede))
+
+    def test_listado_de_prestamos_no_agrega_joins_a_su_consulta(self):
+        self.crear_prestamos(1)
+        sql = self.consulta_principal('/api/prestamos/espacios/', PrestamoEspacio)
+        self.assertNotIn(f'"{PeriodoAcademico._meta.db_table}"', sql)
+        self.assertNotIn(f'"{TipoEspacio._meta.db_table}"', sql)

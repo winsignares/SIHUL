@@ -124,7 +124,8 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
 
 class SedeViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
-    queryset = Sede.objects.select_related('seccional')
+    # prefetch y no select_related: un JOIN cambiaría el orden en que la base devuelve las sedes (el modelo no define orden)
+    queryset = Sede.objects.prefetch_related('seccional')
     serializer_class = SedeSerializer
     seccional_lookup = 'seccional'
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
@@ -137,7 +138,7 @@ class SedeViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return Sede.objects.select_related('seccional').filter(activa=True)
+            return Sede.objects.prefetch_related('seccional').filter(activa=True)
         return super().get_queryset()
 
 
