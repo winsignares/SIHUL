@@ -11,7 +11,6 @@ import os
 import re
 import uuid
 from urllib.parse import urlparse
-import unicodedata
 
 
 ALLOWED_DOC_EXTENSIONS = {'pdf', 'xml', 'png', 'jpg', 'jpeg', 'txt'}
@@ -27,32 +26,10 @@ ALLOWED_DOC_MIME_TYPES = {
 MAX_DOC_SIZE_BYTES = 25 * 1024 * 1024
 
 
-DOCUMENTOS_SENSIBLES_POR_ROL = {
-    'archivo plano bancario',
-    'soporte causacion seven',
-}
-
-ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES = {
-    'auditoria',
-    'direccion financiera',
-}
-
-
-def _normalizar_texto_permiso(value):
-    normalized = unicodedata.normalize('NFD', str(value or '').strip().lower())
-    without_marks = ''.join(ch for ch in normalized if unicodedata.category(ch) != 'Mn')
-    return ' '.join(without_marks.replace('_', ' ').replace('-', ' ').split())
-
-
-def _usuario_puede_ver_documentos_sensibles(user):
-    rol = _normalizar_texto_permiso(getattr(getattr(user, 'rol', None), 'nombre', ''))
-    return rol in ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES
-
-
-def _documento_es_sensible(documento):
-    tipo = _normalizar_texto_permiso(getattr(documento, 'tipo_documento', ''))
-    nombre = _normalizar_texto_permiso(getattr(documento, 'nombre_archivo', ''))
-    return tipo in DOCUMENTOS_SENSIBLES_POR_ROL or 'archivo plano' in nombre
+from .documentos_sensibles import (
+    documento_es_sensible as _documento_es_sensible,
+    usuario_puede_ver_documentos_sensibles as _usuario_puede_ver_documentos_sensibles,
+)
 
 
 # ============================================================

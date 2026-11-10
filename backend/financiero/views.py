@@ -42,35 +42,11 @@ class FacturaPagination(PageNumberPagination):
     max_page_size = 200
 
 
-DOCUMENTOS_SENSIBLES_POR_ROL = {
-    'archivo plano bancario',
-    'soporte causacion seven',
-}
-
-ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES = {
-    'auditoria',
-    'direccion financiera',
-}
-
-
-def _normalizar_texto_permiso(value):
-    normalized = unicodedata.normalize('NFD', str(value or '').strip().lower())
-    without_marks = ''.join(ch for ch in normalized if unicodedata.category(ch) != 'Mn')
-    return ' '.join(without_marks.replace('_', ' ').replace('-', ' ').split())
-
-
-def _rol_usuario_normalizado(user):
-    return _normalizar_texto_permiso(getattr(getattr(user, 'rol', None), 'nombre', ''))
-
-
-def _usuario_puede_ver_documentos_sensibles(user):
-    return _rol_usuario_normalizado(user) in ROLES_CON_ACCESO_DOCUMENTOS_SENSIBLES
-
-
-def _documento_es_sensible(documento):
-    tipo = _normalizar_texto_permiso(getattr(documento, 'tipo_documento', ''))
-    nombre = _normalizar_texto_permiso(getattr(documento, 'nombre_archivo', ''))
-    return tipo in DOCUMENTOS_SENSIBLES_POR_ROL or 'archivo plano' in nombre
+from .documentos_sensibles import (
+    documento_es_sensible as _documento_es_sensible,
+    normalizar_texto_permiso as _normalizar_texto_permiso,
+    usuario_puede_ver_documentos_sensibles as _usuario_puede_ver_documentos_sensibles,
+)
 
 
 def _resolve_documento_local_path(documento):

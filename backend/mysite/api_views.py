@@ -3,7 +3,7 @@ import hashlib
 import secrets
 import unicodedata
 
-from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.hashers import make_password
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -12,7 +12,6 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from werkzeug.security import check_password_hash
 
 from asignaturas.models import Asignatura, AsignaturaPrograma
 from asignaturas.serializers import AsignaturaProgramaSerializer, AsignaturaSerializer
@@ -56,20 +55,7 @@ from .permissions import (
 
 from espacios import api_adapters as espacios_api
 from horario import api_adapters as horario_api
-
-
-def _password_valida(usuario, password_plano):
-    hash_actual = usuario.contrasena_hash or ''
-
-    if check_password(password_plano, hash_actual):
-        return True, False
-
-    try:
-        legacy_ok = check_password_hash(hash_actual, password_plano)
-    except Exception:
-        legacy_ok = False
-
-    return legacy_ok, legacy_ok
+from usuarios.contrasenas import password_valida as _password_valida
 
 
 MAX_LOGIN_ATTEMPTS = 5
