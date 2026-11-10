@@ -8,12 +8,13 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from notificaciones.signals import crear_notificacion
-from mysite.auth_helpers import MISSING_SECCIONAL_MESSAGE, get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema
+from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema
 from usuarios.models import Usuario
 from espacios.models import EspacioFisico
 
 from .models import Horario, HorarioEstudiante, SolicitudEspacio
 from mysite.auth_helpers import SECCIONAL_PUBLICA_REQUERIDA, is_superuser_effective, seccional_publica
+from mysite.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
 
 logger = logging.getLogger(__name__)
 
@@ -51,10 +52,6 @@ def _get_authenticated_seccional_scope(request):
     if is_superuser_effective(user):
         return None, True
     return get_user_seccional_id(user), False
-
-
-def _missing_seccional_response():
-    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 
 @csrf_exempt

@@ -10,9 +10,10 @@ from horario.models import Horario
 from prestamos.models import PrestamoEspacio
 from usuarios.models import Usuario
 from mysite.auth_helpers import (
-    MISSING_SECCIONAL_MESSAGE, SECCIONAL_PUBLICA_REQUERIDA, get_user_seccional_id, is_superuser_effective, seccional_publica,
+    SECCIONAL_PUBLICA_REQUERIDA, get_user_seccional_id, is_superuser_effective, seccional_publica,
     user_supervisa_espacios,
 )
+from mysite.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
 
 
 def _filtrar_horarios_por_rango_fecha(request, queryset):
@@ -50,10 +51,6 @@ def _filtrar_espacios_por_sede_usuario(request, queryset):
 def _usuario_sin_seccional(request):
     user = getattr(request, 'user_obj', None)
     return bool(user and not is_superuser_effective(user) and not get_user_seccional_id(user))
-
-
-def _missing_seccional_response():
-    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
 
 
 def _usuario_puede_acceder_espacio(request, espacio_id):

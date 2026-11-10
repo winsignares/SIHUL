@@ -5,6 +5,13 @@ MISSING_SECCIONAL_MESSAGE = 'Usuario sin sede o seccional asignada. Asignarle un
 SECCIONAL_PUBLICA_REQUERIDA = {'code': 'seccional_publica_requerida', 'error': 'Elige una seccional para consultar.'}
 
 
+
+def respuesta_sin_seccional():
+    """Respuesta 403 para vistas de función cuando el usuario no tiene seccional asignada."""
+    from django.http import JsonResponse
+    return JsonResponse({'code': 'usuario_sin_seccional', 'error': MISSING_SECCIONAL_MESSAGE}, status=403)
+
+
 def seccional_publica(request):
     """Seccional que eligió el visitante del portal público (sin sesión): la envía el frontend en la cabecera
     `X-Seccional-Publica` (o como `?seccional_id=`). None si no eligió ninguna o el valor no es válido."""

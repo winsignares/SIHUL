@@ -60,20 +60,9 @@ urlpatterns = [
     path('api/chatbot/', include('chatbot.api_urls')),
     path('api/notificaciones/', include('notificaciones.api_urls')),
     path('api/financiero/', include('financiero.urls')),  # Rutas API Financiero
+    # Solo login, logout, estado de sesión y cambio de contraseña: nginx reescribe
+    # /api/usuarios/<ruta>/ a /usuarios/<ruta>/. Todo lo demás se sirve bajo /api/.
     path('usuarios/', include('usuarios.urls')),
-    path('sedes/', include('sedes.urls')),
-    path('facultades/', include('facultades.urls')),
-    path('programas/', include('programas.urls')),
-    path('periodos/', include('periodos.urls')),
-    path('grupos/', include('grupos.urls')),
-    path('asignaturas/', include('asignaturas.urls')),
-    path('espacios/', include('espacios.urls')),
-    path('recursos/', include('recursos.urls')),
-    path('componentes/', include('componentes.urls')),
-    path('horario/', include('horario.urls')),
-    path('prestamos/', include('prestamos.urls')),
-    path('chatbot/', include('chatbot.urls')),
-    path('notificaciones/', include('notificaciones.urls')),
 ]
 
 if settings.MICROSOFT_OAUTH_ENABLED:

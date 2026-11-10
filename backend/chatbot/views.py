@@ -10,9 +10,7 @@ from .models import Agente, AnexoRespuesta, PreguntaSugerida, Conversacion
 from usuarios.models import Usuario
 import json
 import logging
-import re
 import requests
-import unicodedata
 import uuid
 
 logger = logging.getLogger(__name__)
@@ -138,18 +136,12 @@ def _agentes_activos_json(sede_value=None):
     return JsonResponse({'agentes': lst}, status=200)
 
 
-def list_agentes(request):
-    """Lista todos los agentes activos"""
-    if request.method == 'GET':
-        return _agentes_activos_json()
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
-
 @csrf_exempt
 def enviar_pregunta(request):
     """Envía pregunta al endpoint RAG del agente y guarda la conversación completa"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         agente_id = data.get('agente_id')
@@ -158,14 +150,14 @@ def enviar_pregunta(request):
         chat_id = data.get('chat_id')
         id_usuario = data.get('id_usuario')
         nombre_usuario = data.get('nombre_usuario')
-        
+
         # Validaciones estrictas
         if not agente_id or not pregunta:
             return JsonResponse({'error': 'agente_id y pregunta son requeridos'}, status=400)
-        
+
         if not id_usuario:
             return JsonResponse({'error': 'id_usuario es requerido'}, status=400)
-        
+
         if not nombre_usuario:
             return JsonResponse({'error': 'nombre_usuario es requerido'}, status=400)
 
@@ -177,7 +169,7 @@ def enviar_pregunta(request):
         sede_value = _resolve_user_sede_value(usuario)
         if not sede_value:
             return JsonResponse({'error': 'El usuario no tiene seccional configurada'}, status=400)
-        
+
         # Obtener agente
         try:
             agente = Agente.objects.get(id=agente_id, activo=True)
@@ -189,7 +181,7 @@ def enviar_pregunta(request):
         # Generar chat_id si no existe (nueva conversación)
         if not chat_id:
             chat_id = str(uuid.uuid4())
-        
+
         _registrar_uso_pregunta_sugerida(pregunta_sugerida_id, agente)
 
         # 1. Enviar pregunta al endpoint RAG (FastAPI)
@@ -225,7 +217,7 @@ def enviar_pregunta(request):
         anexos = _anexos_de_respuesta(ids_anexos, agente, sede_value)
         if anexos:
             conversacion.anexos.set(anexos)
-        
+
         # 3. Devolver respuesta al frontend (con los anexos de soporte, si los hay)
         return JsonResponse({
             'id': conversacion.id,
@@ -237,7 +229,7 @@ def enviar_pregunta(request):
             'error': error_ia,
             'anexos': anexos_json(request, anexos),
         }, status=200)
-            
+
     except json.JSONDecodeError:
         return JsonResponse({'error': 'JSON inválido'}, status=400)
     except Exception as e:
@@ -248,34 +240,34 @@ def obtener_historial(request):
     """Obtiene el historial de conversaciones por chat_id o por agente"""
     if request.method != 'GET':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
-    
+
     try:
         chat_id = request.GET.get('chat_id')
         agente_id = request.GET.get('agente_id')
         id_usuario = request.GET.get('id_usuario')
-        
+
         if not chat_id and not agente_id:
             return JsonResponse({'error': 'Se requiere chat_id o agente_id'}, status=400)
-        
+
         # Construir query base
         query = Conversacion.objects.all()
-        
+
         if chat_id:
             query = query.filter(chat_id=chat_id)
-        
+
         if agente_id:
             query = query.filter(chatbot_id=agente_id)
-        
+
         if id_usuario:
             query = query.filter(id_usuario=id_usuario)
-        
+
         # Obtener conversaciones ordenadas por fecha
         conversaciones = (
             query.order_by('fecha')
             .select_related('chatbot')
             .prefetch_related('anexos__pregunta_respuesta')
         )
-        
+
         # Formatear respuesta - Convertir cada conversación a par de mensajes para el frontend
         mensajes_lista = []
         for conv in conversaciones:
@@ -302,70 +294,12 @@ def obtener_historial(request):
                 'usuario': conv.chatbot.nombre,
                 'anexos': anexos_json(request, anexos),
             })
-        
+
         return JsonResponse({
             'mensajes': mensajes_lista,
             'total': len(mensajes_lista)
         }, status=200)
-        
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
 
-
-def listar_conversaciones(request):
-    """Lista todas las conversaciones de un usuario con un agente"""
-    if request.method != 'GET':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
-    
-    try:
-        agente_id = request.GET.get('agente_id')
-        id_usuario = request.GET.get('id_usuario')
-        
-        if not agente_id:
-            return JsonResponse({'error': 'Se requiere agente_id'}, status=400)
-        
-        # Obtener conversaciones
-        query = Conversacion.objects.filter(chatbot_id=agente_id)
-        
-        if id_usuario:
-            query = query.filter(id_usuario=id_usuario)
-        
-        # Obtener chat_ids únicos (limpiando el ordering por defecto de Meta para compatibilidad con PostgreSQL distinct)
-        chat_ids = query.order_by().values_list('chat_id', flat=True).distinct()
-        
-        # Una sola consulta para todos los hilos (antes eran cuatro por hilo) y se
-        # agrupa en memoria
-        hilos = {}
-        filas = (
-            Conversacion.objects.filter(chat_id__in=list(chat_ids))
-            .only('chat_id', 'usuario', 'mensaje', 'fecha')
-            .order_by('chat_id', 'fecha')
-        )
-        for conv in filas:
-            hilos.setdefault(conv.chat_id, []).append(conv)
-
-        conversaciones_lista = []
-        for chat_id, convs in hilos.items():
-            primera, ultima = convs[0], convs[-1]
-            conversaciones_lista.append({
-                'chat_id': str(chat_id),
-                'agente_id': agente_id,
-                'usuario': primera.usuario,
-                'primer_mensaje': primera.mensaje[:100],
-                'ultimo_mensaje': ultima.mensaje[:100],
-                'fecha_inicio': primera.fecha.isoformat(),
-                'fecha_actualizacion': ultima.fecha.isoformat(),
-                'total_interacciones': len(convs)
-            })
-
-        # Ordenar por fecha más reciente
-        conversaciones_lista.sort(key=lambda x: x['fecha_actualizacion'], reverse=True)
-        
-        return JsonResponse({
-            'conversaciones': conversaciones_lista,
-            'total': len(conversaciones_lista)
-        }, status=200)
-        
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -417,7 +351,7 @@ def enviar_pregunta_publico(request):
     """Envía pregunta al endpoint RAG sin guardar historial - Solo para usuarios públicos"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         if not isinstance(data, dict):
@@ -440,7 +374,7 @@ def enviar_pregunta_publico(request):
         sede_value = _normalize_sede_value(seccional_raw)
         if not sede_value:
             return JsonResponse({'error': 'seccional es requerida para usuarios públicos'}, status=400)
-        
+
         # Obtener agente
         try:
             agente = Agente.objects.get(id=agente_id, activo=True)
@@ -464,14 +398,14 @@ def enviar_pregunta_publico(request):
 
         # NO guardamos la conversación para usuarios públicos
         # Retornamos directamente la respuesta
-        
+
         return JsonResponse({
             'chat_id': chat_id,
             'respuesta': respuesta_texto,
             'timestamp': timezone.now().isoformat(),
             'anexos': anexos_json(request, anexos),
         }, status=200)
-        
+
     except json.JSONDecodeError:
         return JsonResponse({'error': 'JSON inválido'}, status=400)
     except Exception:

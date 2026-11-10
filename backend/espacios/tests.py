@@ -172,7 +172,7 @@ class AlcanceSupervisorTests(TestCase):
         self.assertEqual(r.status_code, 403)
         self.assertFalse(EspacioPermitido.objects.filter(usuario=self.sup_individual, espacio=self.aula2).exists())
 
-    # ---------------------------------------------------------------- vistas antiguas (sin sesión DRF)
+    # ---------------------------------------------------------------- rutas antiguas (sin /api)
     def cliente_sesion(self, usuario):
         client = APIClient(HTTP_HOST='localhost')
         session = client.session
@@ -180,20 +180,18 @@ class AlcanceSupervisorTests(TestCase):
         session.save()
         return client
 
-    def test_vistas_antiguas_aplican_el_mismo_alcance(self):
+    def test_no_hay_rutas_antiguas_que_salten_el_alcance(self):
+        # Las vistas sin /api se retiraron: el alcance solo se aplica en /api/espacios/ y no queda
+        # una ruta alterna para crear, editar o borrar espacios.
         client = self.cliente_sesion(self.sup_individual)
         r = client.post('/espacios/', {'sede_id': self.sede.id, 'nombre': 'X', 'tipo_id': self.aula.id, 'capacidad': 5}, format='json')
-        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.status_code, 404)
         r = client.put('/espacios/update/', {'id': self.aula2.id, 'capacidad': 9}, format='json')
-        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.status_code, 404)
         r = client.delete('/espacios/delete/', {'id': self.aula2.id}, format='json')
-        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.status_code, 404)
         self.assertTrue(EspacioFisico.objects.filter(id=self.aula2.id, capacidad=30).exists())
-        r = client.put('/espacios/update/', {'id': self.aula1.id, 'capacidad': 9}, format='json')
-        self.assertEqual(r.status_code, 200)
-        r = self.cliente_sesion(self.sup_tipo).post(
-            '/espacios/', {'sede_id': self.sede.id, 'nombre': 'Y', 'tipo_id': self.aula.id, 'capacidad': 5}, format='json')
-        self.assertEqual(r.status_code, 201)
+        self.assertFalse(EspacioFisico.objects.filter(nombre='X').exists())
 
     # ---------------------------------------------------------------- préstamos
     def crear_prestamo(self, espacio):
