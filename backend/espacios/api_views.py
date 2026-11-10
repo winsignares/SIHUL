@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+from . import ocupacion
 from .models import EspacioFisico, EspacioPermitido
 from horario.models import Horario
 from prestamos.models import PrestamoEspacio
@@ -909,24 +910,23 @@ def ocupacion_semanal(request):
         if espacio_id:
             espacios_query = espacios_query.filter(id=espacio_id)
 
+        espacios = list(espacios_query)
+        dias = []
+        fecha_actual = lunes
+        while fecha_actual <= sabado:
+            dia_nombre_en = fecha_actual.strftime('%A')
+            dias.append((fecha_actual, dias_nombre.get(dia_nombre_en, dia_nombre_en), dia_nombre_en))
+            fecha_actual += timedelta(days=1)
+        semana = ocupacion.cargar_semana([espacio.id for espacio in espacios], dias)
+
         ocupacion_list = []
-        for espacio in espacios_query:
+        for espacio in espacios:
             horas_manana = 0.0
             horas_tarde = 0.0
             horas_noche = 0.0
             horas_disponibles = 16 * 6
 
-            fecha_actual = lunes
-            while fecha_actual <= sabado:
-                dia_nombre_en = fecha_actual.strftime('%A')
-                dia_nombre_es = dias_nombre.get(dia_nombre_en, dia_nombre_en)
-
-                horarios_dia = Horario.objects.filter(espacio=espacio, dia_semana__iexact=dia_nombre_es, estado='aprobado')
-                if not horarios_dia.exists():
-                    horarios_dia = Horario.objects.filter(espacio=espacio, dia_semana__iexact=dia_nombre_en, estado='aprobado')
-
-                prestamos_dia = PrestamoEspacio.objects.filter(espacio=espacio, fecha=fecha_actual, estado='Aprobado')
-
+            for _fecha, horarios_dia, prestamos_dia in semana.get(espacio.id, []):
                 for horario in horarios_dia:
                     horas_ocupadas = _distribuir_horas_en_jornadas(horario.hora_inicio, horario.hora_fin)
                     horas_manana += horas_ocupadas['manana']
@@ -938,8 +938,6 @@ def ocupacion_semanal(request):
                     horas_manana += horas_ocupadas['manana']
                     horas_tarde += horas_ocupadas['tarde']
                     horas_noche += horas_ocupadas['noche']
-
-                fecha_actual += timedelta(days=1)
 
             horas_manana = min(horas_manana, 36)
             horas_tarde = min(horas_tarde, 36)

@@ -1,3 +1,4 @@
+from . import ocupacion
 from .models import EspacioFisico
 from horario.models import Horario
 from prestamos.models import PrestamoEspacio
@@ -198,46 +199,31 @@ def generar_pdf_ocupacion_semanal(request):
         if tipo_espacio_id:
             espacios_query = espacios_query.filter(tipo_id=tipo_espacio_id)
         
+        espacios = list(espacios_query)
+        dias = [(fecha, _get_dia_nombre(fecha), fecha.strftime('%A')) for fecha in _iterar_fechas_semana(lunes, sabado)]
+        semana = ocupacion.cargar_semana([espacio.id for espacio in espacios], dias)
+
         detalles_espacios = []
-        for espacio in espacios_query:
+        for espacio in espacios:
             horas_ocupadas = 0.0
             horas_manana = 0.0
             horas_tarde = 0.0
             horas_noche = 0.0
-            fecha_actual = lunes
-            while fecha_actual <= sabado:
-                horarios = Horario.objects.filter(
-                    espacio=espacio,
-                    dia_semana__iexact=_get_dia_nombre(fecha_actual),
-                    estado='aprobado'
-                )
-                if not horarios.exists():
-                    horarios = Horario.objects.filter(
-                        espacio=espacio,
-                        dia_semana__iexact=fecha_actual.strftime('%A'),
-                        estado='aprobado'
-                    )
+            for _fecha, horarios, prestamos in semana.get(espacio.id, []):
                 for h in horarios:
                     horas_ocupadas += _calcular_duracion_horas(h.hora_inicio, h.hora_fin)
                     horas_en_jornadas = _distribuir_horas_en_jornadas(h.hora_inicio, h.hora_fin)
                     horas_manana += horas_en_jornadas['manana']
                     horas_tarde += horas_en_jornadas['tarde']
                     horas_noche += horas_en_jornadas['noche']
-                
-                prestamos = PrestamoEspacio.objects.filter(
-                    espacio=espacio,
-                    fecha=fecha_actual,
-                    estado='Aprobado'
-                )
+
                 for p in prestamos:
                     horas_ocupadas += _calcular_duracion_horas(p.hora_inicio, p.hora_fin)
                     horas_en_jornadas = _distribuir_horas_en_jornadas(p.hora_inicio, p.hora_fin)
                     horas_manana += horas_en_jornadas['manana']
                     horas_tarde += horas_en_jornadas['tarde']
                     horas_noche += horas_en_jornadas['noche']
-                
-                fecha_actual += timedelta(days=1)
-            
+
             horas_manana = min(horas_manana, 36)
             horas_tarde = min(horas_tarde, 36)
             horas_noche = min(horas_noche, 24)
