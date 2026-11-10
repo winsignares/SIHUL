@@ -223,7 +223,7 @@ class PreguntaSugeridaDetailAPIView(_PreguntasVisiblesMixin, generics.RetrieveUp
 
 
 class ConversacionListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Conversacion.objects.select_related('chatbot').all().order_by('-fecha')
+    queryset = Conversacion.objects.select_related('chatbot').prefetch_related('anexos').order_by('-fecha')
     serializer_class = ConversacionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -238,7 +238,7 @@ class ConversacionListCreateAPIView(generics.ListCreateAPIView):
 
 
 class ConversacionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Conversacion.objects.select_related('chatbot').all()
+    queryset = Conversacion.objects.select_related('chatbot').prefetch_related('anexos')
     serializer_class = ConversacionSerializer
     permission_classes = [permissions.IsAuthenticated]
 

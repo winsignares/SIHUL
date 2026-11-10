@@ -124,7 +124,7 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
 
 class SedeViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
-    queryset = Sede.objects.all()
+    queryset = Sede.objects.select_related('seccional')
     serializer_class = SedeSerializer
     seccional_lookup = 'seccional'
     permission_classes = [IsAuthenticatedReadOnlyOrAdminWrite]
@@ -137,7 +137,7 @@ class SedeViewSet(CachedCatalogMixin, SeccionalMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return Sede.objects.filter(activa=True)
+            return Sede.objects.select_related('seccional').filter(activa=True)
         return super().get_queryset()
 
 

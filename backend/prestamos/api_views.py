@@ -74,7 +74,7 @@ class TipoActividadDetailAPIView(SeccionalMixin, generics.RetrieveUpdateDestroyA
 
 
 class PrestamoEspacioListCreateAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.ListCreateAPIView):
-    queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
+    queryset = PrestamoEspacio.objects.select_related('espacio__tipo', 'usuario', 'administrador', 'tipo_actividad', 'periodo').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'espacio__sede__seccional'
@@ -88,7 +88,7 @@ class PrestamoEspacioListCreateAPIView(RestringirASupervisorMixin, SeccionalMixi
         user = self.get_current_user()
         if not user:
             # Calendario público: solo la seccional que eligió el visitante
-            return PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').filter(
+            return PrestamoEspacio.objects.select_related('espacio__tipo', 'usuario', 'administrador', 'tipo_actividad', 'periodo').prefetch_related('prestamo_recursos__recurso').filter(
                 espacio__sede__seccional_id=seccional_publica(self.request))
         return super().get_queryset()
 
@@ -99,7 +99,7 @@ class PrestamoEspacioListCreateAPIView(RestringirASupervisorMixin, SeccionalMixi
 
 
 class PrestamoEspacioDetailAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
-    queryset = PrestamoEspacio.objects.select_related('espacio', 'usuario', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
+    queryset = PrestamoEspacio.objects.select_related('espacio__tipo', 'usuario', 'administrador', 'tipo_actividad', 'periodo').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioSerializer
     permission_classes = [permissions.IsAuthenticated, CanManagePrestamosEspacios]
     seccional_lookup = 'espacio__sede__seccional'
@@ -111,7 +111,7 @@ class PrestamoEspacioDetailAPIView(RestringirASupervisorMixin, SeccionalMixin, g
 
 
 class PrestamoEspacioPublicoListCreateAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.ListCreateAPIView):
-    queryset = PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
+    queryset = PrestamoEspacioPublico.objects.select_related('espacio__tipo', 'administrador', 'tipo_actividad', 'periodo').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioPublicoSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'espacio__sede__seccional'
@@ -124,7 +124,7 @@ class PrestamoEspacioPublicoListCreateAPIView(RestringirASupervisorMixin, Seccio
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            queryset = PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
+            queryset = PrestamoEspacioPublico.objects.select_related('espacio__tipo', 'administrador', 'tipo_actividad', 'periodo').prefetch_related('prestamo_recursos__recurso').all()
         else:
             queryset = super().get_queryset()
         # «Mis solicitudes»: con su correo y su identificación el solicitante recibe solo las suyas
@@ -138,7 +138,7 @@ class PrestamoEspacioPublicoListCreateAPIView(RestringirASupervisorMixin, Seccio
 
 
 class PrestamoEspacioPublicoDetailAPIView(RestringirASupervisorMixin, SeccionalMixin, generics.RetrieveUpdateDestroyAPIView):
-    queryset = PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
+    queryset = PrestamoEspacioPublico.objects.select_related('espacio__tipo', 'administrador', 'tipo_actividad', 'periodo').prefetch_related('prestamo_recursos__recurso').all()
     serializer_class = PrestamoEspacioPublicoSerializer
     permission_classes = [permissions.IsAuthenticated]
     seccional_lookup = 'espacio__sede__seccional'
@@ -155,7 +155,7 @@ class PrestamoEspacioPublicoDetailAPIView(RestringirASupervisorMixin, SeccionalM
     def get_queryset(self):
         user = self.get_current_user()
         if not user:
-            return PrestamoEspacioPublico.objects.select_related('espacio', 'administrador', 'tipo_actividad').prefetch_related('prestamo_recursos__recurso').all()
+            return PrestamoEspacioPublico.objects.select_related('espacio__tipo', 'administrador', 'tipo_actividad', 'periodo').prefetch_related('prestamo_recursos__recurso').all()
         return super().get_queryset()
 
     def get_object(self):

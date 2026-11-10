@@ -42,13 +42,19 @@ class EspacioFisico(models.Model):
     @property
     def recursos_con_estado(self):
         """Lista de recursos asociados con su estado actual."""
+        # Si el listado ya precargó las relaciones (prefetch_related('espacio_recursos__recurso')),
+        # se usan esas; si no, una sola consulta con el recurso unido.
+        if 'espacio_recursos' in getattr(self, '_prefetched_objects_cache', {}):
+            relaciones = self.espacio_recursos.all()
+        else:
+            relaciones = self.espacio_recursos.select_related('recurso').all()
         return [
             {
                 'id': relacion.recurso_id,
                 'nombre': relacion.recurso.nombre,
                 'estado': relacion.estado,
             }
-            for relacion in self.espacio_recursos.select_related('recurso').all()
+            for relacion in relaciones
         ]
 
     def __str__(self):
