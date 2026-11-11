@@ -466,6 +466,7 @@ export default function ConsultaEspacios() {
       if (horario.tipo === 'prestamo') {
         // Para préstamos, usar prestamoService
         await prestamoService.actualizarPrestamo({
+          ...horario.prestamo,
           id: horario.id,
           estado: horario.estado || 'Pendiente',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
