@@ -161,6 +161,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {'rol': 'Solo el administrador general puede crear o asignar administradores generales.'}
                 )
+
+        # Quien gestiona usuarios sin ser administrador: sin roles de administración ni cambios a su propio rol
+        from usuarios import gestion
+        if autenticado and gestion.permiso_de_gestion(solicitante):
+            gestion.validar_datos(solicitante, self.instance, attrs)
         return attrs
 
     def create(self, validated_data):

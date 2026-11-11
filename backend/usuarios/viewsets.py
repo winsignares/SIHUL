@@ -20,7 +20,7 @@ from mysite.permissions import (
     IsAdminUserManagement,
 )
 
-from usuarios import sesion
+from usuarios import gestion, sesion
 
 
 _ESTADO_DE_RECHAZO = {
@@ -92,7 +92,16 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             and not is_admin_global(self.get_current_user())
         ):
             raise PermissionDenied('Solo el administrador general puede modificar a otro administrador general.')
+        if self.request.method not in permissions.SAFE_METHODS and self.permiso_de_gestion():
+            gestion.exigir_que_pueda_modificar(
+                self.get_current_user(), usuario, eliminar=self.request.method == 'DELETE')
         return usuario
+
+    def permiso_de_gestion(self):
+        """'VER'/'EDITAR' de quien gestiona usuarios sin ser administrador (ver usuarios/gestion.py)."""
+        if not hasattr(self, '_permiso_de_gestion'):
+            self._permiso_de_gestion = gestion.permiso_de_gestion(self.get_current_user())
+        return self._permiso_de_gestion
 
     def get_serializer_class(self):
         if self.action in ('list',):
@@ -106,7 +115,10 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
             role_name_normalized = role_name_normalized.replace('_', ' ')
             role_name_normalized = ' '.join(role_name_normalized.split())
 
-            if is_admin_global(user) or is_admin_sistema(user) or role_name_normalized == 'admin financiero':
+            if (
+                is_admin_global(user) or is_admin_sistema(user) or role_name_normalized == 'admin financiero'
+                or self.permiso_de_gestion()
+            ):
                 return UsuarioSerializer
 
             return UsuarioMinimalSerializer
@@ -132,9 +144,9 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
                     'rol', 'facultad', 'sede', 'seccional',
                 ).prefetch_related('tipos_espacio_permitidos').filter(rol__nombre__in=self.FINANCIAL_ROLE_NAMES)
 
-            if is_admin_global(user) or is_admin_sistema(user):
-                # Acceso administrativo, pero restringido a la seccional del
-                # usuario salvo que sea superusuario real (SeccionalMixin.get_queryset).
+            if is_admin_global(user) or is_admin_sistema(user) or self.permiso_de_gestion():
+                # Acceso administrativo (o el componente «Gestión de Usuarios»), restringido a la seccional del
+                # usuario salvo para el administrador general (SeccionalMixin.get_queryset).
                 base_queryset = super().get_queryset()
                 if self.action == 'list_docentes':
                     return base_queryset.filter(activo=True, rol__nombre__iexact='docente')
