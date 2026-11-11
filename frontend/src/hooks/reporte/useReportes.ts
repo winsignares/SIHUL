@@ -24,9 +24,8 @@ import { horarioService } from '../../services/horarios/horariosAPI';
 import { programaService } from '../../services/programas/programaAPI';
 import { periodoActivoService } from '../../services/periodos/periodoActivoAPI';
 import { userService } from '../../services/users/authService';
-import { resolveApiBaseUrl } from '../../core/backendUrl';
 import { getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
-import { trackedFetch } from '../../core/apiActivity';
+import { descargarBlob } from '../../share/descargas';
 
 const REPORTES_HORARIOS_CACHE_KEY = 'reporte-reportes-horarios';
 const REPORTES_OCUPACION_CACHE_KEY = 'reporte-reportes-ocupacion';
@@ -35,7 +34,6 @@ const REPORTES_CAPACIDAD_CACHE_KEY = 'reporte-reportes-capacidad';
 
 const PERIODO_LOADING = 'Cargando...';
 const PERIODO_EMPTY = 'Sin periodo activo';
-const apiUrl = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
 const descargarExcel = async (buffer: BlobPart, fileName: string) => {
     const blob = new Blob([buffer], {
@@ -139,19 +137,6 @@ export function useReportes() {
     const cargarHorariosExtendidosReporte = async () => {
         const response = await horarioService.listExtendidos({ estado: estadoReporte });
         return filtrarHorariosPorEstado(response.horarios);
-    };
-
-    const assertResponseOk = async (response: Response, fallback: string) => {
-        if (response.ok) return;
-
-        let detail = '';
-        try {
-            detail = await response.text();
-        } catch {
-            detail = '';
-        }
-
-        throw new Error(`${fallback}: ${response.status}${detail ? ` - ${detail}` : ''}`);
     };
 
     // Cargar período académico activo
@@ -409,28 +394,8 @@ export function useReportes() {
             // Reporte de ocupación (jornadas + espacios más usados) con diseño del backend
             if (tipoReporte === 'ocupacion') {
 
-                const response = await trackedFetch(`${apiUrl}/espacios/reporte/ocupacion/pdf/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        semana_offset: 0,
-                        estado_horario: estadoReporte
-                    })
-                });
-
-                await assertResponseOk(response, 'Error al generar PDF');
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `reporte-ocupacion-${periodoActual}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                const blob = await reporteOcupacionService.descargarPdf(estadoReporte);
+                descargarBlob(blob, `reporte-ocupacion-${periodoActual}.pdf`);
 
                 return;
             }
@@ -438,28 +403,8 @@ export function useReportes() {
             // Reporte de disponibilidad (estilo backend)
             if (tipoReporte === 'disponibilidad') {
 
-                const response = await trackedFetch(`${apiUrl}/espacios/reporte/disponibilidad/pdf/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        semana_offset: 0,
-                        estado_horario: estadoReporte
-                    })
-                });
-
-                await assertResponseOk(response, 'Error al generar PDF');
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `reporte-disponibilidad-${periodoActual}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                const blob = await disponibilidadService.descargarPdf(estadoReporte);
+                descargarBlob(blob, `reporte-disponibilidad-${periodoActual}.pdf`);
 
                 return;
             }
@@ -467,28 +412,8 @@ export function useReportes() {
             // Reporte de capacidad (estilo backend)
             if (tipoReporte === 'capacidad') {
 
-                const response = await trackedFetch(`${apiUrl}/espacios/reporte/capacidad/pdf/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        semana_offset: 0,
-                        estado_horario: estadoReporte
-                    })
-                });
-
-                await assertResponseOk(response, 'Error al generar PDF');
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `reporte-capacidad-${periodoActual}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                const blob = await capacidadService.descargarPdf(estadoReporte);
+                descargarBlob(blob, `reporte-capacidad-${periodoActual}.pdf`);
 
                 return;
             }
@@ -504,28 +429,8 @@ export function useReportes() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
                 
-                const response = await trackedFetch(`${apiUrl}/horarios/exportar-pdf/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        horarios: horariosAExportar,
-                        estado_horario: estadoReporte
-                    })
-                });
-
-                await assertResponseOk(response, 'Error al generar PDF');
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `horarios_programa.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                const blob = await horarioService.exportarPdfPrograma(horariosAExportar, estadoReporte);
+                descargarBlob(blob, `horarios_programa.pdf`);
                 
                 return;
             }
@@ -541,28 +446,8 @@ export function useReportes() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.docente_nombre === filtroDocente);
                 
-                const response = await trackedFetch(`${apiUrl}/horarios/exportar-pdf-docente/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        horarios: horariosAExportar,
-                        estado_horario: estadoReporte
-                    })
-                });
-
-                await assertResponseOk(response, 'Error al generar PDF');
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `horarios_docente.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                const blob = await horarioService.exportarPdfDocente(horariosAExportar, estadoReporte);
+                descargarBlob(blob, `horarios_docente.pdf`);
                 
                 return;
             }
@@ -676,28 +561,8 @@ export function useReportes() {
                     ? todosLosHorarios
                     : todosLosHorarios.filter(h => h.programa_nombre.toLowerCase() === filtroPrograma.toLowerCase());
                 
-                const response = await trackedFetch(`${apiUrl}/horarios/exportar-excel/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        horarios: horariosAExportar,
-                        estado_horario: estadoReporte
-                    })
-                });
-
-                await assertResponseOk(response, 'Error al generar Excel');
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `horarios_programa.xlsx`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                const blob = await horarioService.exportarExcelPrograma(horariosAExportar, estadoReporte);
+                descargarBlob(blob, `horarios_programa.xlsx`);
                 
                 return;
             }
@@ -716,30 +581,10 @@ export function useReportes() {
                     
                     console.log('Enviando horarios al endpoint:', horariosAExportar.length);
                     
-                    const response = await trackedFetch(`${apiUrl}/horarios/exportar-excel-docente/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            horarios: horariosAExportar,
-                            estado_horario: estadoReporte
-                        })
-                    });
-
-                    await assertResponseOk(response, 'Error al generar Excel');
-
-                    const blob = await response.blob();
+                    const blob = await horarioService.exportarExcelDocente(horariosAExportar, estadoReporte);
                     console.log('Blob recibido:', blob.size, 'bytes');
                     
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `horarios_docente.xlsx`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
+                    descargarBlob(blob, `horarios_docente.xlsx`);
                     
                     console.log('Excel descargado exitosamente');
                 } catch (error) {

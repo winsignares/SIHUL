@@ -1,9 +1,6 @@
 import { apiClient } from '../../core/apiClient';
-import { resolveApiBaseUrl } from '../../core/backendUrl';
 import type { EspacioOcupacion } from '../../models/index';
-import { trackedFetch } from '../../core/apiActivity';
-
-const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
+import { descargarBlob } from '../../share/descargas';
 
 export interface OcupacionSemanalResponse {
   semana_inicio: string;
@@ -66,28 +63,8 @@ class OcupacionSemanalService {
         semana_offset: semanaOffset
       };
 
-      const response = await trackedFetch(`${API_BASE_URL}/espacios/ocupacion/pdf/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
-      }
-
-      // Generar blob y descargar
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `ocupacion-semanal-${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const blob = await apiClient.postBlob('/espacios/ocupacion/pdf/', payload);
+      descargarBlob(blob, `ocupacion-semanal-${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
       throw error;
