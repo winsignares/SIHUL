@@ -1,9 +1,13 @@
-"""Inicio de sesión, estado de sesión y cambio de contraseña de /api/usuarios/: caracterización del comportamiento actual.
+"""Inicio de sesión, estado de sesión, cambio de contraseña y salida.
+
+Las rutas /api/usuarios/<accion>/ y /usuarios/<accion>/ (a la que nginx reescribe la primera) son la misma vista,
+así que las pruebas corren en las dos.
 
 - Tras 5 intentos fallidos (clave incorrecta o correo inexistente) desde la misma IP, ese correo queda bloqueado
   2 minutos desde esa IP, incluso con la clave correcta. Un inicio correcto reinicia el conteo.
 - El correo se compara sin mayúsculas ni espacios alrededor.
 - Un hash heredado (werkzeug) se migra al formato de Django al iniciar sesión.
+- Cualquiera puede cerrar su sesión y cambiar su contraseña con la actual; sin sesión, el estado responde 401.
 """
 import json
 import time
@@ -19,10 +23,6 @@ from sedes.models import Seccional, Sede
 from usuarios.models import Rol, Usuario
 
 CLAVE = 'Clave-test-1'
-LOGIN = '/api/usuarios/login/'
-ESTADO = '/api/usuarios/session-auth-state/'
-CAMBIO = '/api/usuarios/change-password/'
-SALIDA = '/api/usuarios/logout/'
 BLOQUEO = {'error': 'Demasiados intentos. Intenta de nuevo en unos minutos.'}
 INVALIDAS = {'error': 'Credenciales inválidas'}
 
@@ -33,6 +33,8 @@ def _con_clave(usuario, hash_clave=None):
 
 
 class InicioDeSesionTests(TestCase):
+    PREFIJO = '/api/usuarios/'
+
     @classmethod
     def setUpTestData(cls):
         seccional = Seccional.objects.create(ciudad='Barranquilla')
@@ -53,17 +55,19 @@ class InicioDeSesionTests(TestCase):
 
     def setUp(self):
         cache.clear()
+        self.LOGIN, self.ESTADO, self.CAMBIO, self.SALIDA = (
+            f'{self.PREFIJO}{accion}/' for accion in ('login', 'session-auth-state', 'change-password', 'logout'))
 
     def entrar(self, correo=None, contrasena=CLAVE, ip=None, cliente=None):
         extra = {'HTTP_X_FORWARDED_FOR': ip} if ip else {}
         return (cliente or self.client).post(
-            LOGIN, json.dumps({'correo': correo or self.usuario.correo, 'contrasena': contrasena}),
+            self.LOGIN, json.dumps({'correo': correo or self.usuario.correo, 'contrasena': contrasena}),
             content_type='application/json', **extra)
 
     # ------------------------------------------------ datos y credenciales
     def test_sin_correo_o_sin_clave_responde_400(self):
         for datos in ({}, {'correo': self.usuario.correo}, {'contrasena': CLAVE}):
-            r = self.client.post(LOGIN, json.dumps(datos), content_type='application/json')
+            r = self.client.post(self.LOGIN, json.dumps(datos), content_type='application/json')
             self.assertEqual((r.status_code, r.json()), (400, {'error': 'correo y contrasena son requeridos'}))
 
     def test_correo_inexistente_o_clave_incorrecta_responden_401(self):
@@ -176,25 +180,24 @@ class InicioDeSesionTests(TestCase):
     # ------------------------------------------------ estado de sesión
     def test_estado_de_sesion_solo_envia_los_permisos_si_cambiaron(self):
         self.entrar()
-        r = self.client.get(ESTADO)
+        r = self.client.get(self.ESTADO)
         self.assertEqual(r.status_code, 200)
         datos = r.json()
         firma = datos['signature']
         self.assertEqual(len(firma), 16)
         self.assertEqual(datos, {'changed': True, 'signature': firma, 'componentes': [], 'rol': {
             'id': self.rol.id, 'nombre': 'supervisor_prueba', 'descripcion': 'Supervisa', 'supervisa_espacios': True}})
-        self.assertEqual(self.client.get(ESTADO, {'since': firma}).json(), {'changed': False, 'signature': firma})
-        self.assertTrue(self.client.get(ESTADO, {'since': 'otra'}).json()['changed'])
+        self.assertEqual(self.client.get(self.ESTADO, {'since': firma}).json(), {'changed': False, 'signature': firma})
+        self.assertTrue(self.client.get(self.ESTADO, {'since': 'otra'}).json()['changed'])
 
-    def test_estado_de_sesion_sin_sesion_no_responde_datos(self):
-        self.assertEqual(self.client.get(ESTADO).status_code, 403)
+    def test_estado_de_sesion_sin_sesion_responde_401(self):
+        r = self.client.get(self.ESTADO)
+        self.assertEqual((r.status_code, r.json()), (401, {'error': 'No autenticado'}))
 
     # ------------------------------------------------ cambio de contraseña y salida
     def test_cambiar_contrasena(self):
-        self.entrar(correo=self.admin.correo)
-
         def cambiar(**datos):
-            return self.client.put(CAMBIO, json.dumps(datos), content_type='application/json')
+            return self.client.put(self.CAMBIO, json.dumps(datos), content_type='application/json')
 
         r = cambiar(correo=self.usuario.correo, old_contrasena=CLAVE)
         self.assertEqual((r.status_code, r.json()),
@@ -211,8 +214,25 @@ class InicioDeSesionTests(TestCase):
         self.assertEqual(self.entrar(contrasena=CLAVE, cliente=cliente).status_code, 401)
         self.assertEqual(self.entrar(contrasena='Nueva-1', cliente=cliente).status_code, 200)
 
+    def test_quien_no_gestiona_usuarios_cambia_su_contrasena_con_y_sin_sesion(self):
+        for cliente, actual, nueva in ((self.client_class(), CLAVE, 'Nueva-1'), (self.client, 'Nueva-1', 'Nueva-2')):
+            if cliente is self.client:
+                self.entrar(contrasena=actual)
+            r = cliente.put(self.CAMBIO, json.dumps({'correo': self.usuario.correo, 'old_contrasena': actual,
+                                                     'new_contrasena': nueva}), content_type='application/json')
+            self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(self.entrar(contrasena='Nueva-2', cliente=self.client_class()).status_code, 200)
+
     def test_salir_borra_la_sesion(self):
-        self.entrar(correo=self.admin.correo)
-        r = self.client.post(SALIDA)
-        self.assertEqual((r.status_code, r.json()), (200, {'message': 'Logout exitoso'}))
-        self.assertIsNone(self.client.session.get('user_id'))
+        for quien in (self.usuario, self.admin):
+            self.entrar(correo=quien.correo)
+            self.assertEqual(self.client.session.get('user_id'), quien.id)
+            r = self.client.post(self.SALIDA)
+            self.assertEqual((r.status_code, r.json()), (200, {'message': 'Logout exitoso'}))
+            self.assertIsNone(self.client.session.get('user_id'))
+        self.assertEqual(self.client.get(self.SALIDA).status_code, 200)
+
+
+class InicioDeSesionSinPrefijoApiTests(InicioDeSesionTests):
+    """Las mismas pruebas en /usuarios/<accion>/, la ruta a la que nginx reescribe /api/usuarios/<accion>/."""
+    PREFIJO = '/usuarios/'

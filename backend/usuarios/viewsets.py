@@ -31,6 +31,12 @@ _ESTADO_DE_RECHAZO = {
 }
 
 
+# Acciones que se publican también en /usuarios/<ruta>/ (nginx reescribe ahí /api/usuarios/<ruta>/). No usan la
+# autenticación de DRF: login la abre, logout la cierra, session-auth-state lee la sesión y responde 401 si no hay,
+# y change-password se valida con la contraseña actual.
+ACCIONES_DE_SESION = ('login', 'logout', 'session_auth_state', 'change_password')
+
+
 def _get_client_ip(request):
     forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if forwarded_for:
@@ -71,9 +77,9 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     )
 
     def get_permissions(self):
-        if self.action in ('login',):
+        if self.action in ACCIONES_DE_SESION:
             return [permissions.AllowAny()]
-        if self.action in ('list', 'retrieve', 'session_auth_state'):
+        if self.action in ('list', 'retrieve'):
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
@@ -192,12 +198,14 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         token = sesion.abrir_sesion(request.session, usuario)
         return Response(sesion.datos_de_inicio(usuario, token), status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get', 'post'], url_path='logout')
+    @action(detail=False, methods=['get', 'post'], url_path='logout',
+            authentication_classes=[], permission_classes=[permissions.AllowAny])
     def logout(self, request):
         request.session.flush()
         return Response({'message': 'Logout exitoso'}, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get'], url_path='session-auth-state')
+    @action(detail=False, methods=['get'], url_path='session-auth-state',
+            authentication_classes=[], permission_classes=[permissions.AllowAny])
     def session_auth_state(self, request):
         user_id = request.session.get('user_id')
         if not user_id:
@@ -210,7 +218,8 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
         return Response(sesion.estado_de_sesion(usuario, request.query_params.get('since')), status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['put'], url_path='change-password')
+    @action(detail=False, methods=['put'], url_path='change-password',
+            authentication_classes=[], permission_classes=[permissions.AllowAny])
     def change_password(self, request):
         try:
             sesion.cambiar_contrasena(

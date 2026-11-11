@@ -564,8 +564,8 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         self.assertNotIn('Gestión de Chatbots', [c['nombre'] for c in componentes])
 
     def test_el_menu_real_del_navegador_incluye_la_documentacion_del_responsable(self):
-        # nginx reescribe /api/usuarios/login/ y /session-auth-state/ a /usuarios/..., que son las
-        # vistas de usuarios.views: tienen que entregar los MISMOS componentes que el ViewSet.
+        # nginx reescribe /api/usuarios/login/ y /session-auth-state/ a /usuarios/...: lo que entregan
+        # esas rutas es el menú que ve el navegador.
         from django.contrib.auth.hashers import make_password
 
         clave = make_password('Clave-test-1')

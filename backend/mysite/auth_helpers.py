@@ -239,8 +239,9 @@ def get_componente_permiso(user, nombre_componente):
 def construir_componentes(usuario):
     """Lista de componentes que recibe el frontend (login y session-auth-state).
 
-    Es la ÚNICA fuente: la usan tanto `usuarios.viewsets.UsuarioViewSet` como las vistas de
-    `usuarios.views` (a las que nginx reescribe /api/usuarios/login/ y /session-auth-state/).
+    La usan `usuarios/sesion.py` (login y session-auth-state de `usuarios.viewsets.UsuarioViewSet`,
+    también publicadas en /usuarios/<ruta>/, a donde nginx reescribe /api/usuarios/<ruta>/) y los permisos
+    financieros.
     Precedencia: el permiso individual (ComponenteUsuario) reemplaza al del rol, uno inactivo lo
     revoca, y uno activo sin permiso de rol concede el acceso. Además, quien es responsable de
     algún chatbot recibe «Gestión de Documentación de Chatbots» (EDITAR) salvo revocación expresa.
