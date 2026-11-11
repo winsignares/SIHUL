@@ -176,13 +176,13 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def exportar_excel_docente(self, request):
         return views.exportar_horarios_excel_docente(request._request)
 
-    @action(detail=False, methods=['post'], url_path='exportar-pdf-usuario')
+    @action(detail=False, methods=['get'], url_path='exportar-pdf-usuario')
     def exportar_pdf_usuario(self, request):
-        return views.exportar_pdf_usuario(request._request)
+        return api_views.exportar_mi_horario(request._request, 'pdf')
 
-    @action(detail=False, methods=['post'], url_path='exportar-excel-usuario')
+    @action(detail=False, methods=['get'], url_path='exportar-excel-usuario')
     def exportar_excel_usuario(self, request):
-        return views.exportar_excel_usuario(request._request)
+        return api_views.exportar_mi_horario(request._request, 'excel')
 
 
 class HorarioFusionadoViewSet(SeccionalMixin, viewsets.ModelViewSet):

@@ -166,11 +166,3 @@ class ExportacionesHorariosTests(TestCase):
         # Una hora que no es número o un día desconocido no aparecen en la cuadrícula
         self.assertEqual([c.value for c in hoja['E'][1:]], [None] * 15)
         self.assertNotIn('Quimica', ''.join(str(c.value) for fila in hoja.iter_rows() for c in fila))
-
-    # ------------------------------------------------ horario individual
-    def test_horario_individual_no_responde_por_get_ni_por_post(self):
-        for ruta in ('exportar-pdf-usuario', 'exportar-excel-usuario'):
-            with self.subTest(ruta=ruta):
-                self.assertEqual(self.client.get(f'/api/horarios/{ruta}/?usuario_id={self.usuario.id}').status_code, 405)
-                r = self.client.post(f'/api/horarios/{ruta}/?usuario_id={self.usuario.id}')
-                self.assertEqual((r.status_code, r.json()), (405, {'error': 'Método no permitido'}))

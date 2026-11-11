@@ -6,9 +6,10 @@ archivo; las vistas se ocupan de la petición y la respuesta HTTP.
 
 Cada horario se ubica en una cuadrícula de 6:00 a 21:00 por día de la semana, ocupando todas las horas
 entre su inicio y su fin. Las variantes son:
-- por grupo (Centro de Horarios y horario individual): una página u hoja por «grupo - programa»; la celda
+- por grupo (Centro de Horarios y Mi horario del estudiante): una página u hoja por «grupo - programa»; la celda
   dice «Asignatura / DOCENTE» y el salón;
-- por docente: una página u hoja por docente, con su facultad; la celda dice «Asignatura / GRUPO» y el salón.
+- por docente (también Mi horario del docente): una página u hoja por docente, con su facultad; la celda dice
+  «Asignatura / GRUPO» y el salón.
 """
 from io import BytesIO
 
@@ -289,51 +290,6 @@ def excel_por_grupo(horarios):
                     cell.fill = class_fill
                 cell.alignment = center_alignment
                 cell.border = border
-
-        ws.column_dimensions['A'].width = 14
-        for col in 'BCDEFGH':
-            ws.column_dimensions[col].width = 25
-        for row in range(2, len(HORAS_INTERVALOS) + 2):
-            ws.row_dimensions[row].height = 75
-
-    if len(wb.sheetnames) == 0:
-        ws = wb.create_sheet(title="Vacío")
-        ws.append(['No hay horarios para mostrar'])
-    return _guardar(wb)
-
-
-def excel_horario_individual(horarios):
-    """Horario de un docente o estudiante: una hoja por grupo. Bordes y color se aplican a las columnas
-    A a F de las filas de horas, y el color a toda celda con texto (también la de la hora)."""
-    wb = Workbook()
-    wb.remove(wb.active)
-
-    header_font = Font(bold=True, color="FFFFFF", size=12)
-    header_fill = PatternFill(start_color="8B0000", end_color="8B0000", fill_type="solid")
-    class_fill = PatternFill(start_color="DBEAFE", end_color="DBEAFE", fill_type="solid")
-    center_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    border = _borde_fino()
-
-    for grupo_key, horarios_grupo in agrupar_por_grupo(horarios).items():
-        dias_dict = cuadricula(horarios_grupo, celda_con_docente)
-        ws = wb.create_sheet(title=grupo_key[:31])
-
-        ws.append(['Hora'] + DIAS_NOMBRES)
-        for cell in ws[1]:
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = center_alignment
-            cell.border = border
-
-        for row in filas_de_texto(dias_dict):
-            ws.append(row)
-
-        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=6):
-            for cell in row:
-                cell.alignment = center_alignment
-                cell.border = border
-                if cell.value:
-                    cell.fill = class_fill
 
         ws.column_dimensions['A'].width = 14
         for col in 'BCDEFGH':
