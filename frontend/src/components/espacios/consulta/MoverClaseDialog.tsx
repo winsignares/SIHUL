@@ -158,7 +158,7 @@ export function MoverClaseDialog({ moverClase, filteredEspacios, diasSemana, hor
                         {horas.map((hora, idx) => (
                           <div key={`time-${hora}`} className="text-xs text-slate-500 flex items-center justify-end pr-1"
                             style={{ gridColumn: 1, gridRow: idx + 2 }}>
-                            {hora}:00
+                            {formatHoraDecimal(hora)}
                           </div>
                         ))}
 

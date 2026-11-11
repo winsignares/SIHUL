@@ -74,6 +74,7 @@ export function useMoverClase({ horarios, filteredEspacios, getConflictoEnRango,
       if (selectedClassToMove.tipo === 'prestamo') {
         // Para préstamos, usar prestamoService
         await prestamoService.actualizarPrestamo({
+          ...selectedClassToMove.prestamo,
           id: selectedClassToMove.id,
           espacio_id: parseInt(targetEspacioId),
           estado: selectedClassToMove.estado || 'Pendiente',
