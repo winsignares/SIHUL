@@ -32,7 +32,7 @@ Cada app vive en `backend/<app>/` con su `models.py`/`views.py`/`urls.py` están
 | `grupos` | Grupos académicos + staging Oracle. |
 | `asignaturas` | Asignaturas y su relación con programas + ETL. |
 | `horario` | Núcleo de horarios académicos, ETL Oracle, reportes de horarios sin espacio asignado. `exportaciones.py`: archivos PDF y Excel de horarios (por grupo y por docente; también la descarga de Mi horario). |
-| `espacios` | Espacios físicos (aulas, laboratorios), `EspacioPermitido` (autorización de supervisores), ETL Oracle. `reportes_pdf.py`: PDF de ocupación semanal, ocupación, disponibilidad y capacidad a partir de los datos ya calculados. |
+| `espacios` | Espacios físicos (aulas, laboratorios), `EspacioPermitido` (autorización de supervisores), ETL Oracle. `reportes.py`: cálculos de los reportes (ocupación semanal, ocupación por jornada, más usados, disponibilidad y capacidad) sin depender de la petición. `reportes_pdf.py`: los PDF de esos reportes a partir de los datos ya calculados. |
 | `recursos` | Recursos/equipos asociados a espacios. |
 | `prestamos` | Préstamos de espacios/recursos, lógica de disponibilidad (`availability.py`). |
 | `chatbot` | App puente Django ↔ servicio FastAPI: `api_views.py`/`api_urls.py` actúan de proxy hacia `CHATBOT_FASTAPI_URL`. |
