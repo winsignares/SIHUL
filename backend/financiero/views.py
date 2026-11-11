@@ -12,9 +12,7 @@ import hashlib
 import json
 import logging
 import mimetypes
-import os
 import threading
-import textwrap
 import zipfile
 from datetime import datetime
 from io import BytesIO
@@ -22,11 +20,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
-from openpyxl import Workbook
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-from reportlab.pdfgen import canvas
-from . import flujo_factura, models, serializers
+from . import archivos, flujo_factura, models, serializers
 from .sla import build_parametros_sla_map, sincronizar_sla_facturas
 from usuarios.models import Usuario
 
@@ -276,42 +270,6 @@ def _es_archivo_plano_txt(tipo_documento, nombre_archivo, tipo_mime):
         tipo in {'archivo plano bancario', 'soporte causacion seven'}
         and (nombre.endswith('.txt') or mime in {'text/plain', 'application/octet-stream'})
     )
-
-
-def _nombre_pdf_archivo_plano(nombre_archivo):
-    base, _extension = os.path.splitext(os.path.basename(nombre_archivo or 'archivo_plano'))
-    return f'{base or "archivo_plano"}.pdf'[:255]
-
-
-def _convertir_archivo_plano_a_pdf(content_bytes, nombre_original):
-    """Convierte el contenido de un archivo plano a un PDF legible y paginado."""
-    try:
-        texto = content_bytes.decode('utf-8-sig')
-    except UnicodeDecodeError:
-        texto = content_bytes.decode('latin-1', errors='replace')
-
-    output = BytesIO()
-    pdf = canvas.Canvas(output, pagesize=letter)
-    _width, height = letter
-    pdf.setFont('Courier', 7.5)
-    y = height - 42
-    lineas = texto.splitlines() or ['(El archivo plano no contiene líneas visibles.)']
-    for linea in lineas:
-        # Courier conserva la estructura tabular del TXT al abrirlo como PDF.
-        segmentos = textwrap.wrap(
-            linea.expandtabs(4), width=118, replace_whitespace=False,
-            drop_whitespace=False, break_long_words=True,
-        ) or ['']
-        for segmento in segmentos:
-            pdf.drawString(40, y, segmento)
-            y -= 10
-            if y < 48:
-                pdf.showPage()
-                pdf.setFont('Courier', 7.5)
-                y = height - 42
-
-    pdf.save()
-    return output.getvalue()
 
 
 # ============================================================
@@ -890,25 +848,8 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
         now_stamp = timezone.now().strftime('%Y%m%d_%H%M%S')
         filename_base = f"{tipo_reporte}_{now_stamp}"
 
-        headers = [
-            'Numero Factura', 'Proveedor', 'NIT', 'Departamento', 'Estado', 'Valor Total',
-            'Fecha Recepcion', 'Fecha Autorizacion', 'Fecha Pago Aplicado', 'Fecha Comprobante',
-            'Numero Transaccion', 'Numero Comprobante'
-        ]
-
         if formato == 'Excel':
-            wb = Workbook()
-            ws = wb.active
-            ws.title = 'Reporte Financiero'
-            ws.append(headers)
-            for row in rows:
-                ws.append(row)
-
-            output = BytesIO()
-            wb.save(output)
-            content = output.getvalue()
-            output.close()
-
+            content = archivos.reporte_excel(rows)
             self._registrar_reporte(
                 tipo_reporte=tipo_reporte,
                 formato='Excel',
@@ -925,30 +866,7 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
             response['Content-Disposition'] = f'attachment; filename="{filename_base}.xlsx"'
             return response
 
-        output = BytesIO()
-        pdf = canvas.Canvas(output, pagesize=letter)
-        _, height = letter
-
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.drawString(40, height - 40, f'Reporte Financiero - {tipo_reporte}')
-        pdf.setFont('Helvetica', 9)
-        pdf.drawString(40, height - 55, f'Generado: {timezone.now().strftime("%Y-%m-%d %H:%M") }')
-        pdf.drawString(40, height - 70, f'Registros: {len(rows)}')
-
-        y = height - 95
-        for row in rows:
-            line = f"{row[0]} | {row[1][:22]} | {row[4]} | ${row[5]:,.0f}"
-            pdf.drawString(40, y, line)
-            y -= 13
-            if y < 50:
-                pdf.showPage()
-                pdf.setFont('Helvetica', 9)
-                y = height - 40
-
-        pdf.save()
-        content = output.getvalue()
-        output.close()
-
+        content = archivos.reporte_pdf(tipo_reporte, rows)
         self._registrar_reporte(
             tipo_reporte=tipo_reporte,
             formato='PDF',
@@ -961,7 +879,6 @@ class ReporteGeneradoViewSet(viewsets.ReadOnlyModelViewSet):
         response = HttpResponse(content, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename_base}.pdf"'
         return response
-
 
 # ============================================================
 # VIEWSETS COMPLEJOS
@@ -1027,8 +944,8 @@ class DocumentoAdjuntoViewSet(viewsets.ModelViewSet):
         # El archivo plano se almacena como PDF. Así su vista individual y el
         # documento unificado muestran el contenido, no solo el nombre del TXT.
         if content_bytes is not None and _es_archivo_plano_txt(tipo_documento, nombre_archivo, tipo_mime):
-            content_bytes = _convertir_archivo_plano_a_pdf(content_bytes, nombre_archivo)
-            nombre_archivo = _nombre_pdf_archivo_plano(nombre_archivo)
+            content_bytes = archivos.archivo_plano_a_pdf(content_bytes)
+            nombre_archivo = archivos.nombre_pdf_archivo_plano(nombre_archivo)
             tipo_mime = 'application/pdf'
             tamano_bytes = len(content_bytes)
             hash_archivo = hashlib.sha256(content_bytes).hexdigest()
@@ -1217,307 +1134,6 @@ class FacturaViewSet(viewsets.ModelViewSet):
             seen_tipos[doc.tipo_documento] = doc  # sobrescribe con el más reciente (orden ASC por fecha)
         return list(seen_tipos.values())
 
-    def _build_pdf_page(self, titulo, lineas):
-        output = BytesIO()
-        pdf = canvas.Canvas(output, pagesize=letter)
-        width, height = letter
-        y = height - 50
-
-        pdf.setFont('Helvetica-Bold', 14)
-        pdf.drawString(40, y, titulo)
-        y -= 24
-        pdf.setFont('Helvetica', 10)
-
-        for linea in lineas:
-            for segmento in str(linea).split('\n'):
-                pdf.drawString(40, y, segmento[:110])
-                y -= 16
-                if y < 60:
-                    pdf.showPage()
-                    pdf.setFont('Helvetica', 10)
-                    y = height - 50
-
-        pdf.save()
-        return output.getvalue()
-
-    def _build_portada_factura(self, factura, documentos, scope):
-        """Genera una portada profesional e informativa para el PDF consolidado."""
-        output = BytesIO()
-        pdf = canvas.Canvas(output, pagesize=letter)
-        width, height = letter
-        
-        # Colores
-        COLOR_HEADER = colors.HexColor('#1e40af')
-        COLOR_ACCENT = colors.HexColor('#0369a1')
-        COLOR_TEXT = colors.HexColor('#1f2937')
-        COLOR_LIGHT = colors.HexColor('#f3f4f6')
-        
-        # Encabezado con fondo
-        pdf.setFillColor(COLOR_HEADER)
-        pdf.rect(0, height - 100, width, 100, fill=1, stroke=0)
-        
-        # Título principal
-        pdf.setFont('Helvetica-Bold', 24)
-        pdf.setFillColor(colors.white)
-        pdf.drawString(40, height - 50, 'DOCUMENTACIÓN CONSOLIDADA')
-        
-        # Número de factura
-        pdf.setFont('Helvetica-Bold', 16)
-        pdf.setFillColor(colors.HexColor('#fbbf24'))
-        pdf.drawString(40, height - 75, f'Factura: {factura.numero_factura}')
-        
-        y = height - 120
-        
-        # Sección 1: Información de la Factura
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.setFillColor(COLOR_ACCENT)
-        pdf.drawString(40, y, '📋 INFORMACIÓN DE LA FACTURA')
-        y -= 20
-        
-        pdf.setFont('Helvetica', 10)
-        pdf.setFillColor(COLOR_TEXT)
-        
-        info_factura = [
-            ('Número Factura:', factura.numero_factura),
-            ('Estado Actual:', factura.estado or 'N/A'),
-            ('Etapa:', factura.etapa_actual or 'N/A'),
-            ('Fecha Factura:', str(factura.fecha_factura) if factura.fecha_factura else 'N/A'),
-            ('Fecha Recepción:', str(factura.fecha_recepcion) if factura.fecha_recepcion else 'N/A'),
-        ]
-        
-        for label, valor in info_factura:
-            pdf.drawString(50, y, f'{label}')
-            pdf.drawString(200, y, str(valor)[:60])
-            y -= 16
-        
-        y -= 10
-        
-        # Sección 2: Información del Proveedor
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.setFillColor(COLOR_ACCENT)
-        pdf.drawString(40, y, '👤 INFORMACIÓN DEL PROVEEDOR')
-        y -= 20
-        
-        pdf.setFont('Helvetica', 10)
-        pdf.setFillColor(COLOR_TEXT)
-        
-        proveedor = factura.proveedor
-        info_proveedor = [
-            ('Razón Social:', getattr(proveedor, 'razon_social', 'N/A') if proveedor else 'N/A'),
-            ('NIT:', getattr(proveedor, 'nit', 'N/A') if proveedor else 'N/A'),
-            ('Email:', getattr(proveedor, 'email', 'N/A') if proveedor else 'N/A'),
-        ]
-        
-        for label, valor in info_proveedor:
-            pdf.drawString(50, y, f'{label}')
-            pdf.drawString(200, y, str(valor)[:60])
-            y -= 16
-        
-        y -= 10
-        
-        # Sección 3: Información Financiera
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.setFillColor(COLOR_ACCENT)
-        pdf.drawString(40, y, '💰 INFORMACIÓN FINANCIERA')
-        y -= 20
-        
-        pdf.setFont('Helvetica', 10)
-        pdf.setFillColor(COLOR_TEXT)
-        
-        info_financiera = [
-            ('Subtotal:', f'${float(factura.valor_subtotal or 0):,.2f}'),
-            ('IVA:', f'${float(factura.valor_iva or 0):,.2f}'),
-            ('Total:', f'${float(factura.valor_total or 0):,.2f}'),
-        ]
-        
-        for label, valor in info_financiera:
-            pdf.drawString(50, y, f'{label}')
-            pdf.setFont('Helvetica-Bold', 10)
-            pdf.drawString(200, y, str(valor))
-            pdf.setFont('Helvetica', 10)
-            y -= 16
-        
-        y -= 10
-        
-        # Sección 4: Información Operativa
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.setFillColor(COLOR_ACCENT)
-        pdf.drawString(40, y, '⚙️ INFORMACIÓN OPERATIVA')
-        y -= 20
-        
-        pdf.setFont('Helvetica', 10)
-        pdf.setFillColor(COLOR_TEXT)
-        
-        dias_transcurridos = factura.dias_transcurridos or 0
-        info_operativa = [
-            ('Días Transcurridos:', f'{dias_transcurridos} días'),
-            ('Área Solicitante:', getattr(factura.departamento, 'nombre', 'N/A') if factura.departamento else 'N/A'),
-            ('Observaciones:', (factura.observaciones or 'Sin observaciones')[:50]),
-        ]
-        
-        for label, valor in info_operativa:
-            pdf.drawString(50, y, f'{label}')
-            pdf.drawString(200, y, str(valor)[:60])
-            y -= 16
-        
-        y -= 10
-        
-        # Sección 5: Documentos Incluidos
-        pdf.setFont('Helvetica-Bold', 12)
-        pdf.setFillColor(COLOR_ACCENT)
-        pdf.drawString(40, y, f'📎 DOCUMENTOS INCLUIDOS ({len(documentos)})')
-        y -= 20
-        
-        pdf.setFont('Helvetica', 9)
-        pdf.setFillColor(COLOR_TEXT)
-        
-        for idx, doc in enumerate(documentos, 1):
-            doc_text = f'{idx}. {doc.tipo_documento} - {doc.nombre_archivo}'
-            pdf.drawString(50, y, doc_text[:80])
-            y -= 14
-            if y < 60:
-                pdf.showPage()
-                y = height - 50
-        
-        # Pie de página
-        pdf.setFont('Helvetica', 8)
-        pdf.setFillColor(colors.HexColor('#9ca3af'))
-        pdf.drawString(40, 30, f'Generado: {timezone.now().strftime("%d/%m/%Y %H:%M:%S")} | Scope: {scope}')
-        
-        pdf.save()
-        return output.getvalue()
-
-    def _append_pdf_bytes(self, writer, raw_bytes):
-        try:
-            from pypdf import PdfReader
-            reader = PdfReader(BytesIO(raw_bytes))
-            for page in reader.pages:
-                writer.add_page(page)
-            return True
-        except Exception:
-            return False
-
-    def _append_image_bytes_as_pdf(self, writer, raw_bytes):
-        try:
-            from PIL import Image
-            image = Image.open(BytesIO(raw_bytes))
-            if image.mode in ('RGBA', 'P'):
-                image = image.convert('RGB')
-            elif image.mode != 'RGB':
-                image = image.convert('RGB')
-            output = BytesIO()
-            image.save(output, format='PDF')
-            output.seek(0)
-            return self._append_pdf_bytes(writer, output.read())
-        except Exception:
-            return False
-
-    def _documento_bytes(self, documento):
-        return _documento_bytes(documento)
-
-    def _guardar_pdf_unificado(self, factura, content, scope):
-        safe_scope = models._safe_path_segment(scope or 'all')
-        safe_factura = models._safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
-        nombre_archivo = f'Documentos_{safe_factura}_{safe_scope}.pdf'
-        ciclo_documental = _factura_ciclo_documental_actual(factura)
-
-        from financiero.services.shared_storage_service import shared_storage
-        result = shared_storage.copy_unified_pdf(content, factura, scope)
-
-        models.DocumentoUnificado.objects.update_or_create(
-            factura=factura,
-            scope=scope or 'all',
-            ciclo_documental=ciclo_documental,
-            defaults={
-                'nombre_archivo': nombre_archivo,
-                'tipo_mime': 'application/pdf',
-                'tamano_bytes': len(content),
-                'contenido_archivo': None,
-                'hash_archivo': hashlib.sha256(content).hexdigest(),
-                'nas_relative_path': result.nas_relative_path or '',
-                'nas_storage_status': (
-                    models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
-                    else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
-                ),
-            },
-        )
-
-        if not result.success:
-            logger.warning(
-                '[SHARED_STORAGE] PDF unificado no copiado al NAS. factura_id=%s error_code=%s message=%s',
-                factura.id, result.error_code, result.message,
-            )
-
-    def _pdf_consolidado_documentos(self, factura, documentos, scope, incluir_portada=True, guardar=True):
-        try:
-            from pypdf import PdfWriter
-        except Exception:
-            PdfWriter = None
-
-        if PdfWriter is None:
-            return self._build_pdf_page(
-                f'Documentacion consolidada - {factura.numero_factura}',
-                [
-                    f'Scope solicitado: {scope}',
-                    'No fue posible consolidar los soportes porque el motor PDF no esta disponible en el servidor.',
-                ],
-            )
-
-        writer = PdfWriter()
-        if incluir_portada:
-            portada = self._build_portada_factura(factura, documentos, scope)
-            self._append_pdf_bytes(writer, portada)
-
-        if not documentos:
-            buffer = BytesIO()
-            writer.write(buffer)
-            content = buffer.getvalue()
-            if guardar:
-                self._guardar_pdf_unificado(factura, content, scope)
-            return content
-
-        for documento in documentos:
-            raw_bytes = self._documento_bytes(documento)
-            lower_name = (documento.nombre_archivo or '').lower()
-            lower_mime = (documento.tipo_mime or '').lower()
-            merged = False
-
-            if raw_bytes is not None:
-                if lower_name.endswith('.pdf') or lower_mime == 'application/pdf':
-                    merged = self._append_pdf_bytes(writer, raw_bytes)
-                elif lower_name.endswith(('.png', '.jpg', '.jpeg')) or lower_mime in {'image/png', 'image/jpeg'}:
-                    merged = self._append_image_bytes_as_pdf(writer, raw_bytes)
-                elif lower_name.endswith('.txt') or lower_mime in {'text/plain', 'application/octet-stream'}:
-                    try:
-                        texto = raw_bytes.decode('utf-8', errors='replace')
-                        lineas = [f'Archivo: {documento.nombre_archivo}', '']
-                        lineas += texto.splitlines()
-                        resumen = self._build_pdf_page('Archivo Plano SEVEN', lineas)
-                        merged = self._append_pdf_bytes(writer, resumen)
-                    except Exception:
-                        pass
-
-            if not merged:
-                resumen = self._build_pdf_page(
-                    f'Soporte no integrado: {documento.tipo_documento}',
-                    [
-                        f'Archivo: {documento.nombre_archivo}',
-                        f'Tipo MIME: {documento.tipo_mime or "No registrado"}',
-                        f'Fecha de carga: {documento.fecha_carga}',
-                        '',
-                        'Este soporte no pudo integrarse como pagina PDF, pero hace parte del expediente de la factura.',
-                        f'URL registrada: {documento.url_storage or "Sin URL disponible"}',
-                    ],
-                )
-                self._append_pdf_bytes(writer, resumen)
-
-        buffer = BytesIO()
-        writer.write(buffer)
-        content = buffer.getvalue()
-        if guardar:
-            self._guardar_pdf_unificado(factura, content, scope)
-        return content
-
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return serializers.FacturaDetailSerializer
@@ -1607,7 +1223,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 return Response({'error': 'El documento solicitado no está disponible.'}, status=status.HTTP_404_NOT_FOUND)
         # Al abrir un documento puntual no se agrega la portada del expediente ni
         # se reemplaza el PDF unificado almacenado de la factura.
-        content = self._pdf_consolidado_documentos(
+        content = _expediente(
             factura,
             documentos,
             scope,
@@ -1626,7 +1242,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         factura = self.get_object()
         scope = self._resolve_scope_documental(request)
         documentos = self._documentos_filtrados_por_scope(factura, scope)
-        consolidado = self._pdf_consolidado_documentos(factura, documentos, scope)
+        consolidado = _expediente(factura, documentos, scope)
 
         output = BytesIO()
         used_names = set()
@@ -1634,7 +1250,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             zip_file.writestr('unificados/expediente_unificado.pdf', consolidado)
 
             for index, documento in enumerate(documentos, 1):
-                raw_bytes = self._documento_bytes(documento)
+                raw_bytes = _documento_bytes(documento)
                 base_name = models._safe_path_segment(documento.nombre_archivo or f'documento-{index}')
                 folder = models._safe_path_segment(documento.tipo_documento or 'documento')
                 zip_name = f'especificos/{folder}/{index:02d}-{base_name}'
@@ -1807,96 +1423,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         scope = self._resolve_scope_documental(request)
         documentos = self._documentos_filtrados_por_scope(factura, scope)
-        content = self._pdf_consolidado_documentos(factura, documentos, scope)
+        content = _expediente(factura, documentos, scope)
         filename = f"Expediente_{models._safe_path_segment(factura.numero_factura or factura.id)}.pdf"
-        response = HttpResponse(content, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-
-        proveedor = factura.proveedor
-        departamento = factura.departamento
-        fecha_emision = factura.fecha_comprobante or timezone.now().date()
-        numero_factura = factura.numero_factura or f"FAC-{factura.id}"
-
-        output = BytesIO()
-        pdf = canvas.Canvas(output, pagesize=letter)
-        width, height = letter
-
-        # Encabezado
-        pdf.setFillColor(colors.HexColor('#991b1b'))
-        pdf.rect(0, height - 80, width, 80, stroke=0, fill=1)
-        pdf.setFillColor(colors.white)
-        pdf.setFont('Helvetica-Bold', 16)
-        pdf.drawString(40, height - 50, 'Comprobante de Egreso')
-        pdf.setFont('Helvetica', 9)
-        pdf.drawString(40, height - 66, 'Sistema Benji - Tesoreria')
-
-        # Metadatos principales
-        pdf.setFillColor(colors.black)
-        pdf.setFont('Helvetica-Bold', 10)
-        pdf.drawString(40, height - 110, f"Comprobante: {factura.numero_comprobante}")
-        pdf.drawString(320, height - 110, f"Fecha: {fecha_emision}")
-
-        # Seccion proveedor
-        y = height - 145
-        pdf.setFont('Helvetica-Bold', 11)
-        pdf.drawString(40, y, 'Proveedor')
-        pdf.setFont('Helvetica', 9)
-        y -= 14
-        pdf.drawString(40, y, f"Razon social: {proveedor.razon_social}")
-        y -= 12
-        pdf.drawString(40, y, f"NIT: {proveedor.nit}")
-        y -= 12
-        pdf.drawString(40, y, f"Contacto: {proveedor.email or 'Sin correo'} | {proveedor.telefono or 'Sin telefono'}")
-
-        # Seccion factura
-        y -= 22
-        pdf.setFont('Helvetica-Bold', 11)
-        pdf.drawString(40, y, 'Factura')
-        pdf.setFont('Helvetica', 9)
-        y -= 14
-        pdf.drawString(40, y, f"Numero factura: {numero_factura}")
-        pdf.drawString(320, y, f"Numero radicado: {factura.numero_radicado or 'Sin radicado'}")
-        y -= 12
-        pdf.drawString(40, y, f"Proceso de pago: {factura.numero_proceso_pago or 'Sin proceso'}")
-        pdf.drawString(320, y, f"Transaccion bancaria: {factura.numero_transaccion or 'Sin transaccion'}")
-        y -= 12
-        pdf.drawString(40, y, f"Fecha autorizacion: {factura.fecha_autorizacion or 'Sin fecha'}")
-        pdf.drawString(320, y, f"Fecha pago aplicado: {factura.fecha_pago_aplicado or 'Sin fecha'}")
-        y -= 12
-        pdf.drawString(40, y, f"Area solicitante: {departamento.nombre if departamento else 'Sin area'}")
-
-        # Valores
-        y -= 22
-        pdf.setFont('Helvetica-Bold', 11)
-        pdf.drawString(40, y, 'Valores')
-        pdf.setFont('Helvetica', 9)
-        y -= 14
-        pdf.drawString(40, y, f"Subtotal: ${factura.valor_subtotal:,.2f}")
-        pdf.drawString(200, y, f"IVA: ${factura.valor_iva:,.2f}")
-        pdf.drawString(320, y, f"Retenciones: ${factura.valor_retencion_renta + factura.valor_retencion_iva + factura.valor_retencion_ica:,.2f}")
-        y -= 12
-        pdf.setFont('Helvetica-Bold', 10)
-        pdf.drawString(40, y, f"Total pagado: ${factura.valor_total:,.2f}")
-
-        # Observaciones
-        y -= 26
-        pdf.setFont('Helvetica-Bold', 11)
-        pdf.drawString(40, y, 'Observaciones')
-        pdf.setFont('Helvetica', 9)
-        y -= 14
-        pdf.drawString(40, y, (factura.observaciones or 'Sin observaciones')[:160])
-
-        # Firma
-        pdf.setFont('Helvetica', 8)
-        pdf.drawString(40, 60, f"Generado por: {request.user.nombre} | Rol: {request.user.rol.nombre if request.user.rol else 'Sin rol'}")
-        pdf.drawString(40, 45, 'Este documento es valido sin firma manuscrita y queda registrado en el sistema.')
-
-        pdf.save()
-        content = output.getvalue()
-        output.close()
-
-        filename = f"Comprobante_Egreso_{factura.numero_comprobante}.pdf"
         response = HttpResponse(content, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
@@ -2155,6 +1683,48 @@ def _archivar_documentos_devueltos(factura, numero_devolucion):
         )
 
 
+def _guardar_pdf_unificado(factura, content, scope):
+    safe_scope = models._safe_path_segment(scope or 'all')
+    safe_factura = models._safe_path_segment(factura.numero_factura or f'factura-{factura.id}')
+    nombre_archivo = f'Documentos_{safe_factura}_{safe_scope}.pdf'
+    ciclo_documental = _factura_ciclo_documental_actual(factura)
+
+    from financiero.services.shared_storage_service import shared_storage
+    result = shared_storage.copy_unified_pdf(content, factura, scope)
+
+    models.DocumentoUnificado.objects.update_or_create(
+        factura=factura,
+        scope=scope or 'all',
+        ciclo_documental=ciclo_documental,
+        defaults={
+            'nombre_archivo': nombre_archivo,
+            'tipo_mime': 'application/pdf',
+            'tamano_bytes': len(content),
+            'contenido_archivo': None,
+            'hash_archivo': hashlib.sha256(content).hexdigest(),
+            'nas_relative_path': result.nas_relative_path or '',
+            'nas_storage_status': (
+                models.DocumentoAdjunto.NAS_STATUS_STORED if result.success
+                else (result.error_code or models.DocumentoAdjunto.NAS_STATUS_FAILED)
+            ),
+        },
+    )
+
+    if not result.success:
+        logger.warning(
+            '[SHARED_STORAGE] PDF unificado no copiado al NAS. factura_id=%s error_code=%s message=%s',
+            factura.id, result.error_code, result.message,
+        )
+
+
+def _expediente(factura, documentos, scope, incluir_portada=True, guardar=True):
+    """Arma el expediente consolidado y, si se pide, lo guarda como PDF unificado de la factura."""
+    content, consolidado = archivos.expediente(factura, documentos, scope, _documento_bytes, incluir_portada)
+    if guardar and consolidado:
+        _guardar_pdf_unificado(factura, content, scope)
+    return content
+
+
 def _regenerar_pdf_unificado_nas(factura):
     """
     Regenera el PDF unificado con todos los documentos actuales de la factura
@@ -2171,8 +1741,7 @@ def _regenerar_pdf_unificado_nas(factura):
             .select_related('cargado_por__rol')
             .order_by('fecha_carga', 'id')
         )
-        _vs = FacturaViewSet()
-        _vs._pdf_consolidado_documentos(factura, documentos, 'all')
+        _expediente(factura, documentos, 'all')
     except Exception:
         logger.exception('[SHARED_STORAGE] Error regenerando PDF unificado. factura_id=%s', factura.id)
 

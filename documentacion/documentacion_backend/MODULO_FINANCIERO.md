@@ -2,7 +2,7 @@
 
 Ver también [APPS_DJANGO.md](APPS_DJANGO.md).
 
-App más grande y reciente del backend (`models.py` ~865 líneas, `views.py` ~2200 líneas, `flujo_factura.py` con los pasos del flujo). Gestiona el ciclo de vida completo de facturación institucional:
+App más grande y reciente del backend (`models.py` ~865 líneas, `views.py` ~1770 líneas, `flujo_factura.py` con los pasos del flujo, `archivos.py` con los PDF y Excel que genera). Gestiona el ciclo de vida completo de facturación institucional:
 
 - **Entidades principales**: `Proveedor`, `Departamento`, `CuentaContable` (PUC), `CentroCosto`, `Banco`/`TipoCuenta`.
 - **`Factura`**: entidad central, con un flujo de **~18 estados**: Recibida → Registrada → Radicada → Causada → Alistada → Aprobada Auditoría → Cargada → Revisada Dirección Financiera → Enviada Rectoría → Autorizada → Pago Aplicado → Pagada (más ramas de rechazo/devolución en cualquier etapa).
