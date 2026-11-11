@@ -41,7 +41,6 @@ import { downloadDocumentosConsolidadosPdf, openDocumentosConsolidados } from '.
 
 export default function RadicarFacturas() {
   const {
-    facturas,
     docsMap,
     cargando,
     error,
@@ -62,7 +61,6 @@ export default function RadicarFacturas() {
     itemsPerPage,
     setObservaciones,
     setNumeroOperacionContable,
-    setConsecutivoOperacion,
     validarConsecutivo,
     errorConsecutivo,
     setFiltros,

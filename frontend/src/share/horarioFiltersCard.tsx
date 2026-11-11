@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
 import { Card, CardContent } from './card';
-import { Button } from './button';
 import { Filter, ChevronDown, X } from 'lucide-react';
 import { cn } from './utils';
 

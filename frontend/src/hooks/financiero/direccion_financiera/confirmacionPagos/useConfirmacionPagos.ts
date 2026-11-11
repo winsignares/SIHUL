@@ -3,6 +3,7 @@ import { facturasService, documentosService } from '../../../../services/financi
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
 import { type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
 import { buildSharedFacturaDetail } from '../../../../share/factura-details-helpers';
+import type { TableFilterValues } from '../../../../share/table-filters';
 
 export interface FacturaConfirmacion extends SharedFacturaDetail {
   id: string;
@@ -43,7 +44,7 @@ export function useConfirmacionPagos() {
   const [numeroConfirmacion, setNumeroConfirmacion] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
-  const [filtros, setFiltros] = useState({
+  const [filtros, setFiltros] = useState<TableFilterValues>({
     numeroFactura: '',
     proveedor: '',
     estado: '',
@@ -140,7 +141,7 @@ export function useConfirmacionPagos() {
       return true;
     });
 
-    switch (ORDER_OPTIONS.includes(filtros.orden) ? filtros.orden : 'recientes') {
+    switch (filtros.orden && ORDER_OPTIONS.includes(filtros.orden) ? filtros.orden : 'recientes') {
       case 'antiguos':
         return filtradas.sort((a, b) => parseFecha(a.fechaAutorizacion) - parseFecha(b.fechaAutorizacion));
       case 'monto':

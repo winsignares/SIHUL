@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useComponentesRoles } from '../../hooks/permisos/useComponentesRoles';
 import type { ComponenteRol, Componente } from '../../services/componentes/componentesAPI';
 import type { Rol } from '../../services/users/authService';

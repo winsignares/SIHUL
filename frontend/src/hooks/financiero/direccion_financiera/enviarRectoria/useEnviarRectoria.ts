@@ -3,6 +3,7 @@ import { facturasService, documentosService } from '../../../../services/financi
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
 import { type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
 import { buildSharedFacturaDetail } from '../../../../share/factura-details-helpers';
+import type { TableFilterValues } from '../../../../share/table-filters';
 
 export interface FacturaEnvio extends SharedFacturaDetail {
   id: string;
@@ -22,7 +23,7 @@ export function useEnviarRectoria() {
   const [envioAbierto, setEnvioAbierto] = useState(false);
   const [observaciones, setObservaciones] = useState('');
 
-  const [filtros, setFiltros] = useState({
+  const [filtros, setFiltros] = useState<TableFilterValues>({
     numeroFactura: '',
     proveedor: '',
     estado: '',

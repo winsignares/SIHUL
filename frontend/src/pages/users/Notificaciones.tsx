@@ -11,6 +11,7 @@ import { Bell, Check, CheckCheck, AlertCircle, MessageSquare, Calendar, Settings
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { useNotificaciones } from '../../hooks/users/useNotificaciones';
+import type { CategoriaNotificacion } from '../../models/users/notification.model';
 import { useAuth } from '../../context/AuthContext';
 import { solicitudEspacioService } from '../../services/horarios/solicitudEspacioAPI';
 import { useNavigate } from 'react-router-dom';
@@ -440,7 +441,7 @@ export default function Notificaciones({ onNotificacionesChange }: Notificacione
       </div>
 
       {/* Tabs */}
-      <Tabs value={filterTab} onValueChange={setFilterTab} className="w-full">
+      <Tabs value={filterTab} onValueChange={(valor) => setFilterTab(valor as CategoriaNotificacion)} className="w-full">
         <TabsList className="grid grid-cols-2 w-full">
           <TabsTrigger value="pendientes">
             Pendientes

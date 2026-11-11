@@ -63,7 +63,7 @@ export function usePublicPrestamo() {
     const [sedes, setSedes] = useState<Sede[]>([]);
     const [tiposActividad, setTiposActividad] = useState<TipoActividadAPI[]>([]);
     const [espaciosDisponibles, setEspaciosDisponibles] = useState<EspacioDisponibleAPI[]>([]);
-    const [sedeSeleccionada, setSedeSeleccionada] = useState<number>(0);
+    const [sedeSeleccionada, setSedeSeleccionada] = useState<number | undefined>(0);
     const [loadingEspacios, setLoadingEspacios] = useState(false);
 
     // Estado CRUD solicitudes públicas
@@ -316,7 +316,7 @@ export function usePublicPrestamo() {
         }
     };
 
-    const handleSedeChange = (sedeId: number) => {
+    const handleSedeChange = (sedeId: number | undefined) => {
         setSedeSeleccionada(sedeId);
         // Limpiar selección de espacio cuando cambie la sede
         setFormData(prev => ({ ...prev, espacio_id: 0 }));
@@ -526,7 +526,6 @@ export function usePublicPrestamo() {
             const response = await prestamosPublicAPI.crearSolicitud({
                 ...(formData as SolicitudPrestamoPublico),
                 ...recurrencePayload,
-                recaptcha_token: recaptchaToken || undefined,
             });
             
             setSuccessMessage(response.message);

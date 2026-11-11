@@ -25,7 +25,6 @@ interface TesoreriaHomeProps {
 export default function TesoreriaHome({
   onGoToAlistar,
   onGoToEnviarDireccion,
-  onGoToRegistrarPago,
   onGoToComprobante,
 }: TesoreriaHomeProps) {
   const { components } = useAuth();

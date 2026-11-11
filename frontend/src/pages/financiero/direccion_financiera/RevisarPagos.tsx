@@ -43,7 +43,6 @@ const ORDER_OPTIONS = [
 
 export default function RevisarPagos() {
   const {
-    facturasRevision,
     facturasFiltradas,
     cargando,
     error,

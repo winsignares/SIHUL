@@ -16,13 +16,10 @@ import {
   CheckCheck,
   Search,
   Zap,
-  Star,
   MessageCircle,
   RotateCcw,
   MapPin,
   /* History, */
-  Clock,
-  X,
   ChevronLeft
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -77,13 +74,7 @@ export default function AsistentesVirtuales({ modoEmbebido = false, seccionalFij
     enviarPreguntaRapida,
     enviarMensaje,
     preguntasRotadas,
-    limpiarConversacion,
-    mostrarHistorial,
-    setMostrarHistorial,
-    conversacionesHistorial,
-    cargandoHistorial,
-    cargarHistorialConversaciones,
-    cargarConversacionAnterior
+    limpiarConversacion
   } = useAsistentesVirtuales({ publicoForzado: modoEmbebido, seccionalFija });
 
   // En celular (solo en modo embebido) se muestra una pantalla a la vez: el chat, o la lista de asistentes.

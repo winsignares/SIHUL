@@ -338,7 +338,7 @@ export default function PublicPrestamo() {
                                     <SelectContent>
                                         <SelectItem value="all">Todas las sedes</SelectItem>
                                         {sedes?.map((sede) => (
-                                            <SelectItem key={sede.id} value={sede.id.toString()}>
+                                            <SelectItem key={sede.id} value={String(sede.id)}>
                                                 {sede.nombre}
                                             </SelectItem>
                                         ))}
@@ -603,7 +603,7 @@ export default function PublicPrestamo() {
                                                 max={ocurrenciasMaximoPeriodo ?? undefined}
                                                 value={finRepeticionOcurrencias}
                                                 onChange={(e) => {
-                                                    let value = Number(e.target.value) || '';
+                                                    let value: number | '' = Number(e.target.value) || '';
                                                     if (ocurrenciasMaximoPeriodo != null && value !== '' && value > ocurrenciasMaximoPeriodo) {
                                                         value = ocurrenciasMaximoPeriodo;
                                                     }

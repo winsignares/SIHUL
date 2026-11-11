@@ -327,7 +327,7 @@ export const authService = {
       suppressErrorLog: options?.suppressErrorLog ?? false,
     });
 
-    if (response?.sede && !response.sede.ciudad && response.sede.seccional_ciudad) {
+    if (response && response.authenticated !== false && response.sede && !response.sede.ciudad && response.sede.seccional_ciudad) {
       response.sede.ciudad = response.sede.seccional_ciudad;
     }
 

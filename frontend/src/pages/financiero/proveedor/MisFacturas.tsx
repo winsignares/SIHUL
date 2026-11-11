@@ -235,8 +235,6 @@ export default function MisFacturas({ miProveedor }: MisFacturasProps) {
     );
   }
 
-  const tableColumns = '220px minmax(280px,1fr) 180px 170px 140px 180px';
-
   return (
     <div className="space-y-6">
       <motion.div

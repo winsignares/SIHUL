@@ -95,7 +95,7 @@ export default function GestionUsuariosReal() {
     return componenteRoles
       .filter((item) => item.rol_id === rolId)
       .reduce<Record<number, PermisoTipo>>((acc, item) => {
-        acc[item.componente_id] = item.permiso;
+        acc[item.componente_id] = item.permiso as PermisoTipo;
         return acc;
       }, {});
   }, [componenteRoles]);
