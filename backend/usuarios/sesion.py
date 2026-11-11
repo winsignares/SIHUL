@@ -205,18 +205,28 @@ def estado_de_sesion(usuario, since=None):
     }
 
 
-def cambiar_contrasena(correo, contrasena_actual, contrasena_nueva):
+def cambiar_contrasena(correo, contrasena_actual, contrasena_nueva, ip):
+    """Cambia la contraseña si la actual es correcta.
+
+    Comparte el conteo de intentos con el inicio de sesión (mismo correo e IP): los fallos de los dos suman y el
+    bloqueo aplica a los dos, para que no sirva para probar contraseñas sin límite.
+    """
     if not correo or not contrasena_actual or not contrasena_nueva:
         raise DatosIncompletos('correo, old_contrasena y new_contrasena son requeridos')
+
+    intentos = ControlDeIntentos(correo.strip().lower(), ip)
+    if intentos.bloqueado():
+        raise DemasiadosIntentos()
 
     try:
         usuario = Usuario.objects.get(correo=correo)
     except Usuario.DoesNotExist:
-        raise CredencialesInvalidas() from None
+        _fallo(intentos)
     password_ok, _ = password_valida(usuario, contrasena_actual)
     if not password_ok:
-        raise CredencialesInvalidas()
+        _fallo(intentos)
 
+    intentos.reiniciar()
     usuario.contrasena_hash = make_password(contrasena_nueva)
     usuario.password = usuario.contrasena_hash
     usuario.save()

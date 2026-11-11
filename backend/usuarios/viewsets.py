@@ -33,7 +33,7 @@ _ESTADO_DE_RECHAZO = {
 
 # Acciones que se publican también en /usuarios/<ruta>/ (nginx reescribe ahí /api/usuarios/<ruta>/). No usan la
 # autenticación de DRF: login la abre, logout la cierra, session-auth-state lee la sesión y responde 401 si no hay,
-# y change-password se valida con la contraseña actual.
+# y change-password se valida con la contraseña actual (con el mismo límite de intentos que login).
 ACCIONES_DE_SESION = ('login', 'logout', 'session_auth_state', 'change_password')
 
 
@@ -223,7 +223,8 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
     def change_password(self, request):
         try:
             sesion.cambiar_contrasena(
-                request.data.get('correo'), request.data.get('old_contrasena'), request.data.get('new_contrasena'))
+                request.data.get('correo'), request.data.get('old_contrasena'), request.data.get('new_contrasena'),
+                _get_client_ip(request))
         except sesion.SesionRechazada as rechazo:
             return Response({'error': rechazo.mensaje}, status=_ESTADO_DE_RECHAZO[type(rechazo)])
         return Response({'message': 'Contraseña cambiada exitosamente'}, status=status.HTTP_200_OK)

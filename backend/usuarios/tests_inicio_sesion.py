@@ -8,6 +8,8 @@ así que las pruebas corren en las dos.
 - El correo se compara sin mayúsculas ni espacios alrededor.
 - Un hash heredado (werkzeug) se migra al formato de Django al iniciar sesión.
 - Cualquiera puede cerrar su sesión y cambiar su contraseña con la actual; sin sesión, el estado responde 401.
+- El cambio de contraseña comparte el conteo de intentos del inicio de sesión: los fallos de los dos suman, y el
+  bloqueo aplica a los dos.
 """
 import json
 import time
@@ -213,6 +215,48 @@ class InicioDeSesionTests(TestCase):
         cliente = self.client_class()
         self.assertEqual(self.entrar(contrasena=CLAVE, cliente=cliente).status_code, 401)
         self.assertEqual(self.entrar(contrasena='Nueva-1', cliente=cliente).status_code, 200)
+
+    def cambiar(self, actual, nueva='Nueva-1', correo=None, ip=None):
+        extra = {'HTTP_X_FORWARDED_FOR': ip} if ip else {}
+        return self.client_class().put(self.CAMBIO, json.dumps({
+            'correo': correo or self.usuario.correo, 'old_contrasena': actual, 'new_contrasena': nueva}),
+            content_type='application/json', **extra)
+
+    def clave_guardada(self):
+        return Usuario.objects.get(pk=self.usuario.pk).contrasena_hash
+
+    def test_cambiar_contrasena_bloquea_al_quinto_fallo(self):
+        antes = self.clave_guardada()
+        self.assertEqual([self.cambiar('mala').status_code for _ in range(5)], [401, 401, 401, 401, 429])
+        r = self.cambiar(CLAVE)
+        self.assertEqual((r.status_code, r.json()), (429, BLOQUEO))
+        self.assertEqual(self.clave_guardada(), antes)
+        self.assertEqual(self.cambiar(CLAVE, ip='10.0.0.7').status_code, 200)  # otra IP no está bloqueada
+
+    def test_cambiar_contrasena_con_correo_inexistente_tambien_cuenta(self):
+        codigos = [self.cambiar('x', correo='Nadie@prueba.test').status_code for _ in range(5)]
+        self.assertEqual(codigos, [401, 401, 401, 401, 429])
+
+    def test_los_fallos_del_inicio_de_sesion_bloquean_el_cambio_de_contrasena(self):
+        for _ in range(5):
+            self.entrar(contrasena='mala')
+        self.assertEqual(self.cambiar(CLAVE).status_code, 429)
+
+    def test_los_fallos_del_cambio_de_contrasena_bloquean_el_inicio_de_sesion(self):
+        for _ in range(3):
+            self.cambiar('mala')
+        self.assertEqual([self.entrar(contrasena='mala').status_code for _ in range(2)], [401, 429])
+        self.assertEqual(self.entrar().status_code, 429)
+
+    def test_un_cambio_correcto_reinicia_el_conteo(self):
+        for _ in range(4):
+            self.cambiar('mala')
+        self.assertEqual(self.cambiar(CLAVE).status_code, 200)
+        self.assertEqual([self.entrar(contrasena='mala').status_code for _ in range(4)], [401] * 4)
+
+    def test_cambiar_contrasena_sin_datos_no_cuenta(self):
+        self.assertEqual({self.cambiar('').status_code for _ in range(6)}, {400})
+        self.assertEqual(self.cambiar(CLAVE).status_code, 200)
 
     def test_quien_no_gestiona_usuarios_cambia_su_contrasena_con_y_sin_sesion(self):
         for cliente, actual, nueva in ((self.client_class(), CLAVE, 'Nueva-1'), (self.client, 'Nueva-1', 'Nueva-2')):
