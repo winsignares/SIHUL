@@ -16,6 +16,10 @@ SIHUL **no usa JWT**: usa sesiones de Django sobre un modelo `Usuario` custom (`
 - **Filtrado multi-sede/seccional**:
   - `SedeFilterMiddleware` (`mysite/middleware.py`): adjunta `request.sede`/`request.sede_id`/`request.seccional`/`request.user_obj` en cada request autenticado.
   - `SeccionalMixin` (`mysite/seccional_auth.py`): mixin para ViewSets DRF que filtra automáticamente los querysets por la seccional del usuario (excepto el administrador general: superusuario o rol `admin_global`, ver `ve_todas_las_seccionales`) y completa `sede`/`seccional` al crear registros.
+- **Gestión de Usuarios sin ser administrador** (`usuarios/gestion.py`): con el componente «Gestión de Usuarios» en
+  VER se consulta la lista de la propia seccional; en EDITAR además se crea, edita y elimina a sus personas, sin roles
+  de administración (admin, admin_global, Admin Financiero) ni superusuarios, sin tocar cuentas de administración y,
+  en el propio registro, solo nombre, correo y contraseña.
 - **Helpers y permisos DRF**: `mysite/auth_helpers.py` (funciones puras: `is_admin_global`, `is_admin_sistema`, `has_any_role`, etc.) usadas por las clases de permiso en `mysite/permissions.py` (`IsAdminGlobal`, `IsAdminSistema`, `IsCoordinador`, `IsDocente`, `IsEstudiante`, `IsSupervisorGeneral`, `IsAuthenticatedReadOnlyOrAdminWrite`...).
 - **Microsoft OAuth** (opcional, solo si `MICROSOFT_CLIENT_ID`/`SECRET` están configurados): vía `django-allauth` + adaptador custom `mysite/social_adapter.py`.
 
