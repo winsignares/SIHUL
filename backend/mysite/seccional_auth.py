@@ -27,7 +27,7 @@ class SessionUsuarioAuthentication(BaseAuthentication):
         from usuarios.models import Usuario
 
         try:
-            usuario = Usuario.objects.select_related('sede', 'seccional').get(id=user_id, activo=True)
+            usuario = Usuario.objects.select_related('rol', 'sede', 'seccional').get(id=user_id, activo=True)
         except Usuario.DoesNotExist as exc:
             raise AuthenticationFailed('Usuario de sesión no válido.') from exc
 
