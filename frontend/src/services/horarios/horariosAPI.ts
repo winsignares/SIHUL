@@ -153,8 +153,9 @@ export interface HorariosPorPeriodoResponse {
     horarios: HorarioExtendido[];
 }
 
-const downloadHorariosBlob = async (endpoint: string, horarios: HorarioExtendido[]): Promise<Blob> => {
-    return apiClient.postBlob(endpoint, { horarios });
+// `estadoHorario` (opcional) acota el reporte; sin él se envían solo los horarios, como siempre.
+const downloadHorariosBlob = async (endpoint: string, horarios: HorarioExtendido[], estadoHorario?: string): Promise<Blob> => {
+    return apiClient.postBlob(endpoint, estadoHorario === undefined ? { horarios } : { horarios, estado_horario: estadoHorario });
 };
 
 /**
@@ -374,29 +375,29 @@ export const horarioService = {
     /**
      * Exporta horarios de programa a PDF.
      */
-    exportarPdfPrograma: async (horarios: HorarioExtendido[]): Promise<Blob> => {
-        return downloadHorariosBlob('/horarios/exportar-pdf/', horarios);
+    exportarPdfPrograma: async (horarios: HorarioExtendido[], estadoHorario?: string): Promise<Blob> => {
+        return downloadHorariosBlob('/horarios/exportar-pdf/', horarios, estadoHorario);
     },
 
     /**
      * Exporta horarios de docente a PDF.
      */
-    exportarPdfDocente: async (horarios: HorarioExtendido[]): Promise<Blob> => {
-        return downloadHorariosBlob('/horarios/exportar-pdf-docente/', horarios);
+    exportarPdfDocente: async (horarios: HorarioExtendido[], estadoHorario?: string): Promise<Blob> => {
+        return downloadHorariosBlob('/horarios/exportar-pdf-docente/', horarios, estadoHorario);
     },
 
     /**
      * Exporta horarios de programa a Excel.
      */
-    exportarExcelPrograma: async (horarios: HorarioExtendido[]): Promise<Blob> => {
-        return downloadHorariosBlob('/horarios/exportar-excel/', horarios);
+    exportarExcelPrograma: async (horarios: HorarioExtendido[], estadoHorario?: string): Promise<Blob> => {
+        return downloadHorariosBlob('/horarios/exportar-excel/', horarios, estadoHorario);
     },
 
     /**
      * Exporta horarios de docente a Excel.
      */
-    exportarExcelDocente: async (horarios: HorarioExtendido[]): Promise<Blob> => {
-        return downloadHorariosBlob('/horarios/exportar-excel-docente/', horarios);
+    exportarExcelDocente: async (horarios: HorarioExtendido[], estadoHorario?: string): Promise<Blob> => {
+        return downloadHorariosBlob('/horarios/exportar-excel-docente/', horarios, estadoHorario);
     },
 
     /**

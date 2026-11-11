@@ -31,6 +31,14 @@ class DisponibilidadService {
       throw error;
     }
   }
+
+  /** PDF del reporte de disponibilidad (semana actual por defecto). */
+  async descargarPdf(estadoHorario: EstadoHorarioReporte = 'aprobado', semanaOffset: number = 0): Promise<Blob> {
+    return apiClient.postBlob('/espacios/reporte/disponibilidad/pdf/', {
+      semana_offset: semanaOffset,
+      estado_horario: estadoHorario
+    });
+  }
 }
 
 export const disponibilidadService = new DisponibilidadService();

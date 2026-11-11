@@ -26,6 +26,14 @@ class CapacidadService {
       throw error;
     }
   }
+
+  /** PDF del reporte de capacidad (semana actual por defecto). */
+  async descargarPdf(estadoHorario: EstadoHorarioReporte = 'aprobado', semanaOffset: number = 0): Promise<Blob> {
+    return apiClient.postBlob('/espacios/reporte/capacidad/pdf/', {
+      semana_offset: semanaOffset,
+      estado_horario: estadoHorario
+    });
+  }
 }
 
 export const capacidadService = new CapacidadService();

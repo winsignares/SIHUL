@@ -41,6 +41,14 @@ class ReporteOcupacionService {
       throw error;
     }
   }
+
+  /** PDF del reporte de ocupacion (semana actual por defecto). */
+  async descargarPdf(estadoHorario: EstadoHorarioReporte = 'aprobado', semanaOffset: number = 0): Promise<Blob> {
+    return apiClient.postBlob('/espacios/reporte/ocupacion/pdf/', {
+      semana_offset: semanaOffset,
+      estado_horario: estadoHorario
+    });
+  }
 }
 
 export const reporteOcupacionService = new ReporteOcupacionService();

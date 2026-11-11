@@ -1,18 +1,10 @@
 import { facturasService } from '../services/financiero';
 import { resolveBackendBaseUrl } from '../core/backendUrl';
 import { trackedFetch } from '../core/apiActivity';
+import { descargarBlob } from './descargas';
 
 // Descarga un blob directamente al sistema abriendo el explorador de archivos (sin nueva pestaña)
-export function triggerBlobDownload(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-}
+export const triggerBlobDownload = descargarBlob;
 
 // Abre una URL en nueva pestaña usando window.open sincrónico + asignación posterior
 // DEBE llamarse dentro del handler síncrono del click (no dentro de async/await)

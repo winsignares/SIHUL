@@ -10,8 +10,7 @@ import { grupoService, type Grupo } from '../../services/grupos/gruposAPI';
 import { periodoService, type PeriodoAcademico } from '../../services/periodos/periodoAPI';
 import { useAuth } from '../../context/AuthContext';
 import { clearSessionCacheByPrefix, getSessionCacheData, setSessionCacheData } from '../../core/sessionCache';
-import { resolveApiBaseUrl } from '../../core/backendUrl';
-import { trackedFetch } from '../../core/apiActivity';
+import { descargarBlob } from '../../share/descargas';
 import { userService } from '../../services/users/authService';
 import { useValidacionHorarios } from './useValidacionHorarios';
 import type { HorarioValidable } from './useValidacionHorarios';
@@ -20,7 +19,6 @@ const CENTRO_HORARIOS_CACHE_KEY = 'gestion-academica-centro-horarios-v2';
 const ACADEMIC_CATALOG_UPDATED_EVENT = 'academic-catalog-updated';
 const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
 const HORARIOS_UPDATED_EVENT = 'horariosUpdated';
-const apiUrl = resolveApiBaseUrl(import.meta.env.VITE_API_URL);
 
 export interface Docente {
     id: number;
@@ -784,29 +782,8 @@ export function useCentroHorarios() {
 
         try {
             // Usar horarios filtrados según los filtros aplicados
-            const response = await trackedFetch(`${apiUrl}/horarios/exportar-pdf/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    horarios: horariosFiltrados
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Error al generar PDF');
-            }
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `horarios_centro.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            const blob = await horarioService.exportarPdfPrograma(horariosFiltrados);
+            descargarBlob(blob, `horarios_centro.pdf`);
 
             showNotification('¡Horarios descargados exitosamente en PDF!', 'success');
         } catch (error) {
@@ -820,29 +797,8 @@ export function useCentroHorarios() {
 
         try {
             // Usar horarios filtrados según los filtros aplicados
-            const response = await trackedFetch(`${apiUrl}/horarios/exportar-excel/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    horarios: horariosFiltrados
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Error al generar Excel');
-            }
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `horarios_centro.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            const blob = await horarioService.exportarExcelPrograma(horariosFiltrados);
+            descargarBlob(blob, `horarios_centro.xlsx`);
 
             showNotification('¡Horarios descargados exitosamente en Excel!', 'success');
         } catch (error) {
