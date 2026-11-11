@@ -37,6 +37,8 @@ router.register(r'espacios-recursos', EspacioRecursoViewSet, basename='espacio-r
 router.register(r'roles', RolViewSet, basename='rol-api')
 router.register(r'usuarios', UsuarioViewSet, basename='usuario-api')
 
+_vista_de_la_api = {patron.name: patron.callback for patron in router.urls}
+
 urlpatterns = [
     path('health/', health.live),
     path('health/ready/', health.ready),
@@ -50,8 +52,13 @@ urlpatterns = [
     path('api/notificaciones/', include('notificaciones.api_urls')),
     path('api/financiero/', include('financiero.urls')),  # Rutas API Financiero
     # Solo login, logout, estado de sesión y cambio de contraseña: nginx reescribe
-    # /api/usuarios/<ruta>/ a /usuarios/<ruta>/. Todo lo demás se sirve bajo /api/.
-    path('usuarios/', include('usuarios.urls')),
+    # /api/usuarios/<ruta>/ a /usuarios/<ruta>/. Son las mismas vistas de /api/usuarios/; todo lo demás se sirve bajo /api/.
+    *[path(f'usuarios/{ruta}/', _vista_de_la_api[f'usuario-api-{ruta}'], name=nombre) for ruta, nombre in (
+        ('login', 'login_usuario'),
+        ('logout', 'logout_usuario'),
+        ('session-auth-state', 'session_auth_state'),
+        ('change-password', 'change_password'),
+    )],
 ]
 
 if settings.MICROSOFT_OAUTH_ENABLED:

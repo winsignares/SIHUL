@@ -32,17 +32,16 @@ class RutasPublicadasTests(TestCase):
         fuera = [ruta for ruta in _todas_las_rutas() if not PREFIJOS_PUBLICADOS.match(ruta)]
         self.assertEqual(fuera, [])
 
-    def test_las_rutas_de_sesion_siguen_en_usuarios(self):
-        for nombre, ruta, vista in [
-            ('login_usuario', '/usuarios/login/', 'login'),
-            ('logout_usuario', '/usuarios/logout/', 'logout'),
-            ('session_auth_state', '/usuarios/session-auth-state/', 'session_auth_state'),
-            ('change_password', '/usuarios/change-password/', 'change_password'),
+    def test_las_rutas_de_sesion_siguen_en_usuarios_y_son_las_de_la_api(self):
+        for nombre, accion in [
+            ('login_usuario', 'login'),
+            ('logout_usuario', 'logout'),
+            ('session_auth_state', 'session-auth-state'),
+            ('change_password', 'change-password'),
         ]:
             with self.subTest(nombre=nombre):
-                self.assertEqual(reverse(nombre), ruta)
-                funcion = resolve(ruta).func
-                self.assertEqual((funcion.__module__, funcion.__name__), ('usuarios.views', vista))
+                self.assertEqual(reverse(nombre), f'/usuarios/{accion}/')
+                self.assertIs(resolve(f'/usuarios/{accion}/').func, resolve(f'/api/usuarios/{accion}/').func)
 
     def test_las_rutas_antiguas_sin_api_no_existen(self):
         for ruta in [

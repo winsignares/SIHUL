@@ -104,7 +104,7 @@ if (hasEditPermission("Mi Componente")) {
 ## 7️⃣ DÓNDE ESTÁ TODO
 
 **Backend**:
-- Autenticación: `backend/usuarios/views.py` (función `login`)
+- Autenticación: `backend/usuarios/sesion.py` (caso de uso) y las acciones de `UsuarioViewSet` en `backend/usuarios/viewsets.py`
 - Modelos Usuario/Rol: `backend/usuarios/models.py`
 - Componentes: `backend/componentes/models.py`
 - API REST: `backend/<app>/views.py` + `api_urls.py`
@@ -288,7 +288,7 @@ curl -X POST http://localhost:8000/usuarios/login/ \
 **AppRouter**: `frontend/src/router/AppRouter.tsx` (244 líneas)  
 **componentRoutes**: `frontend/src/config/componentRoutes.ts` (165 líneas)  
 **useAdminDashboard**: `frontend/src/hooks/useAdminDashboard.ts` (350 líneas)  
-**Login Backend**: `backend/usuarios/views.py` linea ~333  
+**Login Backend**: `backend/usuarios/sesion.py` (`autenticar`)  
 **Modelos**: `backend/usuarios/models.py` + `backend/componentes/models.py`
 
 ---
