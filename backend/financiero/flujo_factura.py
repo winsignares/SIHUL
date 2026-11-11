@@ -5,19 +5,24 @@ paso exige, o faltan datos, lanza `PasoRechazado` con el mensaje y el código HT
 estado y la etapa, fija las fechas, asigna el responsable, agrega las observaciones con su etiqueta, actualiza el
 SLA, deja la entrada del historial y notifica (salvo el control de pago, que no notifica).
 
-Los pasos que suben archivos (causar, registrar pago aplicado) o pasan por el serializador (crear, completar
-registro, corregir) siguen en financiero/views.py y usan `registrar_historial` y `notificar_transicion` de aquí.
+En los pasos que suben archivos (causar, registrar pago aplicado) la vista entrega las funciones que guardan el
+archivo en la carpeta compartida y regeneran el PDF unificado. En los que pasan por el serializador (crear, corregir,
+completar registro) la vista valida y guarda el formulario, y el servicio aplica el resto del paso.
 """
+import logging
 import unicodedata
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from notificaciones.signals import crear_notificacion
 from usuarios.models import Usuario
 
 from . import models
 from .sla import actualizar_sla_factura
+
+logger = logging.getLogger(__name__)
 
 ESTADO_ENVIADA_RECTORIA = 'Enviada Rectoría'
 ESTADO_AUTORIZADA = 'Autorizada'
@@ -165,10 +170,11 @@ QUIEN_ACTUA = object()
 
 
 def _avanzar(factura, usuario, *, estado, etapa, accion, observacion=None, etiqueta=None, fecha=None,
-             inicio_etapa=None, responsable=QUIEN_ACTUA, rechazo_en=None):
+             inicio_etapa=None, responsable=QUIEN_ACTUA, rechazo_en=None, al_guardar=None):
     """Aplica el paso: estado, etapa, fecha del paso (campo) e inicio de etapa, responsable y observación.
 
-    Luego guarda, actualiza el SLA, registra el rechazo (si `rechazo_en` trae la etapa), el historial y notifica.
+    Luego guarda, llama a `al_guardar(factura)` si se indica, actualiza el SLA, registra el rechazo (si `rechazo_en`
+    trae la etapa), el historial y notifica.
     """
     estado_anterior = factura.estado
     hoy = _hoy()
@@ -181,6 +187,8 @@ def _avanzar(factura, usuario, *, estado, etapa, accion, observacion=None, etiqu
     if etiqueta and observacion:
         _agregar_observacion(factura, etiqueta, observacion)
     factura.save()
+    if al_guardar:
+        al_guardar(factura)
 
     actualizar_sla_factura(factura)
 
@@ -489,3 +497,173 @@ def rechazar(factura, usuario, datos, archivar_documentos):
     registrar_historial(factura, usuario, 'Factura devuelta', estado_anterior, estado_destino, motivo)
     notificar_transicion(factura, estado_anterior, estado_destino)
     return estado_destino
+
+
+# ------------------------------------------------------------------ registro y corrección
+def registrar_creacion(factura, usuario):
+    """Completa una factura recién guardada: etapa inicial, historial, SLA y aviso a Contabilidad."""
+    if not factura.etapa_actual:
+        factura.etapa_actual = 'Recepción y Registro'
+    if not factura.fecha_inicio_etapa:
+        factura.fecha_inicio_etapa = factura.fecha_recepcion or _hoy()
+    factura.save(update_fields=['etapa_actual', 'fecha_inicio_etapa', 'fecha_modificacion'])
+
+    registrar_historial(factura, usuario, 'Factura registrada', None, 'Recibida')
+    actualizar_sla_factura(factura)
+    notificar_transicion(factura, None, factura.estado)
+    return factura
+
+
+def validar_completar_registro(factura):
+    if factura.estado not in ['Recibida', 'Registrada', 'Devuelta']:
+        raise PasoRechazado(
+            'Solo se pueden completar facturas en estado Recibida, Registrada o Devuelta. '
+            f'Estado actual: {factura.estado}'
+        )
+
+
+def completar_registro(factura, usuario, estado_anterior, guardar_datos):
+    """Deja la factura Registrada en «Radicación y Causación».
+
+    `guardar_datos()` guarda los cambios ya validados del formulario (después de fijar el estado y antes de guardarlo).
+    """
+    factura.estado = 'Registrada'
+    factura.etapa_actual = 'Radicación y Causación'
+    if not factura.usuario_responsable:
+        factura.usuario_responsable = usuario
+    if not factura.fecha_inicio_etapa:
+        factura.fecha_inicio_etapa = _hoy()
+
+    guardar_datos()
+    factura.save(update_fields=['estado', 'etapa_actual', 'usuario_responsable', 'fecha_inicio_etapa'])
+
+    actualizar_sla_factura(factura)
+    models.HistorialFactura.objects.create(
+        factura=factura,
+        accion='Completar Registro',
+        estado_anterior=estado_anterior,
+        estado_nuevo='Registrada',
+        usuario=usuario,
+        usuario_nombre=usuario.get_full_name() or usuario.username,
+        usuario_rol='Funcionario',
+        observacion='Factura registrada correctamente por el funcionario',
+    )
+    notificar_transicion(factura, estado_anterior, 'Registrada')
+    return factura
+
+
+def validar_correccion(factura, usuario):
+    """Solo el proveedor corrige, y solo facturas devueltas o rechazadas."""
+    rol_nombre = (usuario.rol.nombre if getattr(usuario, 'rol', None) else '').strip()
+    if rol_nombre != 'Proveedor':
+        raise PasoRechazado('No autorizado para corregir esta factura.', codigo=403)
+    if factura.estado not in ['Devuelta', 'Rechazada']:
+        raise PasoRechazado('Solo se pueden corregir facturas en estado Devuelta o Rechazada.')
+
+
+def reenviar_correccion(factura, usuario, estado_anterior, observaciones_correccion):
+    """Vuelve a Recepción y Registro la factura corregida y marca reenviada la última devolución."""
+    factura.estado = 'Recibida'
+    factura.etapa_actual = 'Recepción y Registro'
+    factura.usuario_responsable = None
+    factura.fecha_inicio_etapa = _hoy()
+    factura.fecha_recepcion = _hoy()
+    factura.save(update_fields=['estado', 'etapa_actual', 'usuario_responsable', 'fecha_inicio_etapa', 'fecha_recepcion'])
+
+    observaciones_correccion = (observaciones_correccion or '').strip() or 'Corrección enviada por proveedor.'
+
+    ultimo_rechazo = models.RechazoDevolucion.objects.filter(factura=factura).order_by('-fecha_rechazo').first()
+    if ultimo_rechazo:
+        ultimo_rechazo.estado_devolucion = 'Reenviada'
+        ultimo_rechazo.fecha_correccion = timezone.now()
+        ultimo_rechazo.usuario_corrige = usuario
+        ultimo_rechazo.observaciones_correccion = observaciones_correccion
+        ultimo_rechazo.save(update_fields=[
+            'estado_devolucion', 'fecha_correccion', 'usuario_corrige', 'observaciones_correccion'])
+
+    registrar_historial(factura, usuario, 'Corrección enviada por proveedor', estado_anterior, 'Recibida',
+                        observaciones_correccion)
+    actualizar_sla_factura(factura)
+    notificar_transicion(factura, estado_anterior, factura.estado)
+    return factura
+
+
+# ------------------------------------------------------------------ pasos con archivos
+def causar(factura, usuario, datos, soporte, guardar_soporte, regenerar_pdf):
+    """Causa la factura radicada con el soporte PDF de Seven.
+
+    `guardar_soporte(factura, archivo, nombre)` lo guarda en la carpeta compartida (lanza `PasoRechazado` si no puede)
+    y `regenerar_pdf(factura)` rehace el PDF unificado después de guardar la factura.
+    """
+    if factura.estado != 'Radicada':
+        raise PasoRechazado('La factura debe estar radicada')
+
+    observaciones = datos.get('observaciones', '')
+    if not soporte:
+        raise PasoRechazado('Debe adjuntar el soporte PDF de causacion en Seven.')
+
+    nombre_archivo = getattr(soporte, 'name', 'soporte_causacion_seven.pdf') or 'soporte_causacion_seven.pdf'
+    if not nombre_archivo.lower().endswith('.pdf'):
+        raise PasoRechazado('El soporte de causacion debe estar en formato PDF.')
+    guardar_soporte(factura, soporte, nombre_archivo)
+
+    return _avanzar(factura, usuario, estado='Causada', etapa='Alistamiento', fecha='fecha_causacion',
+                    accion='Factura causada', observacion=observaciones, al_guardar=regenerar_pdf)
+
+
+def registrar_pago_aplicado(factura, usuario, datos, comprobante, guardar_comprobante, regenerar_pdf):
+    """Registra el pago aplicado y deja la factura Pagada; todo o nada.
+
+    `guardar_comprobante(factura, archivo)` valida y guarda el comprobante (lanza `PasoRechazado` si no puede);
+    `regenerar_pdf(factura)` rehace el PDF unificado.
+    """
+    _exigir_estado(factura, ['Autorizada'], 'La factura debe estar autorizada para pago')
+    if not factura.numero_confirmacion:
+        raise PasoRechazado(
+            'Debe confirmar el control de pago en Dirección Financiera antes de registrar el pago aplicado')
+
+    numero_transaccion = _texto(datos, 'numero_transaccion')
+    observaciones = _texto(datos, 'observaciones')
+    fecha_pago = datos.get('fecha_pago_aplicado')
+    fecha_pago_parsed = None
+    if fecha_pago:
+        fecha_pago_parsed = parse_date(str(fecha_pago))
+        if not fecha_pago_parsed:
+            raise PasoRechazado('La fecha de pago aplicado no es valida. Use el formato YYYY-MM-DD.')
+
+    if not numero_transaccion:
+        raise PasoRechazado('Debe registrar el número de transacción bancaria')
+    if models.Factura.objects.filter(numero_transaccion=numero_transaccion).exclude(pk=factura.pk).exists():
+        raise PasoRechazado('El número de transacción bancaria ya está registrado en otra factura.')
+    if not comprobante:
+        raise PasoRechazado('Debe adjuntar el comprobante bancario en archivo (PDF/XML/PNG/JPG).')
+
+    estado_anterior = factura.estado
+    try:
+        with transaction.atomic():
+            factura.numero_transaccion = numero_transaccion
+            factura.fecha_pago_aplicado = fecha_pago_parsed or _hoy()
+            factura.fecha_comprobante = factura.fecha_pago_aplicado
+            factura.estado = 'Pagada'
+            factura.etapa_actual = 'Pago Aplicado'
+            factura.fecha_inicio_etapa = factura.fecha_pago_aplicado
+            factura.usuario_responsable = usuario
+            if observaciones:
+                _agregar_observacion(factura, 'Tesorería', observaciones)
+            factura.save()
+
+            actualizar_sla_factura(factura)
+            guardar_comprobante(factura, comprobante)
+            regenerar_pdf(factura)
+
+            registrar_historial(factura, usuario, 'Pago aplicado y factura pagada', estado_anterior, 'Pagada',
+                                observaciones or None)
+            notificar_transicion(factura, estado_anterior, 'Pagada')
+    except IntegrityError:
+        raise PasoRechazado('El número de transacción bancaria ya está registrado en otra factura.')
+    except PasoRechazado:
+        raise
+    except Exception as exc:
+        logger.exception('Error registrando pago aplicado factura_id=%s', factura.id)
+        raise PasoRechazado('No fue posible registrar el pago aplicado.', codigo=500, detail=str(exc))
+    return factura
