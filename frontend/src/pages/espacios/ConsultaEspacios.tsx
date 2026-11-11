@@ -1,33 +1,23 @@
 import { Input } from '../../share/input';
 import { DatePickerField } from '../../share/date-picker-field';
 import { Button } from '../../share/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../share/card';
+import { Card, CardContent } from '../../share/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../share/select';
 import { Badge } from '../../share/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../share/dialog';
 import { Label } from '../../share/label';
 import { Alert, AlertDescription } from '../../share/alert';
 import { 
-  GripVertical, 
   Search, 
-  CalendarDays, 
   MapPin, 
-  Users, 
   Grid3x3, 
   ArrowLeft, 
   Home, 
   RefreshCw, 
   FileDown, 
   FileSpreadsheet,
-  Pencil,
   AlertCircle,
-  ChevronsLeft,
-  ChevronsRight,
   X,
-  Trash2
 } from 'lucide-react';
-import { motion } from 'motion/react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../share/tooltip';
 import { useConsultaEspacios } from '../../hooks/espacios/useConsultaEspacios';
 import { getRangoSemanaCompleta } from '../../hooks/espacios/semanaUtils';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -48,10 +38,15 @@ import { NuevaSolicitudDialog } from '../../components/espacios/consulta/NuevaSo
 
 import { useMoverClase } from '../../hooks/espacios/useMoverClase';
 import { MoverClaseDialog } from '../../components/espacios/consulta/MoverClaseDialog';
+import { VistaTarjetas } from '../../components/espacios/consulta/VistaTarjetas';
+import { VistaCronograma } from '../../components/espacios/consulta/VistaCronograma';
+import { ConfirmarMovimientoDialog } from '../../components/espacios/consulta/ConfirmarMovimientoDialog';
+import { ConfirmarEliminarHorarioDialog } from '../../components/espacios/consulta/ConfirmarEliminarHorarioDialog';
 export default function ConsultaEspacios() {
   const isMobile = useIsMobile();
   const { user, hasEditPermission } = useAuth();
   
+  const hook = useConsultaEspacios();
   const {
     searchTerm,
     setSearchTerm,
@@ -76,26 +71,11 @@ export default function ConsultaEspacios() {
     tiposEspacio,
     sedes,
     diasSemana,
-    encabezadosDiasCronograma,
     horas,
-    isDiaBloqueado,
-    isCeldaBloqueada,
-    horaToSlotIndex,
-    isHoraExacta,
     filteredEspacios,
-    paginatedEspacios,
     totalFilteredEspacios,
     currentPage,
-    totalPages,
-    pageNumbers,
     pageSize,
-    goToPage,
-    goToNextPage,
-    goToPrevPage,
-    hasPrevPageWindow,
-    hasNextPageWindow,
-    goToPrevPageWindow,
-    goToNextPageWindow,
     estadisticas,
     horarios,
     prestamos,
@@ -106,8 +86,6 @@ export default function ConsultaEspacios() {
     // Drag-to-select
     isDragging,
     seleccionRango,
-    iniciarSeleccion,
-    actualizarSeleccion,
     finalizarSeleccion,
     puedeCrearSolicitudes,
     // Modal solicitud
@@ -118,21 +96,19 @@ export default function ConsultaEspacios() {
     periodos,
     fechaServidor,
     periodosLoading,
-    horariosLoading,
     errorBusquedaPeriodo,
     buscarPeriodoPorRangoFechas,
     cargarHorariosPorPeriodo,
     cargarPeriodos,
     // Vista individual
     espacioSeleccionado,
-    verCronogramaIndividual,
     volverALista,
     // Filtros
     limpiarFiltros,
     // Recarga
     recargarDatos,
     loading
-  } = useConsultaEspacios();
+  } = hook;
 
   const describirConflicto = (conflicto: typeof horarios[number]) => {
     const etiqueta =
@@ -785,705 +761,19 @@ export default function ConsultaEspacios() {
         </div>
       )}
 
-      {/* Vista Tarjetas */}
-      {vistaActual === 'tarjetas' && !espacioSeleccionado && (
-        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
-          {loading && (
-            <div className="col-span-full flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 py-10">
-              <div className="flex items-center gap-3 text-slate-700 dark:text-slate-200">
-                <RefreshCw className="w-5 h-5 animate-spin" />
-                <span className="text-sm font-medium">Cargando espacios...</span>
-              </div>
-            </div>
-          )}
-
-          {!loading && paginatedEspacios.length === 0 && (
-            <div className="col-span-full rounded-lg border border-slate-200 bg-white p-10 text-center dark:border-slate-700 dark:bg-slate-800">
-              <AlertCircle className="mx-auto mb-3 h-10 w-10 text-slate-400" />
-              <p className="font-medium text-slate-700 dark:text-slate-200">
-                {filterOcupacion === 'todos'
-                  ? 'No hay espacios que coincidan con los filtros seleccionados.'
-                  : 'No hay espacios que cumplan el filtro de ocupación seleccionado.'}
-              </p>
-              {periodoSeleccionado && (
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Los horarios y préstamos se están consultando únicamente para el periodo {periodoSeleccionado.nombre}.
-                </p>
-              )}
-            </div>
-          )}
-
-          {!loading && paginatedEspacios.map(espacio => {
-            return (
-              <motion.div
-                key={espacio.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card 
-                  className="border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow bg-white dark:bg-slate-800 cursor-pointer"
-                  onClick={() => verCronogramaIndividual(espacio)}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-slate-900 dark:text-slate-100 mb-2">{espacio.nombre}</CardTitle>
-                        <Badge variant="outline" className="border-blue-600 text-blue-600">
-                          {espacio.tipo}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getAperturaBadge(espacio.estaAbierto)}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                      <Users className="w-4 h-4" />
-                      <span>Capacidad: {espacio.capacidad} personas</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                      <MapPin className="w-4 h-4" />
-                      <span>{espacio.sede} - Edificio {espacio.edificio}</span>
-                    </div>
-                    {espacio.proximaClase && (
-                      <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-3">
-                        <p className="text-slate-600 dark:text-slate-400">Próxima clase:</p>
-                        <p className="text-blue-700 dark:text-blue-300">{espacio.proximaClase}</p>
-                      </div>
-                    )}
-                    <div className="pt-2">
-                      <Button variant="outline" className="w-full text-sm border-blue-600 text-blue-600 hover:bg-blue-50">
-                        <CalendarDays className="w-4 h-4 mr-2" />
-                        Ver Cronograma
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Paginación - Solo en vista tarjetas */}
-      {vistaActual === 'tarjetas' && !espacioSeleccionado && totalFilteredEspacios > 0 && (
-        <Card className="border-slate-200 dark:border-slate-700 shadow-lg bg-white dark:bg-slate-800">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Mostrando {firstItemIndex}-{lastItemIndex} de {totalFilteredEspacios} espacios
-              </p>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToPrevPage}
-                  disabled={currentPage === 1}
-                >
-                  Anterior
-                </Button>
-
-                <div className="flex items-center gap-1 flex-wrap">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={goToPrevPageWindow}
-                    disabled={!hasPrevPageWindow}
-                    className="px-2"
-                    title="Ver números de página anteriores"
-                    aria-label="Grupo anterior de páginas"
-                  >
-                    <ChevronsLeft className="w-4 h-4" />
-                  </Button>
-                  <div className="flex gap-1 flex-wrap">
-                    {pageNumbers.map((page) => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => goToPage(page)}
-                        className={currentPage === page ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800' : ''}
-                      >
-                        {page}
-                      </Button>
-                    ))}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={goToNextPageWindow}
-                    disabled={!hasNextPageWindow}
-                    className="px-2"
-                    title="Ver números de página siguientes"
-                    aria-label="Grupo siguiente de páginas"
-                  >
-                    <ChevronsRight className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToNextPage}
-                  disabled={currentPage === totalPages}
-                >
-                  Siguiente
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Vista Cronograma */}
-      {vistaActual === 'cronograma' && (
-        <div className="space-y-6">
-          {/* Leyenda */}
-          <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-            <CardContent className="p-4">
-              <div className="flex flex-wrap gap-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-green-500 rounded"></div>
-                  <span className="text-sm text-slate-700 dark:text-slate-300">Préstamo Aprobado</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-yellow-300 rounded"></div>
-                  <span className="text-sm text-slate-700 dark:text-slate-300">Préstamo Pendiente</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-yellow-600 rounded"></div>
-                  <span className="text-sm text-slate-700 dark:text-slate-300">Mantenimiento</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-[#f97316] rounded"></div>
-                  <span className="text-sm text-slate-700 dark:text-slate-300">Horario Pendiente</span>
-                </div>
-                {puedeCrearSolicitudes && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-purple-500 rounded border-2 border-purple-700"></div>
-                    <span className="text-sm text-slate-700 dark:text-slate-300">Seleccionar (drag para solicitud)</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Indicador de selección activa */}
-          {isDragging && puedeCrearSolicitudes && (
-            <div className="bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700 rounded-lg p-3 text-center">
-              <p className="text-purple-700 dark:text-purple-300 text-sm font-medium">
-                Suelta el mouse para crear una nueva solicitud de préstamo
-              </p>
-            </div>
-          )}
-
-          {espaciosToShow.map((espacio) => (
-            <motion.div
-              key={espacio.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-slate-900 dark:text-slate-100">{espacio.nombre}</CardTitle>
-                      <div className="flex gap-2 mt-2">
-                        <Badge variant="outline" className="border-blue-600 text-blue-600">
-                          {espacio.tipo}
-                        </Badge>
-                        <Badge variant="outline" className="border-slate-600 text-slate-600">
-                          Capacidad: {espacio.capacidad}
-                        </Badge>
-                        <Badge variant="outline" className="border-slate-600 text-slate-600">
-                          Edificio {espacio.edificio}
-                        </Badge>
-                      </div>
-                    </div>
-                    {puedeEditarDisponibilidad && (
-                      <Button
-                        variant={editModeEnabled ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setEditModeEnabled(!editModeEnabled)}
-                        className={`${editModeEnabled
-                          ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white'
-                          : 'border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950'
-                        }`}
-                        title={editModeEnabled ? 'Deshabilitar edición de horarios' : 'Habilitar edición de horarios'}
-                      >
-                        <Pencil className="w-4 h-4 mr-2" />
-                        {editModeEnabled ? 'Edición ON' : 'Editar'}
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div 
-                    className="overflow-x-auto relative"
-                    onMouseLeave={() => {
-                      if (isDragging) finalizarSeleccion();
-                    }}
-                  >
-                    {(horariosLoading || loading) && (
-                      <div className="absolute inset-0 z-30 bg-white/70 dark:bg-slate-900/70 backdrop-blur-[1px] flex items-center justify-center rounded-md">
-                        <div className="flex flex-col items-center gap-2 text-slate-700 dark:text-slate-200">
-                          <RefreshCw className="w-6 h-6 animate-spin" />
-                          <span className="text-xs font-medium">Cargando horarios...</span>
-                        </div>
-                      </div>
-                    )}
-                    <div className="min-w-[1000px] grid grid-cols-[60px_repeat(7,1fr)] gap-1" style={{ gridAutoRows: '32px' }}>
-                      <div className="p-2"></div>
-                      {encabezadosDiasCronograma.map(({ dia, fecha }) => {
-                        const diaBloqueado = isDiaBloqueado(dia);
-                        return (
-                        <div
-                          key={dia}
-                          className={`text-sm text-center text-white font-semibold p-2 rounded ${
-                            diaBloqueado
-                              ? 'bg-slate-500 shadow-[inset_0_0_0_9999px_rgba(15,23,42,0.25)]'
-                              : 'bg-slate-800'
-                          }`}
-                        >
-                          <div>{dia}</div>
-                          <div className="text-[11px] font-medium opacity-90">{fecha}</div>
-                        </div>
-                      )})}
-
-                      {horas.map((hora, idx) => (
-                        <div
-                          key={`time-${hora}`}
-                          className={`text-xs text-slate-500 flex items-start justify-end pr-2 ${isHoraExacta(hora) ? 'font-semibold' : 'text-[9px] opacity-60'}`}
-                          style={{
-                            gridColumn: 1,
-                            gridRow: idx + 2
-                          }}
-                        >
-                          {isHoraExacta(hora) ? `${hora}:00` : `${hora % 1 === 0.25 ? '15' : hora % 1 === 0.5 ? '30' : '45'}`}
-                        </div>
-                      ))}
-
-                      {/* Celdas vacías / disponibles - con interacción de selección y drop zone */}
-                      {horas.flatMap((hora, horaIdx) =>
-                        encabezadosDiasCronograma.map(({ dia }, diaIdx) => {
-                          const ocupacionRaw = getOcupacionPorHora(espacio.id, dia, hora);
-                          
-                          // Verificar si la ocupación es del horario que se está arrastrando
-                          const esOcupacionDelHorarioArrastrado = draggedHorario && ocupacionRaw && 
-                            ocupacionRaw.id === draggedHorario.id &&
-                            ocupacionRaw.materia === draggedHorario.materia;
-                          
-                          // Si es la ocupación del horario arrastrado, tratar como disponible
-                          const ocupado = ocupacionRaw && !esOcupacionDelHorarioArrastrado;
-                          
-                          const estaSeleccionada = estaEnRangoSeleccion(espacio.id, dia, hora);
-                          const celdaBloqueada = isCeldaBloqueada(dia, hora);
-                          
-                          // Verificar si esta celda es parte del rango donde se está arrastrando
-                          // Para horarios de múltiples horas, resaltar todas las celdas que ocupará
-                          // Slots de 15 minutos (4 slots por hora) para precisión en horarios
-                          const duracionSlots = draggedHorario ? Math.round((draggedHorario.horaFin - draggedHorario.horaInicio) * 4) : 0;
-                          const dropStartIdx = dragOverCell ? horaToSlotIndex(dragOverCell.hora) : -1;
-                          const isDragOver = dragOverCell?.dia === dia &&
-                            draggedHorario &&
-                            horaIdx >= dropStartIdx &&
-                            horaIdx < dropStartIdx + duracionSlots;
-                          const conflictoDrop = draggedHorario
-                            ? getConflictoEnRango(
-                                espacio.id,
-                                dia,
-                                hora,
-                                hora + (draggedHorario.horaFin - draggedHorario.horaInicio),
-                                draggedHorario
-                              )
-                            : null;
-                          
-                          // Verificar si hay un horario arrastrado que puede soltarse aquí
-                          // Para horarios, no bloquear por fecha pasada (son recurrentes)
-                          const canDrop =
-                            !!draggedHorario &&
-                            editModeEnabled &&
-                            draggedHorario.espacioId === espacio.id &&
-                            !celdaBloqueada &&
-                            !conflictoDrop;
-                          
-                          // Handlers inline sin useCallback (usar useCallback dentro de loop causa error de hooks)
-                          const handleMouseDown = () => {
-                            if (!celdaBloqueada && !ocupado && puedeCrearSolicitudes && !editModeEnabled) {
-                              iniciarSeleccion(espacio.id, dia, hora);
-                            }
-                          };
-                          
-                          const handleMouseEnter = () => {
-                            if (!celdaBloqueada && !ocupado && puedeCrearSolicitudes && !editModeEnabled) {
-                              actualizarSeleccion(espacio.id, dia, hora);
-                            }
-                          };
-                          
-                          const handleMouseUp = () => {
-                            if (puedeCrearSolicitudes && !editModeEnabled) {
-                              finalizarSeleccion();
-                            }
-                          };
-                          
-                          const handleDragOver = (e: React.DragEvent) => {
-                            if (canDrop) {
-                              e.preventDefault();
-                              setDragOverCell({ dia, hora });
-                            } else if (dragOverCell?.dia === dia && dragOverCell?.hora === hora) {
-                              setDragOverCell(null);
-                            }
-                          };
-                          
-                          const handleDragLeave = () => {
-                            if (dragOverCell?.dia === dia && dragOverCell?.hora === hora) {
-                              setDragOverCell(null);
-                            }
-                          };
-                          
-                          const handleDrop = (e: React.DragEvent) => {
-                            e.preventDefault();
-                            setDragOverCell(null);
-                            if (draggedHorario && draggedHorario.espacioId === espacio.id) {
-                              const duracion = draggedHorario.horaFin - draggedHorario.horaInicio;
-                              const nuevaHoraInicio = hora;
-                              const nuevaHoraFin = nuevaHoraInicio + duracion;
-                              
-                              if (nuevaHoraFin <= 23) {
-                                const validacion = validarMovimiento(
-                                  draggedHorario,
-                                  espacio.id,
-                                  dia,
-                                  nuevaHoraInicio,
-                                  nuevaHoraFin
-                                );
-
-                                if (!validacion.valido) {
-                                  toast.error(validacion.error || 'No se puede mover el horario');
-                                  return;
-                                }
-
-                                setIsProcessingMove(false);
-                                setPendingMove({
-                                  horario: draggedHorario,
-                                  targetDia: dia,
-                                  targetHoraInicio: nuevaHoraInicio
-                                });
-                                setConfirmMoveDialogOpen(true);
-                              } else {
-                                toast.error('No se puede mover el horario: las clases solo se permiten hasta las 23:00');
-                              }
-                            }
-                          };
-
-                          // Simplificado: solo verificar si es hora exacta para marcar visualmente
-                          // La selección ahora es por bloques de 1 hora pero visualmente simple
-                          const esHoraExactaSeleccion = estaSeleccionada && hora % 1 === 0;
-
-                          return (
-                            <div
-                              key={`cell-${espacio.id}-${dia}-${hora}`}
-                              className={`border rounded transition-all ${
-                                isDragOver && canDrop
-                                  ? 'border-purple-500 bg-purple-100 dark:bg-purple-900/30 ring-2 ring-purple-500'
-                                  :
-                                celdaBloqueada
-                                  ? 'border-slate-300 dark:border-slate-700 bg-slate-200/70 dark:bg-slate-900/60 shadow-[inset_0_0_0_9999px_rgba(15,23,42,0.06)] cursor-not-allowed'
-                                  :
-                                ocupado
-                                  ? 'border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50'
-                                  : puedeCrearSolicitudes
-                                    ? estaSeleccionada
-                                      ? esHoraExactaSeleccion
-                                        ? 'bg-purple-500 border-purple-700 cursor-grabbing'
-                                        : 'bg-purple-400 border-purple-600 cursor-grabbing'
-                                      : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/20'
-                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-                              }`}
-                              style={{
-                                gridColumn: diaIdx + 2,
-                                gridRow: horaIdx + 2,
-                                zIndex: isDragOver && canDrop ? 20 : 1
-                              }}
-                              onMouseDown={handleMouseDown}
-                              onMouseEnter={handleMouseEnter}
-                              onMouseUp={handleMouseUp}
-                              onDragOver={handleDragOver}
-                              onDragLeave={handleDragLeave}
-                              onDrop={handleDrop}
-                            />
-                          );
-                        })
-                      )}
-
-                      {/* Horarios ocupados */}
-                      {horarios
-                        .filter(h => h.espacioId === espacio.id && encabezadosDiasCronograma.some(d => d.dia === h.dia))
-                        .map((ocupacion, idx) => {
-                          const colStart = getDayColumnIndex(ocupacion.dia);
-                          // Calcular fila usando slots de 15 minutos (precisión para horarios)
-                          const slotStart = Math.round((ocupacion.horaInicio - 6) * 4);
-                          const slotEnd = Math.round((ocupacion.horaFin - 6) * 4);
-                          const rowStart = slotStart + 2;
-                          const rowSpan = Math.max(1, slotEnd - slotStart);
-
-                          // Validar rango: tenemos 68 slots (17 horas * 4) + 1 header = 69 filas
-                          if (rowStart < 2 || rowStart > 70) return null;
-
-                          // Determinar si es un préstamo o un horario académico
-                          const isPrestamo = ocupacion.tipo === 'prestamo';
-                          const isPrestamoPendiente = isPrestamo && ocupacion.prestamo?.estado === 'Pendiente';
-                          const isPrestamoAprobado = isPrestamo && ocupacion.prestamo?.estado === 'Aprobado';
-                          const isHorarioPendiente = !isPrestamo && ocupacion.estado === 'pendiente';
-                          const prestamoMotivo = isPrestamo
-                            ? ocupacion.prestamo?.motivo || ocupacion.grupo || ocupacion.materia || 'Préstamo'
-                            : '';
-                          
-                          let colorClass = '';
-                          let labelText = '';
-                          
-                          if (isPrestamoPendiente) {
-                            colorClass = 'bg-gradient-to-br from-yellow-300 to-yellow-400 hover:from-yellow-400 hover:to-yellow-500 text-slate-900';
-                            labelText = 'PENDIENTE';
-                          } else if (isPrestamoAprobado) {
-                            colorClass = 'bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white';
-                            labelText = '';
-                          } else if (isHorarioPendiente) {
-                            colorClass = 'bg-[#f97316] hover:bg-[#ea580c] text-white';
-                            labelText = 'PENDIENTE';
-                          } else if (ocupacion.estado === 'ocupado') {
-                            colorClass = 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white';
-                            labelText = ocupacion.materia || 'Ocupado';
-                          } else {
-                            colorClass = 'bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white';
-                            labelText = '';
-                          }
-
-                          return (
-                            <TooltipProvider key={`ocup-${idx}`}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div
-                                    draggable={editModeEnabled && (!isPrestamo || isPrestamoPendiente)}
-                                    onDragStart={() => {
-                                      if (editModeEnabled && (!isPrestamo || isPrestamoPendiente)) {
-                                        setDraggedHorario(ocupacion);
-                                      }
-                                    }}
-                                    onDragEnd={() => {
-                                      setDraggedHorario(null);
-                                      setDragOverCell(null);
-                                    }}
-                                    onClick={() => {
-                                      if (!editModeEnabled) return;
-                                      setSelectedClassToMove(ocupacion);
-                                      setTargetEspacioId(espacio.id);
-                                      setMoveClassDialogOpen(true);
-                                      setMoveClassError(null);
-                                    }}
-                                    className={`${colorClass} text-white rounded p-1 sm:p-1.5 md:p-2 text-[10px] sm:text-[11px] md:text-xs ${
-                                      editModeEnabled && (!isPrestamo || isPrestamoPendiente)
-                                        ? 'cursor-move hover:ring-2 hover:ring-purple-400 group' 
-                                        : 'cursor-pointer'
-                                    } shadow-sm flex flex-col justify-center items-center overflow-hidden h-full text-center leading-tight relative`}
-                                    style={{
-                                      gridColumn: `${colStart} / span 1`,
-                                      gridRow: `${rowStart} / span ${rowSpan}`,
-                                      zIndex: 10,
-                                      minHeight: `${rowSpan * 30}px`
-                                    }}
-                                  >
-                                    {editModeEnabled && (!isPrestamo || isPrestamoPendiente) && (
-                                      <>
-                                        <div className="absolute top-0.5 left-0.5 opacity-60">
-                                          <GripVertical className="w-3 h-3" />
-                                        </div>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (ocupacion.id) {
-                                              setHorarioToDelete(ocupacion);
-                                              setConfirmDeleteDialogOpen(true);
-                                            } else {
-                                              toast.error('No se puede eliminar: ID no disponible');
-                                            }
-                                          }}
-                                          className="absolute top-0.5 right-0.5 p-0.5 bg-white/30 hover:bg-red-500 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                          title="Eliminar horario"
-                                        >
-                                          <Trash2 className="w-3 h-3" />
-                                        </button>
-                                      </>
-                                    )}
-                                    {isPrestamoPendiente && labelText && (
-                                      <p className="text-[8px] sm:text-[9px] font-bold mb-0.5 bg-white/30 px-1 py-0.5 rounded shrink-0">{labelText}</p>
-                                    )}
-                                    <p className="font-semibold text-[9px] sm:text-[10px] md:text-[11px] leading-tight break-words w-full line-clamp-2">
-                                      {isPrestamo ? prestamoMotivo : ocupacion.materia}
-                                    </p>
-                                    <p className="text-[8px] sm:text-[9px] opacity-90 leading-tight break-words w-full line-clamp-1">{ocupacion.docente}</p>
-                                    {rowSpan > 1 && (
-                                      <p className="text-[7px] sm:text-[8px] opacity-75 leading-tight mt-0.5 shrink-0">
-                                        {Math.floor(ocupacion.horaInicio)}:{String(Math.round((ocupacion.horaInicio % 1) * 60)).padStart(2, '0')}-
-                                        {Math.floor(ocupacion.horaFin)}:{String(Math.round((ocupacion.horaFin % 1) * 60)).padStart(2, '0')}
-                                      </p>
-                                    )}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="space-y-1">
-                                    {isPrestamo ? (
-                                      <>
-                                        <p className={`font-semibold text-sm ${isPrestamoPendiente ? 'text-yellow-600' : 'text-green-600'}`}>
-                                          PRÉSTAMO {isPrestamoPendiente ? 'PENDIENTE' : 'APROBADO'}
-                                        </p>
-                                        <p className="text-xs">Actividad: {ocupacion.materia}</p>
-                                        <p className="text-xs">Solicitante: {ocupacion.docente || 'No especificado'}</p>
-                                        {ocupacion.grupo && <p className="text-xs">Motivo: {ocupacion.grupo}</p>}
-                                        {ocupacion.prestamo?.asistentes && (
-                                          <p className="text-xs">Asistentes: {ocupacion.prestamo.asistentes}</p>
-                                        )}
-                                        {ocupacion.prestamo?.telefono && (
-                                          <p className="text-xs">Teléfono: {ocupacion.prestamo.telefono}</p>
-                                        )}
-                                        <p className="text-xs">Horario: {Math.floor(ocupacion.horaInicio)}:{String(Math.round((ocupacion.horaInicio % 1) * 60)).padStart(2, '0')} - {Math.floor(ocupacion.horaFin)}:{String(Math.round((ocupacion.horaFin % 1) * 60)).padStart(2, '0')}</p>
-                                        <p className="text-xs">Fecha: {ocupacion.prestamo?.fecha}</p>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <p className="font-semibold text-sm">{ocupacion.materia}</p>
-                                        <p className="text-xs">Docente: {ocupacion.docente || 'No asignado'}</p>
-                                        <p className="text-xs">Grupo: {ocupacion.grupo || 'N/A'}</p>
-                                        <p className="text-xs">Horario: {Math.floor(ocupacion.horaInicio)}:{String(Math.round((ocupacion.horaInicio % 1) * 60)).padStart(2, '0')} - {Math.floor(ocupacion.horaFin)}:{String(Math.round((ocupacion.horaFin % 1) * 60)).padStart(2, '0')}</p>
-                                        <p className="text-xs capitalize">Estado: {ocupacion.estado}</p>
-                                      </>
-                                    )}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          );
-                        })}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      )}
-
+      <VistaTarjetas hook={hook} firstItemIndex={firstItemIndex} lastItemIndex={lastItemIndex} isMobile={isMobile} getAperturaBadge={getAperturaBadge} periodoSeleccionado={periodoSeleccionado} />
+      <VistaCronograma hook={hook} dragOverCell={dragOverCell} setDragOverCell={setDragOverCell} draggedHorario={draggedHorario} setDraggedHorario={setDraggedHorario} editModeEnabled={editModeEnabled} setEditModeEnabled={setEditModeEnabled} espaciosToShow={espaciosToShow} estaEnRangoSeleccion={estaEnRangoSeleccion} getDayColumnIndex={getDayColumnIndex} puedeEditarDisponibilidad={puedeEditarDisponibilidad} setConfirmDeleteDialogOpen={setConfirmDeleteDialogOpen} setConfirmMoveDialogOpen={setConfirmMoveDialogOpen} setHorarioToDelete={setHorarioToDelete} setIsProcessingMove={setIsProcessingMove} setMoveClassDialogOpen={setMoveClassDialogOpen} setMoveClassError={setMoveClassError} setPendingMove={setPendingMove} setSelectedClassToMove={setSelectedClassToMove} setTargetEspacioId={setTargetEspacioId} validarMovimiento={validarMovimiento} />
       {/* Modal de Nueva Solicitud */}
       <NuevaSolicitudDialog user={user} dialogSolicitudOpen={dialogSolicitudOpen} setDialogSolicitudOpen={setDialogSolicitudOpen} nuevaSolicitudData={nuevaSolicitudData} filteredEspacios={filteredEspacios} horarios={horarios} getConflictoEnRango={getConflictoEnRango} periodoSeleccionado={periodoSeleccionado} puedeEditarDisponibilidad={puedeEditarDisponibilidad} describirConflicto={describirConflicto} />
 
       {/* Diálogo de Confirmación para Drag and Drop */}
-      <Dialog open={confirmMoveDialogOpen} onOpenChange={setConfirmMoveDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirmar Movimiento</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {pendingMove?.horario && (
-              <div className="space-y-3">
-                <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-3">
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Horario Actual:</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {pendingMove.horario.materia} - {pendingMove.horario.dia} {formatHoraDecimal(pendingMove.horario.horaInicio)}-{formatHoraDecimal(pendingMove.horario.horaFin)}
-                  </p>
-                </div>
-                <div className="flex items-center justify-center">
-                  <div className="bg-purple-100 dark:bg-purple-900/30 rounded-full p-2">
-                    <ArrowLeft className="w-5 h-5 text-purple-600 rotate-90" />
-                  </div>
-                </div>
-                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
-                  <p className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">Nuevo Horario:</p>
-                  <p className="text-sm text-purple-600 dark:text-purple-400">
-                    {pendingMove.targetDia} {formatHoraDecimal(pendingMove.targetHoraInicio)}-{formatHoraDecimal(pendingMove.targetHoraInicio + (pendingMove.horario.horaFin - pendingMove.horario.horaInicio))}
-                  </p>
-                </div>
-              </div>
-            )}
-            <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
-              ¿Estás seguro de que deseas mover esta clase?
-            </p>
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => {
-              setConfirmMoveDialogOpen(false);
-              setPendingMove(null);
-              setDraggedHorario(null);
-            }}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={ejecutarMovimiento}
-              disabled={isProcessingMove}
-              className="bg-gradient-to-r from-purple-600 to-purple-700 text-white"
-            >
-              {isProcessingMove ? 'Procesando...' : 'Confirmar Movimiento'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ConfirmarMovimientoDialog confirmMoveDialogOpen={confirmMoveDialogOpen} ejecutarMovimiento={ejecutarMovimiento} isProcessingMove={isProcessingMove} pendingMove={pendingMove} setConfirmMoveDialogOpen={setConfirmMoveDialogOpen} setDraggedHorario={setDraggedHorario} setPendingMove={setPendingMove} />
 
       {/* Diálogo para Mover Clase a Otro Espacio */}
       <MoverClaseDialog moverClase={moverClase} filteredEspacios={filteredEspacios} diasSemana={diasSemana} horas={horas} getOcupacionPorHora={getOcupacionPorHora} getConflictoEnRango={getConflictoEnRango} describirConflicto={describirConflicto} />
 
       {/* Diálogo de Confirmación para Eliminar Horario */}
-      <Dialog open={confirmDeleteDialogOpen} onOpenChange={setConfirmDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-600">Confirmar Eliminación</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {horarioToDelete && (
-              <div className="space-y-3">
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                  <p className="text-sm font-medium text-red-700 dark:text-red-300 mb-1">Horario a eliminar:</p>
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {horarioToDelete.materia} - {horarioToDelete.dia} {formatHoraDecimal(horarioToDelete.horaInicio)}-{formatHoraDecimal(horarioToDelete.horaFin)}
-                  </p>
-                  {horarioToDelete.docente && (
-                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                      Docente: {horarioToDelete.docente}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center justify-center">
-                  <div className="bg-red-100 dark:bg-red-900/30 rounded-full p-2">
-                    <Trash2 className="w-5 h-5 text-red-600" />
-                  </div>
-                </div>
-              </div>
-            )}
-            <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
-              ¿Estás seguro de que deseas eliminar este horario? Esta acción no se puede deshacer.
-            </p>
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => {
-              setConfirmDeleteDialogOpen(false);
-              setHorarioToDelete(null);
-            }}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={eliminarHorario}
-              disabled={isDeleting}
-              className="bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800"
-            >
-              {isDeleting ? 'Eliminando...' : 'Eliminar Horario'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ConfirmarEliminarHorarioDialog confirmDeleteDialogOpen={confirmDeleteDialogOpen} eliminarHorario={eliminarHorario} horarioToDelete={horarioToDelete} isDeleting={isDeleting} setConfirmDeleteDialogOpen={setConfirmDeleteDialogOpen} setHorarioToDelete={setHorarioToDelete} />
     </div>
   );
 }
