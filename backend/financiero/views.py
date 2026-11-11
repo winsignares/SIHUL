@@ -22,13 +22,12 @@ from pathlib import Path
 from urllib.parse import urlparse
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
-from django.utils.dateparse import parse_date
 from openpyxl import Workbook
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from . import flujo_factura, models, serializers
-from .sla import build_parametros_sla_map, actualizar_sla_factura, sincronizar_sla_facturas
+from .sla import build_parametros_sla_map, sincronizar_sla_facturas
 from usuarios.models import Usuario
 
 logger = logging.getLogger(__name__)
@@ -1536,26 +1535,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         factura = serializer.save(creado_por=self.request.user)
-
-        if not factura.etapa_actual:
-            factura.etapa_actual = 'Recepción y Registro'
-        if not factura.fecha_inicio_etapa:
-            factura.fecha_inicio_etapa = factura.fecha_recepcion or timezone.now().date()
-
-        factura.save(update_fields=['etapa_actual', 'fecha_inicio_etapa', 'fecha_modificacion'])
-        
-        # Crear entrada en historial
-        models.HistorialFactura.objects.create(
-            factura=factura,
-            accion='Factura registrada',
-            estado_nuevo='Recibida',
-            usuario=self.request.user,
-            usuario_nombre=self.request.user.nombre,
-            usuario_rol=self.request.user.rol.nombre if self.request.user.rol else 'Sin rol'
-        )
-
-        actualizar_sla_factura(factura)
-        flujo_factura.notificar_transicion(factura, None, factura.estado)
+        flujo_factura.registrar_creacion(factura, self.request.user)
 
     @action(detail=False, methods=['get'])
     def numero_sugerido(self, request):
@@ -1713,62 +1693,31 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def causar(self, request, pk=None):
         """Causar una factura"""
         factura = self.get_object()
-        
-        if factura.estado != 'Radicada':
-            return Response(
-                {'error': 'La factura debe estar radicada'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
-        observaciones = request.data.get('observaciones', '')
-        soporte_causacion = request.FILES.get('soporte_causacion')
-
-        if not soporte_causacion:
-            return Response({'error': 'Debe adjuntar el soporte PDF de causacion en Seven.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        nombre_archivo = getattr(soporte_causacion, 'name', 'soporte_causacion_seven.pdf') or 'soporte_causacion_seven.pdf'
-        if not nombre_archivo.lower().endswith('.pdf'):
-            return Response({'error': 'El soporte de causacion debe estar en formato PDF.'}, status=status.HTTP_400_BAD_REQUEST)
-        content_bytes, tamano_bytes, hash_archivo = _documento_upload_metadata(soporte_causacion)
+        def guardar_soporte(factura, soporte, nombre_archivo):
+            content_bytes, tamano_bytes, hash_archivo = _documento_upload_metadata(soporte)
+            try:
+                _guardar_documento_en_carpeta_compartida(
+                    factura=factura,
+                    nombre_archivo=nombre_archivo,
+                    tipo_documento='Soporte Causacion Seven',
+                    tipo_mime=getattr(soporte, 'content_type', '') or 'application/pdf',
+                    content_bytes=content_bytes,
+                    tamano_bytes=tamano_bytes,
+                    hash_archivo=hash_archivo,
+                    usuario=request.user,
+                )
+            except ValidationError as exc:
+                raise flujo_factura.PasoRechazado(
+                    'No fue posible guardar el soporte en la carpeta compartida.',
+                    codigo=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.detail,
+                )
 
         try:
-            _guardar_documento_en_carpeta_compartida(
-                factura=factura,
-                nombre_archivo=nombre_archivo,
-                tipo_documento='Soporte Causacion Seven',
-                tipo_mime=getattr(soporte_causacion, 'content_type', '') or 'application/pdf',
-                content_bytes=content_bytes,
-                tamano_bytes=tamano_bytes,
-                hash_archivo=hash_archivo,
-                usuario=request.user,
-            )
-        except ValidationError as exc:
-            return Response({'error': 'No fue posible guardar el soporte en la carpeta compartida.', 'detail': exc.detail}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-        factura.estado = 'Causada'
-        factura.fecha_causacion = timezone.now().date()
-        factura.etapa_actual = 'Alistamiento'
-        factura.fecha_inicio_etapa = factura.fecha_causacion
-        factura.usuario_responsable = request.user
-        factura.save()
-
-        _regenerar_pdf_unificado_nas(factura)
-
-        actualizar_sla_factura(factura)
-
-        models.HistorialFactura.objects.create(
-            factura=factura,
-            accion='Factura causada',
-            estado_anterior='Radicada',
-            estado_nuevo='Causada',
-            usuario=request.user,
-            usuario_nombre=request.user.nombre,
-            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
-            observacion=observaciones or None
-        )
-
-        flujo_factura.notificar_transicion(factura, 'Radicada', 'Causada')
-
+            flujo_factura.causar(factura, request.user, request.data, request.FILES.get('soporte_causacion'),
+                                 guardar_soporte, _regenerar_pdf_unificado_nas)
+        except flujo_factura.PasoRechazado as rechazo:
+            return Response(rechazo.respuesta, status=rechazo.codigo)
         return Response(
             self._factura_response_data(factura),
             status=status.HTTP_200_OK
@@ -1799,77 +1748,17 @@ class FacturaViewSet(viewsets.ModelViewSet):
         """Registrar pago aplicado en tesorería."""
         factura = self.get_object()
 
-        if factura.estado != 'Autorizada':
-            return Response(
-                {'error': 'La factura debe estar autorizada para pago'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if not factura.numero_confirmacion:
-            return Response(
-                {'error': 'Debe confirmar el control de pago en Dirección Financiera antes de registrar el pago aplicado'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        numero_transaccion = (request.data.get('numero_transaccion') or '').strip()
-        observaciones = (request.data.get('observaciones') or '').strip()
-        fecha_pago = request.data.get('fecha_pago_aplicado')
-        fecha_pago_parsed = None
-        if fecha_pago:
-            fecha_pago_parsed = parse_date(str(fecha_pago))
-            if not fecha_pago_parsed:
-                return Response(
-                    {'error': 'La fecha de pago aplicado no es valida. Use el formato YYYY-MM-DD.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        comprobante_bancario = request.FILES.get('comprobante_bancario')
-
-        if not numero_transaccion:
-            return Response(
-                {'error': 'Debe registrar el número de transacción bancaria'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if models.Factura.objects.filter(numero_transaccion=numero_transaccion).exclude(pk=factura.pk).exists():
-            return Response(
-                {'error': 'El número de transacción bancaria ya está registrado en otra factura.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if not comprobante_bancario:
-            return Response(
-                {'error': 'Debe adjuntar el comprobante bancario en archivo (PDF/XML/PNG/JPG).'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        estado_anterior = factura.estado
-
-        try:
-            with transaction.atomic():
-                factura.numero_transaccion = numero_transaccion
-                factura.fecha_pago_aplicado = fecha_pago_parsed or timezone.now().date()
-                factura.fecha_comprobante = factura.fecha_pago_aplicado
-                factura.estado = 'Pagada'
-                factura.etapa_actual = 'Pago Aplicado'
-                factura.fecha_inicio_etapa = factura.fecha_pago_aplicado
-                factura.usuario_responsable = request.user
-
-                if observaciones:
-                    factura.observaciones = '\n'.join(filter(None, [factura.observaciones, f"[Tesorería] {observaciones}"]))
-
-                factura.save()
-
-                actualizar_sla_factura(factura)
-
-                documento_data = {
-                    'factura': factura.id,
-                    'nombre_archivo': comprobante_bancario.name,
-                    'tipo_documento': 'Comprobante de Pago',
-                    'url_storage': comprobante_bancario.name,
-                    'tamano_bytes': comprobante_bancario.size,
-                    'tipo_mime': getattr(comprobante_bancario, 'content_type', '') or None,
-                    'archivo': comprobante_bancario,
-                }
+        def guardar_comprobante(factura, comprobante_bancario):
+            documento_data = {
+                'factura': factura.id,
+                'nombre_archivo': comprobante_bancario.name,
+                'tipo_documento': 'Comprobante de Pago',
+                'url_storage': comprobante_bancario.name,
+                'tamano_bytes': comprobante_bancario.size,
+                'tipo_mime': getattr(comprobante_bancario, 'content_type', '') or None,
+                'archivo': comprobante_bancario,
+            }
+            try:
                 documento_serializer = serializers.DocumentoAdjuntoSerializer(
                     data=documento_data,
                     context={'request': request}
@@ -1886,43 +1775,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
                     hash_archivo=hash_archivo,
                     usuario=request.user,
                 )
-                _regenerar_pdf_unificado_nas(factura)
+            except ValidationError as exc:
+                raise flujo_factura.PasoRechazado('Datos de validacion incorrectos.', detail=exc.detail)
 
-                models.HistorialFactura.objects.create(
-                    factura=factura,
-                    accion='Pago aplicado y factura pagada',
-                    estado_anterior=estado_anterior,
-                    estado_nuevo='Pagada',
-                    usuario=request.user,
-                    usuario_nombre=request.user.nombre,
-                    usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
-                    observacion=observaciones or None,
-                )
-
-                flujo_factura.notificar_transicion(factura, estado_anterior, 'Pagada')
-        except IntegrityError:
-            return Response(
-                {'error': 'El número de transacción bancaria ya está registrado en otra factura.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        except ValidationError as exc:
-            return Response(
-                {
-                    'error': 'Datos de validacion incorrectos.',
-                    'detail': exc.detail,
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        except Exception as exc:
-            logger.exception('Error registrando pago aplicado factura_id=%s', factura.id)
-            return Response(
-                {
-                    'error': 'No fue posible registrar el pago aplicado.',
-                    'detail': str(exc),
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
+        try:
+            flujo_factura.registrar_pago_aplicado(factura, request.user, request.data,
+                                                  request.FILES.get('comprobante_bancario'),
+                                                  guardar_comprobante, _regenerar_pdf_unificado_nas)
+        except flujo_factura.PasoRechazado as rechazo:
+            return Response(rechazo.respuesta, status=rechazo.codigo)
         return Response(
             self._factura_response_data(factura),
             status=status.HTTP_200_OK
@@ -2062,16 +1923,10 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def corregir(self, request, pk=None):
         """Permite al proveedor corregir y reenviar una factura devuelta/rechazada."""
         factura = self.get_object()
-        rol_nombre = (request.user.rol.nombre if getattr(request.user, 'rol', None) else '').strip()
-
-        if rol_nombre != 'Proveedor':
-            return Response({'error': 'No autorizado para corregir esta factura.'}, status=status.HTTP_403_FORBIDDEN)
-
-        if factura.estado not in ['Devuelta', 'Rechazada']:
-            return Response(
-                {'error': 'Solo se pueden corregir facturas en estado Devuelta o Rechazada.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        try:
+            flujo_factura.validar_correccion(factura, request.user)
+        except flujo_factura.PasoRechazado as rechazo:
+            return Response(rechazo.respuesta, status=rechazo.codigo)
 
         estado_anterior = factura.estado
         # Separar items antes de pasar al serializer de detalle (que no los acepta en escritura)
@@ -2105,48 +1960,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
                     item.pop('orden', None)
                     models.ItemFactura.objects.create(factura=factura, orden=orden, **item)
 
-        factura.estado = 'Recibida'
-        factura.etapa_actual = 'Recepción y Registro'
-        factura.usuario_responsable = None
-        factura.fecha_inicio_etapa = timezone.now().date()
-        factura.fecha_recepcion = timezone.now().date()
-        factura.save(update_fields=['estado', 'etapa_actual', 'usuario_responsable', 'fecha_inicio_etapa', 'fecha_recepcion'])
-
-        observaciones_correccion = (request.data.get('observaciones_correccion') or '').strip()
-        if not observaciones_correccion:
-            observaciones_correccion = 'Corrección enviada por proveedor.'
-
-        ultimo_rechazo = (
-            models.RechazoDevolucion.objects
-            .filter(factura=factura)
-            .order_by('-fecha_rechazo')
-            .first()
-        )
-        if ultimo_rechazo:
-            ultimo_rechazo.estado_devolucion = 'Reenviada'
-            ultimo_rechazo.fecha_correccion = timezone.now()
-            ultimo_rechazo.usuario_corrige = request.user
-            ultimo_rechazo.observaciones_correccion = observaciones_correccion
-            ultimo_rechazo.save(update_fields=[
-                'estado_devolucion',
-                'fecha_correccion',
-                'usuario_corrige',
-                'observaciones_correccion'
-            ])
-
-        models.HistorialFactura.objects.create(
-            factura=factura,
-            accion='Corrección enviada por proveedor',
-            estado_anterior=estado_anterior,
-            estado_nuevo='Recibida',
-            usuario=request.user,
-            usuario_nombre=request.user.nombre,
-            usuario_rol=request.user.rol.nombre if request.user.rol else 'Sin rol',
-            observacion=observaciones_correccion
-        )
-
-        actualizar_sla_factura(factura)
-        flujo_factura.notificar_transicion(factura, estado_anterior, factura.estado)
+        flujo_factura.reenviar_correccion(factura, request.user, estado_anterior,
+                                          request.data.get('observaciones_correccion'))
 
         return Response(
             serializers.FacturaDetailSerializer(factura, context={'request': request}).data,
@@ -2232,56 +2047,22 @@ class FacturaViewSet(viewsets.ModelViewSet):
         """Completar registro de una factura pendiente (desde Mis Pendientes)"""
         factura = self.get_object()
         estado_anterior = factura.estado
-        
-        # Permitir facturas en estado 'Recibida', 'Registrada' o 'Devuelta' para reproceso.
-        if factura.estado not in ['Recibida', 'Registrada', 'Devuelta']:
-            return Response(
-                {'error': f'Solo se pueden completar facturas en estado Recibida, Registrada o Devuelta. Estado actual: {factura.estado}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+        try:
+            flujo_factura.validar_completar_registro(factura)
+        except flujo_factura.PasoRechazado as rechazo:
+            return Response(rechazo.respuesta, status=rechazo.codigo)
+
         # Permitir actualización de campos específicos sin validaciones estrictas
         serializer = serializers.FacturaDetailSerializer(
-            factura, 
-            data=request.data, 
+            factura,
+            data=request.data,
             partial=True
         )
-        
-        if serializer.is_valid():
-            # Cambiar estado a 'Registrada' al completar el registro
-            factura.estado = 'Registrada'
-            factura.etapa_actual = 'Radicación y Causación'
-            # Asignar responsable si no está asignado
-            if not factura.usuario_responsable:
-                factura.usuario_responsable = request.user
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            if not factura.fecha_inicio_etapa:
-                factura.fecha_inicio_etapa = timezone.now().date()
-
-            serializer.save()
-            factura.save(update_fields=['estado', 'etapa_actual', 'usuario_responsable', 'fecha_inicio_etapa'])
-
-            actualizar_sla_factura(factura)
-            
-            # Crear registro en historial
-            from .models import HistorialFactura
-            HistorialFactura.objects.create(
-                factura=factura,
-                accion='Completar Registro',
-                estado_anterior=estado_anterior,
-                estado_nuevo='Registrada',
-                usuario=request.user,
-                usuario_nombre=request.user.get_full_name() or request.user.username,
-                usuario_rol='Funcionario',
-                observacion='Factura registrada correctamente por el funcionario'
-            )
-
-            flujo_factura.notificar_transicion(factura, estado_anterior, 'Registrada')
-            
-            return Response(serializer.data)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        flujo_factura.completar_registro(factura, request.user, estado_anterior, serializer.save)
+        return Response(serializer.data)
 
 # ============================================================
 # HELPERS DE PDF — accesibles desde cualquier ViewSet
