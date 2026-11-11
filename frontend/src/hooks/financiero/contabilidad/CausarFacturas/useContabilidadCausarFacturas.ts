@@ -3,6 +3,7 @@ import { documentosService, facturasService } from '../../../../services/financi
 import type { DocumentoAdjunto, Factura } from '../../../../models/financiero/core.models';
 import { type SharedFacturaDetail } from '../../../../share/factura-detail-modal';
 import { buildSharedFacturaDetail } from '../../../../share/factura-details-helpers';
+import type { TableFilterValues } from '../../../../share/table-filters';
 
 const facturaToDetail = (factura: Factura, docs: DocumentoAdjunto[]): SharedFacturaDetail => {
   const base = buildSharedFacturaDetail(factura);
@@ -35,7 +36,7 @@ export function useContabilidadCausarFacturas() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  const [filtros, setFiltros] = useState({
+  const [filtros, setFiltros] = useState<TableFilterValues>({
     numeroFactura: '',
     proveedor: '',
     estado: '',

@@ -62,7 +62,8 @@ export function useAjustes() {
             if (!usuarioBase?.id) {
                 try {
                     const sessionUser = await authService.getAuthenticatedUser({ suppressErrorLog: true });
-                    usuarioBase = {
+                    // Sin sesión no hay datos que leer: queda sin id y más abajo no se carga el perfil
+                    if (sessionUser.authenticated !== false) usuarioBase = {
                         id: sessionUser.id,
                         nombre: sessionUser.nombre,
                         correo: sessionUser.correo,

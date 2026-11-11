@@ -27,7 +27,6 @@ import {
   FolderOpen,
   Loader2,
   Search,
-  ShieldAlert,
   X,
   XCircle,
 } from 'lucide-react';
@@ -42,7 +41,6 @@ const ORDER_OPTIONS = [
 export default function AutorizarPagos() {
   const {
     filtros,
-    facturasAutorizacion,
     facturasFiltradas,
     resumen,
     facturaSeleccionada,

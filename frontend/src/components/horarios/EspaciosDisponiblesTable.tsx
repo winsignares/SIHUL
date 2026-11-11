@@ -1,4 +1,3 @@
-import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../share/table';
 import { Button } from '../../share/button';
 import { Badge } from '../../share/badge';

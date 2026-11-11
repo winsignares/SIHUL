@@ -182,9 +182,9 @@ export default function RegistrarFactura() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [numeroFacturaSugerido, setNumeroFacturaSugerido] = useState('');
-  const [slaTotalDias, setSlaTotalDias] = useState(0);
-  const [slaTodosHabiles, setSlaTodosHabiles] = useState(true);
-  const [slaEtapas, setSlaEtapas] = useState(0);
+  const [, setSlaTotalDias] = useState(0);
+  const [, setSlaTodosHabiles] = useState(true);
+  const [, setSlaEtapas] = useState(0);
 
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);

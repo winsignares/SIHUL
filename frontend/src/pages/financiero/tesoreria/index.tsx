@@ -7,7 +7,7 @@ import GenerarComprobanteEgreso from './GenerarComprobanteEgreso';
 import { useTesoreriaDashboard } from '../../../hooks/financiero/tesoreria';
 
 export default function TesoreriaDashboard() {
-  const { activeView, goToPendientes, goToAlistar, goToEnviarDireccion, goToRegistrarPago, goToComprobante } = useTesoreriaDashboard();
+  const { activeView, goToAlistar, goToEnviarDireccion, goToRegistrarPago, goToComprobante } = useTesoreriaDashboard();
 
   const renderContent = () => {
     switch (activeView) {
@@ -24,7 +24,6 @@ export default function TesoreriaDashboard() {
       default:
         return (
           <TesoreriaHome
-            onGoToPendientes={goToPendientes}
             onGoToAlistar={goToAlistar}
             onGoToEnviarDireccion={goToEnviarDireccion}
             onGoToRegistrarPago={goToRegistrarPago}

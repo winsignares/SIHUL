@@ -11,7 +11,7 @@ interface UseContabilidadHomeParams {
   onGoToFacturaPagada: () => void;
 }
 
-export function useContabilidadHome({ onGoToPendientes, onGoToRadicar, onGoToCausar, onGoToFacturaPagada }: UseContabilidadHomeParams) {
+export function useContabilidadHome({ onGoToPendientes, onGoToRadicar }: UseContabilidadHomeParams) {
   const navigate = useNavigate();
   const [registradas, setRegistradas] = useState<number | null>(null);
   const [radicadas, setRadicadas] = useState<number | null>(null);

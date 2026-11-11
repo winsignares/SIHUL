@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useGestionRoles } from '../../hooks/permisos/useGestionRoles';
 import type { Rol } from '../../services/users/authService';
 import { Search, Edit, Trash2, ChevronLeft, ChevronRight, Plus, Shield, Building2 } from 'lucide-react';
