@@ -11,6 +11,7 @@ from datetime import date
 from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -181,6 +182,20 @@ class FlujoFacturaArchivosTests(TestCase):
         }, format='multipart')
         self.assertEqual((r.status_code, r.data['error']), (400, 'Datos de validacion incorrectos.'))
         self.assertEqual(list(r.data['detail']), ['archivo'])
+
+    def test_el_pago_aplicado_ante_errores_inesperados(self):
+        f = self.factura('Autorizada', numero_confirmacion='CONF-2026-0001')
+        guardar = 'financiero.views._guardar_documento_en_carpeta_compartida'
+        with mock.patch(guardar, side_effect=RuntimeError('disco lleno')):
+            r = self.pagar(f, numero_transaccion='TRX-9')
+        self.assertEqual((r.status_code, r.data), (500, {'error': 'No fue posible registrar el pago aplicado.',
+                                                         'detail': 'disco lleno'}))
+        self.assertEqual((f.estado, f.numero_transaccion), ('Autorizada', None))
+        with mock.patch(guardar, side_effect=IntegrityError('duplicado')):
+            r = self.pagar(f, numero_transaccion='TRX-9')
+        self.assertEqual((r.status_code, r.data),
+                         (400, {'error': 'El número de transacción bancaria ya está registrado en otra factura.'}))
+        self.assertEqual(self.historial(f), [])
 
     # ------------------------------------------------------------------ corregir
     def test_corregir(self):
