@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.core.cache import cache
 from rest_framework.response import Response
 
-from .auth_helpers import is_superuser_effective
+from .auth_helpers import ve_todas_las_seccionales
 
 CATALOG_CACHE_TTL_SECONDS = 300
 
@@ -25,7 +25,7 @@ class CachedCatalogMixin:
         user = self.get_current_user()
         if not user:
             return 'anon'
-        if is_superuser_effective(user):
+        if ve_todas_las_seccionales(user):
             return 'all'
         lookup = getattr(self, 'seccional_lookup', None)
         if not lookup:

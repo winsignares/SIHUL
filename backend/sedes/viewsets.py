@@ -4,7 +4,7 @@ from sedes.models import Seccional, Sede
 from sedes.serializers import SeccionalSerializer, SedeSerializer
 
 from mysite.auth_helpers import (
-    is_superuser_effective,
+    ve_todas_las_seccionales,
 )
 from mysite.cache_utils import CachedCatalogMixin
 from mysite.seccional_auth import SeccionalMixin
@@ -32,7 +32,7 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
         if self.request.method == 'GET':
             if not user and self.action == 'list':
                 return Seccional.objects.all().order_by('ciudad')
-            if user and is_superuser_effective(user):
+            if user and ve_todas_las_seccionales(user):
                 return Seccional.objects.all()
 
             seccional = self.get_user_seccional()
@@ -41,7 +41,7 @@ class SeccionalViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
             return Seccional.objects.filter(id=seccional.id)
 
-        if user and is_superuser_effective(user):
+        if user and ve_todas_las_seccionales(user):
             return super().get_queryset()
 
         return Seccional.objects.none()

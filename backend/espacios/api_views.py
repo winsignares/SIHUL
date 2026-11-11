@@ -11,7 +11,7 @@ from horario.models import Horario
 from prestamos.models import PrestamoEspacio
 from usuarios.models import Usuario
 from mysite.auth_helpers import (
-    SECCIONAL_PUBLICA_REQUERIDA, get_user_seccional_id, is_superuser_effective, seccional_publica,
+    SECCIONAL_PUBLICA_REQUERIDA, get_user_seccional_id, seccional_publica, ve_todas_las_seccionales,
     user_supervisa_espacios,
 )
 from mysite.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
@@ -39,7 +39,7 @@ def _filtrar_espacios_por_sede_usuario(request, queryset):
     if not user:
         return queryset
 
-    if is_superuser_effective(user):
+    if ve_todas_las_seccionales(user):
         return queryset
 
     seccional_id = get_user_seccional_id(user)
@@ -51,12 +51,12 @@ def _filtrar_espacios_por_sede_usuario(request, queryset):
 
 def _usuario_sin_seccional(request):
     user = getattr(request, 'user_obj', None)
-    return bool(user and not is_superuser_effective(user) and not get_user_seccional_id(user))
+    return bool(user and not ve_todas_las_seccionales(user) and not get_user_seccional_id(user))
 
 
 def _usuario_puede_acceder_espacio(request, espacio_id):
     user = getattr(request, 'user_obj', None)
-    if not user or is_superuser_effective(user):
+    if not user or ve_todas_las_seccionales(user):
         return True
 
     seccional_id = get_user_seccional_id(user)
@@ -411,7 +411,7 @@ def proximos_apertura_cierre(request):
         except Usuario.DoesNotExist:
             return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
 
-        if not is_superuser_effective(usuario) and not get_user_seccional_id(usuario):
+        if not ve_todas_las_seccionales(usuario) and not get_user_seccional_id(usuario):
             return _missing_seccional_response()
 
         if user_supervisa_espacios(usuario):
