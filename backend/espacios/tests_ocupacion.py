@@ -172,17 +172,17 @@ class OcupacionSemanalTests(TestCase):
 
     # ------------------------------------------------------------------ PDF
     def filas_pdf(self, **datos):
-        from reportlab import platypus
+        from . import reportes_pdf
 
         tablas = []
-        original = platypus.Table
+        original = reportes_pdf.Table
 
         class TablaQueAnota(original):
             def __init__(self, data, *args, **kwargs):
                 tablas.append(data)
                 super().__init__(data, *args, **kwargs)
 
-        with mock.patch.object(platypus, 'Table', TablaQueAnota):
+        with mock.patch.object(reportes_pdf, 'Table', TablaQueAnota):
             respuesta = self.client.post('/api/espacios/ocupacion/pdf/', data=json.dumps(datos), content_type='application/json')
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta['Content-Type'], 'application/pdf')

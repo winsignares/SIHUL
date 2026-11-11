@@ -1,8 +1,9 @@
-from . import ocupacion
+from . import ocupacion, reportes_pdf
 from .models import EspacioFisico
 from horario.models import Horario
 from prestamos.models import PrestamoEspacio
-from django.http import JsonResponse
+from django.http import FileResponse, JsonResponse
+from io import BytesIO
 import json
 from django.views.decorators.csrf import csrf_exempt
 from datetime import timedelta, time
@@ -15,6 +16,31 @@ from .api_views import (
     _distribuir_horas_en_jornadas,
     _filtrar_espacios_por_sede_usuario,
 )
+
+
+# Nombre en español de cada día, por su nombre en inglés (strftime('%A'))
+DIAS_NOMBRE = {
+    'Monday': 'Lunes',
+    'Tuesday': 'Martes',
+    'Wednesday': 'Miércoles',
+    'Thursday': 'Jueves',
+    'Friday': 'Viernes',
+    'Saturday': 'Sábado',
+    'Sunday': 'Domingo'
+}
+
+
+def _semana(semana_offset):
+    """Lunes y sábado de la semana actual desplazada semana_offset semanas."""
+    hoy = timezone.now().date()
+    lunes = hoy - timedelta(days=hoy.weekday()) + timedelta(weeks=semana_offset)
+    return lunes, lunes + timedelta(days=5)
+
+
+def _descarga_pdf(contenido, nombre):
+    response = FileResponse(BytesIO(contenido), as_attachment=True, filename=nombre)
+    response['Content-Type'] = 'application/pdf'
+    return response
 
 
 def _env_bool_param(value):
@@ -160,45 +186,26 @@ def list_espacios_disponibles_por_horario(request):
 def generar_pdf_ocupacion_semanal(request):
     """
     Genera un PDF con el reporte de ocupación semanal.
-    
+
     Parámetros POST:
     - tipo_espacio_id: ID del tipo de espacio (opcional)
     - semana_offset: 0 (semana actual), 1 (próxima semana), etc.
     """
     if request.method != 'POST':
         return JsonResponse({"error": "Solo se permite POST"}, status=405)
-    
+
     try:
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-        from reportlab.lib import colors
-        from reportlab.lib.enums import TA_CENTER
-        from reportlab.graphics.shapes import Drawing
-        from reportlab.graphics.charts.barcharts import HorizontalBarChart
-        from datetime import datetime, timedelta
-        from django.utils import timezone
-        from io import BytesIO
-        from django.http import FileResponse
-        
         data = json.loads(request.body) if request.body else {}
         tipo_espacio_id = data.get('tipo_espacio_id')
         semana_offset = int(data.get('semana_offset', 0))
-        
-        # Calcular rango de fechas
-        hoy = timezone.now().date()
-        dias_hasta_lunes = (hoy.weekday() - 0) % 7
-        lunes = hoy - timedelta(days=dias_hasta_lunes)
-        lunes += timedelta(weeks=semana_offset)
-        sabado = lunes + timedelta(days=5)
-        
+        lunes, sabado = _semana(semana_offset)
+
         # Obtener espacios filtrados
         espacios_query = EspacioFisico.objects.all().select_related('tipo', 'sede')
         espacios_query = _filtrar_espacios_por_sede_usuario(request, espacios_query)
         if tipo_espacio_id:
             espacios_query = espacios_query.filter(tipo_id=tipo_espacio_id)
-        
+
         espacios = list(espacios_query)
         dias = [(fecha, _get_dia_nombre(fecha), fecha.strftime('%A')) for fecha in _iterar_fechas_semana(lunes, sabado)]
         semana = ocupacion.cargar_semana([espacio.id for espacio in espacios], dias)
@@ -243,173 +250,9 @@ def generar_pdf_ocupacion_semanal(request):
                 'porcentajeTarde': round(porcentaje_tarde, 1),
                 'porcentajeNoche': round(porcentaje_noche, 1)
             })
-        
-        total_espacios = len(detalles_espacios)
-        promedio_ocupacion = (sum(e['porcentajeOcupacion'] for e in detalles_espacios) / total_espacios) if total_espacios > 0 else 0
-        total_horas_ocupadas = sum(e['horasOcupadasSemana'] for e in detalles_espacios)
-        total_horas_disponibles = sum(e['horasDisponibles'] for e in detalles_espacios)
-        espacios_sobreocupados = sum(1 for e in detalles_espacios if e['porcentajeOcupacion'] >= 85)
-        espacios_subutilizados = sum(1 for e in detalles_espacios if e['porcentajeOcupacion'] <= 50 and e['porcentajeOcupacion'] > 0)
-        
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=letter,
-            rightMargin=inch * 0.6,
-            leftMargin=inch * 0.6,
-            topMargin=inch * 0.8,
-            bottomMargin=inch * 0.8
-        )
-        elements = []
-        styles = getSampleStyleSheet()
 
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=24,
-            textColor=colors.HexColor('#0f172a'),
-            alignment=TA_CENTER,
-            spaceAfter=18
-        )
-        subtitle_style = ParagraphStyle(
-            'CustomSubtitle',
-            parent=styles['Normal'],
-            fontSize=10,
-            textColor=colors.HexColor('#475569'),
-            alignment=TA_CENTER
-        )
-        stat_title_style = ParagraphStyle(
-            'StatTitle',
-            parent=styles['Normal'],
-            fontSize=7,
-            textColor=colors.HexColor('#64748b')
-        )
-        stat_value_style = ParagraphStyle(
-            'StatValue',
-            parent=styles['Heading3'],
-            fontSize=14,
-            textColor=colors.HexColor('#0f172a')
-        )
-        body_small_style = ParagraphStyle(
-            'BodySmall',
-            parent=styles['BodyText'],
-            fontSize=7,
-            leading=8,
-            textColor=colors.HexColor('#0f172a')
-        )
-
-        elements.append(Paragraph('Reporte de Ocupación Semanal de Espacios', title_style))
-        periodo_parrafo = f'<b>Período:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")} - <b>Semana:</b> {semana_offset:+d}'
-        elements.append(Paragraph(periodo_parrafo, subtitle_style))
-        elements.append(Spacer(1, 0.2 * inch))
-
-        stats_data = [
-            [
-                Paragraph('Promedio ocupación', stat_title_style),
-                Paragraph('Horas ocupadas', stat_title_style),
-                Paragraph('Horas tot. disponibles', stat_title_style),
-                Paragraph('Sobreocupados', stat_title_style),
-                Paragraph('Subutilizados', stat_title_style)
-            ],
-            [
-                Paragraph(f'{promedio_ocupacion:.1f}%', stat_value_style),
-                Paragraph(f'{total_horas_ocupadas:.0f}h', stat_value_style),
-                Paragraph(f'{total_horas_disponibles:.0f}h', stat_value_style),
-                Paragraph(f'{espacios_sobreocupados}', stat_value_style),
-                Paragraph(f'{espacios_subutilizados}', stat_value_style)
-            ]
-        ]
-        stats_table = Table(stats_data, colWidths=[(doc.width) / 5] * 5)
-        stats_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e0f2fe')),
-            ('BACKGROUND', (0, 1), (-1, 1), colors.white),
-            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5f5')),
-            ('LINEBEFORE', (1, 0), (1, -1), 0.5, colors.HexColor('#cbd5f5')),
-            ('LINEBEFORE', (2, 0), (2, -1), 0.5, colors.HexColor('#cbd5f5')),
-            ('LINEBEFORE', (3, 0), (3, -1), 0.5, colors.HexColor('#cbd5f5')),
-            ('LINEBEFORE', (4, 0), (4, -1), 0.5, colors.HexColor('#cbd5f5')),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ]))
-        elements.append(stats_table)
-        elements.append(Spacer(1, 0.3 * inch))
-
-        table_header = ['Espacio', 'Tipo', 'Edificio', 'Capacidad', 'Horas', 'Ocupación', 'Jornadas']
-        table_data = [table_header]
-        for espacio in detalles_espacios:
-            jornadas = (
-                f'M: {espacio["porcentajeManana"]:.1f}%\n'
-                f'T: {espacio["porcentajeTarde"]:.1f}%\n'
-                f'N: {espacio["porcentajeNoche"]:.1f}%'
-            )
-            table_data.append([
-                espacio['nombre'],
-                espacio['tipo'],
-                espacio['edificio'],
-                str(espacio['capacidad']),
-                f'{espacio["horasOcupadasSemana"]:.1f} / {espacio["horasDisponibles"]}h',
-                f'{espacio["porcentajeOcupacion"]:.1f}%',
-                Paragraph(jornadas.replace('\n', '<br/>'), body_small_style)
-            ])
-
-        detail_col_widths = [2.0 * inch, 1.0 * inch, 1.0 * inch, 0.8 * inch, 1.0 * inch, 1.0 * inch, 1.4 * inch]
-        detail_table = Table(table_data, colWidths=detail_col_widths)
-        detail_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f172a')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('FONTSIZE', (0, 1), (-1, -1), 7),
-            ('ALIGN', (0, 0), (3, -1), 'LEFT'),
-            ('ALIGN', (4, 0), (-2, -1), 'CENTER'),
-            ('ALIGN', (-1, 0), (-1, -1), 'CENTER'),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5f5')),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
-        ]))
-        elements.append(detail_table)
-        elements.append(Spacer(1, 0.4 * inch))
-
-        top_espacios = sorted(detalles_espacios, key=lambda x: x['porcentajeOcupacion'], reverse=True)[:10]
-        if top_espacios:
-            elements.append(PageBreak())
-            elements.append(Paragraph('Top 10 espacios por ocupación', styles['Heading3']))
-            elements.append(Spacer(1, 0.1 * inch))
-            chart_width = doc.width - (inch * 0.4)
-            chart_height = 190
-            drawing = Drawing(chart_width, chart_height)
-            chart = HorizontalBarChart()
-            chart.x = 0
-            chart.y = 10
-            chart.width = chart_width
-            chart.height = chart_height - 10
-            chart.data = [[espacio['porcentajeOcupacion'] for espacio in top_espacios]]
-            chart.categoryAxis.categoryNames = [espacio['nombre'][:32] for espacio in top_espacios]
-            chart.categoryAxis.labels.fontSize = 7
-            chart.categoryAxis.strokeColor = colors.HexColor('#475569')
-            chart.categoryAxis.labels.dy = -2
-            chart.categoryAxis.categoryNames = [name if len(name) <= 32 else f'{name[:29]}...' for name in chart.categoryAxis.categoryNames]
-            chart.valueAxis.valueMin = 0
-            chart.valueAxis.valueMax = 100
-            chart.valueAxis.valueStep = 20
-            chart.valueAxis.labels.fontSize = 7
-            chart.valueAxis.strokeColor = colors.HexColor('#94a3b8')
-            chart.barLabels.nudge = 7
-            chart.barLabels.fontSize = 7
-            chart.barLabels.fillColor = colors.HexColor('#0f172a')
-            chart.barLabels.dx = 0
-            chart.barLabels.dy = 0
-            chart.bars[0].fillColor = colors.HexColor('#2563eb')
-            chart.bars[0].strokeWidth = 0
-            drawing.add(chart)
-            elements.append(drawing)
-
-        doc.build(elements)
-        buffer.seek(0)
-        response = FileResponse(buffer, as_attachment=True, filename=f'ocupacion-semanal-{lunes.isoformat()}.pdf')
-        response['Content-Type'] = 'application/pdf'
-        return response
-    except ImportError:
-        return JsonResponse({"error": "ReportLab no está instalado"}, status=500)
+        contenido = reportes_pdf.ocupacion_semanal(detalles_espacios, lunes, sabado, semana_offset)
+        return _descarga_pdf(contenido, f'ocupacion-semanal-{lunes.isoformat()}.pdf')
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
@@ -467,23 +310,7 @@ def reporte_ocupacion(request):
         semana_offset = int(request.GET.get('semana_offset', 0))
         include_pending = _estado_horario_param(request)
         
-        # Calcular rango de fechas (Lunes a Sábado)
-        hoy = timezone.now().date()
-        dias_hasta_lunes = (hoy.weekday() - 0) % 7
-        lunes = hoy - timedelta(days=dias_hasta_lunes)
-        lunes += timedelta(weeks=semana_offset)
-        sabado = lunes + timedelta(days=5)
-        
-        # Mapeo de nombres de días
-        dias_nombre = {
-            'Monday': 'Lunes',
-            'Tuesday': 'Martes',
-            'Wednesday': 'Miércoles',
-            'Thursday': 'Jueves',
-            'Friday': 'Viernes',
-            'Saturday': 'Sábado',
-            'Sunday': 'Domingo'
-        }
+        lunes, sabado = _semana(semana_offset)
         
         # Obtener todos los espacios
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
@@ -502,12 +329,12 @@ def reporte_ocupacion(request):
 
         # ======== OCUPACIÓN POR JORNADA ========
         ocupacion_por_jornada = _calcular_ocupacion_por_jornada_reporte(
-            espacios, lunes, sabado, dias_nombre, include_pending, datos_reporte
+            espacios, lunes, sabado, DIAS_NOMBRE, include_pending, datos_reporte
         )
         
         # ======== ESPACIOS MÁS USADOS ========
         espacios_mas_usados = _calcular_espacios_mas_usados_reporte(
-            espacios, lunes, sabado, dias_nombre, include_pending, datos_reporte
+            espacios, lunes, sabado, DIAS_NOMBRE, include_pending, datos_reporte
         )
         
         # Construcción del periodo
@@ -749,38 +576,12 @@ def generar_pdf_reporte_ocupacion(request):
         return JsonResponse({"error": "Solo se permite POST"}, status=405)
 
     try:
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-        from reportlab.lib import colors
-        from reportlab.lib.enums import TA_CENTER
-        from datetime import timedelta
-        from io import BytesIO
-        from django.http import FileResponse
-
         data = json.loads(request.body) if request.body else {}
         semana_offset = int(data.get('semana_offset', 0))
         include_pending = _estado_horario_param(request, data)
         tipo_espacio_id = data.get('tipo_espacio_id')
         espacios_nombres = data.get('espacios')
-
-        # Calcular rango de fechas (Lunes a Sábado)
-        hoy = timezone.now().date()
-        dias_hasta_lunes = (hoy.weekday() - 0) % 7
-        lunes = hoy - timedelta(days=dias_hasta_lunes)
-        lunes += timedelta(weeks=semana_offset)
-        sabado = lunes + timedelta(days=5)
-
-        dias_nombre = {
-            'Monday': 'Lunes',
-            'Tuesday': 'Martes',
-            'Wednesday': 'Miércoles',
-            'Thursday': 'Jueves',
-            'Friday': 'Viernes',
-            'Saturday': 'Sábado',
-            'Sunday': 'Domingo'
-        }
+        lunes, sabado = _semana(semana_offset)
 
         espacios_qs = EspacioFisico.objects.all().select_related('tipo', 'sede')
         espacios_qs = _filtrar_espacios_por_sede_usuario(request, espacios_qs)
@@ -792,151 +593,14 @@ def generar_pdf_reporte_ocupacion(request):
 
         datos_reporte = _preparar_datos_reporte_espacios(espacios_qs, lunes, sabado, include_pending)
         ocupacion_por_jornada = _calcular_ocupacion_por_jornada_reporte(
-            espacios_qs, lunes, sabado, dias_nombre, include_pending, datos_reporte
+            espacios_qs, lunes, sabado, DIAS_NOMBRE, include_pending, datos_reporte
         )
         espacios_mas_usados = _calcular_espacios_mas_usados_reporte(
-            espacios_qs, lunes, sabado, dias_nombre, include_pending, datos_reporte
+            espacios_qs, lunes, sabado, DIAS_NOMBRE, include_pending, datos_reporte
         )
 
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=letter,
-            rightMargin=inch * 0.6,
-            leftMargin=inch * 0.6,
-            topMargin=inch * 0.8,
-            bottomMargin=inch * 0.8
-        )
-        elements = []
-        styles = getSampleStyleSheet()
-
-        title_style = ParagraphStyle(
-            'RptTitle',
-            parent=styles['Heading1'],
-            fontSize=20,
-            textColor=colors.HexColor('#0f172a'),
-            alignment=TA_CENTER,
-            spaceAfter=10
-        )
-        subtitle_style = ParagraphStyle(
-            'RptSubtitle',
-            parent=styles['Normal'],
-            fontSize=9,
-            textColor=colors.HexColor('#475569'),
-            alignment=TA_CENTER
-        )
-        section_style = ParagraphStyle(
-            'RptSection',
-            parent=styles['Heading3'],
-            fontSize=12,
-            textColor=colors.HexColor('#0f172a'),
-            spaceAfter=6
-        )
-        body_small_style = ParagraphStyle(
-            'RptBodySmall',
-            parent=styles['BodyText'],
-            fontSize=8,
-            leading=9,
-            textColor=colors.HexColor('#0f172a')
-        )
-
-        elements.append(Paragraph('Reporte: Ocupación de Espacios', title_style))
-        elements.append(
-            Paragraph(
-                f'<b>Semana:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
-                subtitle_style
-            )
-        )
-        elements.append(Spacer(1, 0.25 * inch))
-
-        # ===== Ocupación por jornada =====
-        elements.append(Paragraph('Ocupación por Jornada - Semana Actual', section_style))
-
-        header = ['Jornada', 'Ocupación', 'Espacios']
-        table_data = [header]
-
-        # Colores UI
-        jornada_colors = [
-            colors.HexColor('#2563eb'),  # blue-600
-            colors.HexColor('#dc2626'),  # red-600
-            colors.HexColor('#ca8a04')   # yellow-600 (aprox)
-        ]
-
-        for idx, item in enumerate(ocupacion_por_jornada or []):
-            table_data.append([
-                item.get('jornada', ''),
-                f"{item.get('ocupacion', 0)}%",
-                str(item.get('espacios', 0))
-            ])
-
-        jornada_table = Table(table_data, colWidths=[3.3 * inch, 1.2 * inch, 1.0 * inch])
-        jornada_table_style = [
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f172a')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5f5')),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('ALIGN', (1, 1), (-1, -1), 'CENTER')
-        ]
-        # Colorear columna de ocupación como barra simple (fondo)
-        for i in range(1, len(table_data)):
-            color_idx = min(i - 1, len(jornada_colors) - 1)
-            jornada_table_style.append(('TEXTCOLOR', (1, i), (1, i), jornada_colors[color_idx]))
-
-        jornada_table.setStyle(TableStyle(jornada_table_style))
-        elements.append(jornada_table)
-        elements.append(Spacer(1, 0.3 * inch))
-
-        # ===== Espacios más utilizados =====
-        elements.append(Paragraph('Espacios Más Utilizados', section_style))
-
-        espacios_header = ['#', 'Espacio', 'Usos', 'Ocupación']
-        espacios_data = [espacios_header]
-        for idx, item in enumerate(espacios_mas_usados or []):
-            espacios_data.append([
-                str(idx + 1),
-                item.get('espacio', ''),
-                str(item.get('usos', 0)),
-                f"{item.get('ocupacion', 0)}%"
-            ])
-
-        espacios_table = Table(espacios_data, colWidths=[0.4 * inch, 3.1 * inch, 0.9 * inch, 1.1 * inch])
-        espacios_table_style = [
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f172a')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5f5')),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
-            ('ALIGN', (2, 1), (-1, -1), 'CENTER')
-        ]
-        # Badge-like ocupación en azul
-        for i in range(1, len(espacios_data)):
-            espacios_table_style.append(('TEXTCOLOR', (3, i), (3, i), colors.HexColor('#2563eb')))
-
-        espacios_table.setStyle(TableStyle(espacios_table_style))
-        elements.append(espacios_table)
-        elements.append(Spacer(1, 0.1 * inch))
-        elements.append(Paragraph('Generado por Benji', body_small_style))
-
-        doc.build(elements)
-        buffer.seek(0)
-
-        response = FileResponse(
-            buffer,
-            as_attachment=True,
-            filename=f'reporte-ocupacion-{lunes.isoformat()}.pdf'
-        )
-        response['Content-Type'] = 'application/pdf'
-        return response
-    except ImportError:
-        return JsonResponse({"error": "ReportLab no está instalado"}, status=500)
+        contenido = reportes_pdf.ocupacion(ocupacion_por_jornada, espacios_mas_usados, lunes, sabado)
+        return _descarga_pdf(contenido, f'reporte-ocupacion-{lunes.isoformat()}.pdf')
     except Exception as e:
         import traceback
         error_msg = f"{str(e)}\n{traceback.format_exc()}"
@@ -982,23 +646,7 @@ def reporte_disponibilidad(request):
         semana_offset = int(request.GET.get('semana_offset', 0))
         include_pending = _estado_horario_param(request)
         
-        # Calcular rango de fechas (Lunes a Sábado)
-        hoy = timezone.now().date()
-        dias_hasta_lunes = (hoy.weekday() - 0) % 7
-        lunes = hoy - timedelta(days=dias_hasta_lunes)
-        lunes += timedelta(weeks=semana_offset)
-        sabado = lunes + timedelta(days=5)
-        
-        # Mapeo de nombres de días
-        dias_nombre = {
-            'Monday': 'Lunes',
-            'Tuesday': 'Martes',
-            'Wednesday': 'Miércoles',
-            'Thursday': 'Jueves',
-            'Friday': 'Viernes',
-            'Saturday': 'Sábado',
-            'Sunday': 'Domingo'
-        }
+        lunes, sabado = _semana(semana_offset)
         
         # Obtener todos los espacios
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
@@ -1019,7 +667,7 @@ def reporte_disponibilidad(request):
         
         # ======== CÁLCULO DE DISPONIBILIDAD ========
         disponibilidad, resumen = _calcular_disponibilidad_reporte(
-            espacios, lunes, sabado, dias_nombre, include_pending
+            espacios, lunes, sabado, DIAS_NOMBRE, include_pending
         )
         
         # Construcción del periodo
@@ -1145,23 +793,7 @@ def reporte_capacidad(request):
         semana_offset = int(request.GET.get('semana_offset', 0))
         include_pending = _estado_horario_param(request)
         
-        # Calcular rango de fechas (Lunes a Sábado)
-        hoy = timezone.now().date()
-        dias_hasta_lunes = (hoy.weekday() - 0) % 7
-        lunes = hoy - timedelta(days=dias_hasta_lunes)
-        lunes += timedelta(weeks=semana_offset)
-        sabado = lunes + timedelta(days=5)
-        
-        # Mapeo de nombres de días
-        dias_nombre = {
-            'Monday': 'Lunes',
-            'Tuesday': 'Martes',
-            'Wednesday': 'Miércoles',
-            'Thursday': 'Jueves',
-            'Friday': 'Viernes',
-            'Saturday': 'Sábado',
-            'Sunday': 'Domingo'
-        }
+        lunes, sabado = _semana(semana_offset)
         
         # Obtener todos los espacios
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
@@ -1177,7 +809,7 @@ def reporte_capacidad(request):
         
         # ======== CÁLCULO DE CAPACIDAD ========
         capacidad = _calcular_capacidad_reporte(
-            espacios, lunes, sabado, dias_nombre, include_pending
+            espacios, lunes, sabado, DIAS_NOMBRE, include_pending
         )
         
         # Construcción del periodo
@@ -1206,164 +838,17 @@ def generar_pdf_reporte_disponibilidad(request):
         return JsonResponse({"error": "Solo se permite POST"}, status=405)
 
     try:
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-        from reportlab.lib import colors
-        from reportlab.lib.enums import TA_CENTER
-        from datetime import timedelta
-        from io import BytesIO
-        from django.http import FileResponse
-
         data = json.loads(request.body) if request.body else {}
         semana_offset = int(data.get('semana_offset', 0))
         include_pending = _estado_horario_param(request, data)
-
-        hoy = timezone.now().date()
-        dias_hasta_lunes = (hoy.weekday() - 0) % 7
-        lunes = hoy - timedelta(days=dias_hasta_lunes)
-        lunes += timedelta(weeks=semana_offset)
-        sabado = lunes + timedelta(days=5)
-
-        dias_nombre = {
-            'Monday': 'Lunes',
-            'Tuesday': 'Martes',
-            'Wednesday': 'Miércoles',
-            'Thursday': 'Jueves',
-            'Friday': 'Viernes',
-            'Saturday': 'Sábado',
-            'Sunday': 'Domingo'
-        }
+        lunes, sabado = _semana(semana_offset)
 
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
         espacios = _filtrar_espacios_por_sede_usuario(request, espacios)
-        disponibilidad, resumen = _calcular_disponibilidad_reporte(espacios, lunes, sabado, dias_nombre, include_pending)
+        disponibilidad, resumen = _calcular_disponibilidad_reporte(espacios, lunes, sabado, DIAS_NOMBRE, include_pending)
 
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=letter,
-            rightMargin=inch * 0.6,
-            leftMargin=inch * 0.6,
-            topMargin=inch * 0.8,
-            bottomMargin=inch * 0.8
-        )
-        elements = []
-        styles = getSampleStyleSheet()
-
-        title_style = ParagraphStyle(
-            'RptTitle',
-            parent=styles['Heading1'],
-            fontSize=20,
-            textColor=colors.HexColor('#0f172a'),
-            alignment=TA_CENTER,
-            spaceAfter=10
-        )
-        subtitle_style = ParagraphStyle(
-            'RptSubtitle',
-            parent=styles['Normal'],
-            fontSize=9,
-            textColor=colors.HexColor('#475569'),
-            alignment=TA_CENTER
-        )
-        stat_title_style = ParagraphStyle(
-            'RptStatTitle',
-            parent=styles['Normal'],
-            fontSize=7,
-            textColor=colors.HexColor('#64748b')
-        )
-        stat_value_style = ParagraphStyle(
-            'RptStatValue',
-            parent=styles['Heading3'],
-            fontSize=14,
-            textColor=colors.HexColor('#0f172a')
-        )
-
-        elements.append(Paragraph('Reporte: Disponibilidad General de Espacios', title_style))
-        elements.append(
-            Paragraph(
-                f'<b>Semana:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
-                subtitle_style
-            )
-        )
-        elements.append(Spacer(1, 0.25 * inch))
-
-        stats_data = [
-            [
-                Paragraph('Total disponible', stat_title_style),
-                Paragraph('Total ocupado', stat_title_style),
-                Paragraph('Promedio ocupación', stat_title_style)
-            ],
-            [
-                Paragraph(f"{resumen.get('total_disponible', 0)}h", stat_value_style),
-                Paragraph(f"{resumen.get('total_ocupado', 0)}h", stat_value_style),
-                Paragraph(f"{resumen.get('promedio_ocupacion', 0)}%", stat_value_style)
-            ]
-        ]
-        stats_table = Table(stats_data, colWidths=[(doc.width) / 3] * 3)
-        stats_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dcfce7')),
-            ('BACKGROUND', (0, 1), (-1, 1), colors.white),
-            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#bbf7d0')),
-            ('LINEBEFORE', (1, 0), (1, -1), 0.5, colors.HexColor('#bbf7d0')),
-            ('LINEBEFORE', (2, 0), (2, -1), 0.5, colors.HexColor('#bbf7d0')),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ]))
-        elements.append(stats_table)
-        elements.append(Spacer(1, 0.25 * inch))
-
-        header = ['Espacio', 'Tipo', 'Disponible', 'Ocupado', 'Ocupación']
-        table_data = [header]
-        for item in (disponibilidad or []):
-            table_data.append([
-                item.get('nombre', ''),
-                item.get('tipo', ''),
-                f"{item.get('horasDisponibles', 0)}h",
-                f"{item.get('horasOcupadas', 0)}h",
-                f"{item.get('porcentajeOcupacion', 0)}%"
-            ])
-
-        detail_table = Table(table_data, colWidths=[2.3 * inch, 1.0 * inch, 1.0 * inch, 1.0 * inch, 0.9 * inch])
-        detail_style = [
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f172a')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('FONTSIZE', (0, 1), (-1, -1), 7),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5f5')),
-            ('ALIGN', (2, 1), (-1, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
-        ]
-        # Color estilo badge para ocupación (verde / amarillo / rojo)
-        for i in range(1, len(table_data)):
-            try:
-                pct = int(table_data[i][4].replace('%', ''))
-            except Exception:
-                pct = 0
-            if pct >= 70:
-                color = colors.HexColor('#dc2626')  # red-600
-            elif pct >= 50:
-                color = colors.HexColor('#ca8a04')  # yellow
-            else:
-                color = colors.HexColor('#16a34a')  # green-600
-            detail_style.append(('TEXTCOLOR', (4, i), (4, i), color))
-
-        detail_table.setStyle(TableStyle(detail_style))
-        elements.append(detail_table)
-
-        doc.build(elements)
-        buffer.seek(0)
-        response = FileResponse(
-            buffer,
-            as_attachment=True,
-            filename=f'reporte-disponibilidad-{lunes.isoformat()}.pdf'
-        )
-        response['Content-Type'] = 'application/pdf'
-        return response
-    except ImportError:
-        return JsonResponse({"error": "ReportLab no está instalado"}, status=500)
+        contenido = reportes_pdf.disponibilidad(disponibilidad, resumen, lunes, sabado)
+        return _descarga_pdf(contenido, f'reporte-disponibilidad-{lunes.isoformat()}.pdf')
     except Exception as e:
         import traceback
         error_msg = f"{str(e)}\n{traceback.format_exc()}"
@@ -1378,254 +863,17 @@ def generar_pdf_reporte_capacidad(request):
         return JsonResponse({"error": "Solo se permite POST"}, status=405)
 
     try:
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-        from reportlab.lib import colors
-        from reportlab.lib.enums import TA_CENTER
-        from datetime import timedelta
-        from io import BytesIO
-        from django.http import FileResponse
-
         data = json.loads(request.body) if request.body else {}
         semana_offset = int(data.get('semana_offset', 0))
         include_pending = _estado_horario_param(request, data)
-
-        hoy = timezone.now().date()
-        dias_hasta_lunes = (hoy.weekday() - 0) % 7
-        lunes = hoy - timedelta(days=dias_hasta_lunes)
-        lunes += timedelta(weeks=semana_offset)
-        sabado = lunes + timedelta(days=5)
-
-        dias_nombre = {
-            'Monday': 'Lunes',
-            'Tuesday': 'Martes',
-            'Wednesday': 'Miércoles',
-            'Thursday': 'Jueves',
-            'Friday': 'Viernes',
-            'Saturday': 'Sábado',
-            'Sunday': 'Domingo'
-        }
+        lunes, sabado = _semana(semana_offset)
 
         espacios = EspacioFisico.objects.all().select_related('tipo', 'sede')
         espacios = _filtrar_espacios_por_sede_usuario(request, espacios)
-        capacidad = _calcular_capacidad_reporte(espacios, lunes, sabado, dias_nombre, include_pending)
+        capacidad = _calcular_capacidad_reporte(espacios, lunes, sabado, DIAS_NOMBRE, include_pending)
 
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=letter,
-            rightMargin=inch * 0.6,
-            leftMargin=inch * 0.6,
-            topMargin=inch * 0.8,
-            bottomMargin=inch * 0.8
-        )
-        elements = []
-        styles = getSampleStyleSheet()
-
-        title_style = ParagraphStyle(
-            'RptTitle',
-            parent=styles['Heading1'],
-            fontSize=20,
-            textColor=colors.HexColor('#0f172a'),
-            alignment=TA_CENTER,
-            spaceAfter=10
-        )
-        subtitle_style = ParagraphStyle(
-            'RptSubtitle',
-            parent=styles['Normal'],
-            fontSize=9,
-            textColor=colors.HexColor('#475569'),
-            alignment=TA_CENTER
-        )
-
-        elements.append(Paragraph('Reporte: Capacidad Utilizada', title_style))
-        elements.append(
-            Paragraph(
-                f'<b>Semana:</b> {lunes.strftime("%d/%m/%Y")} - {sabado.strftime("%d/%m/%Y")}',
-                subtitle_style
-            )
-        )
-        elements.append(Spacer(1, 0.25 * inch))
-
-        # Vertical bar chart with legend
-        elements.append(Spacer(1, 0.2 * inch))
-        
-        # Prepare data for vertical bars
-        chart_data = []
-        max_capacity = max([item.get('capacidadTotal', 0) for item in (capacidad or [])] + [1])
-        
-        for item in (capacidad or []):
-            tipo_nombre = item.get('tipo', '')
-            capacidad_total = item.get('capacidadTotal', 0)
-            capacidad_usada = item.get('capacidadUsada', 0)
-            porcentaje = min(item.get('porcentaje', 0), 100)
-            
-            chart_data.append({
-                'tipo': tipo_nombre,
-                'total': capacidad_total,
-                'usada': capacidad_usada,
-                'porcentaje': porcentaje
-            })
-        
-        # Create vertical bar chart
-        if chart_data:
-            # Title for chart
-            chart_title_style = ParagraphStyle(
-                'ChartTitle',
-                parent=styles['Normal'],
-                fontSize=12,
-                textColor=colors.HexColor('#0f172a'),
-                alignment=TA_CENTER,
-                spaceAfter=10
-            )
-            elements.append(Paragraph("Capacidad Utilizada por Tipo de Espacio", chart_title_style))
-            
-            # Calculate bar dimensions
-            bar_width = 0.8 * inch
-            max_bar_height = 3.0 * inch
-            chart_width = len(chart_data) * (bar_width + 0.3 * inch) + 0.5 * inch
-            
-            # Create bar chart using tables
-            for i, item in enumerate(chart_data):
-                # Bar height based on percentage (not total capacity)
-                bar_height = (item['porcentaje'] / 100) * max_bar_height
-                # The entire bar should be colored based on percentage
-                used_height = bar_height
-                
-                # Bar color based on percentage
-                bar_color = colors.HexColor('#9333ea')  # Purple
-                if item['porcentaje'] > 75:
-                    bar_color = colors.HexColor('#16a34a')  # Green
-                elif item['porcentaje'] > 40:
-                    bar_color = colors.HexColor('#ca8a04')  # Yellow
-                
-                # Create vertical bar (only the used portion, since we're showing percentage)
-                bar_table_data = [
-                    [''],  # Empty space above bar
-                    [''],  # Colored bar (percentage)
-                    ['']   # Empty space below bar
-                ]
-                
-                bar_heights = [
-                    max_bar_height - bar_height,  # Space above
-                    used_height,                 # Colored portion (percentage)
-                    0                           # No space below, bar sits on baseline
-                ]
-                
-                bar_table = Table(bar_table_data, colWidths=[bar_width], rowHeights=bar_heights)
-                bar_style = [
-                    ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                    ('TOPPADDING', (0, 0), (-1, -1), 0),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-                ]
-                
-                # Add colors for used portion only
-                if used_height > 0:
-                    bar_style.append(('BACKGROUND', (0, 1), (0, 1), bar_color))  # Colored portion (percentage)
-                # No empty portion needed since we're showing percentage directly
-                
-                bar_table.setStyle(TableStyle(bar_style))
-                
-                # Create container for bar + label
-                container_data = [
-                    [bar_table],
-                    [item['tipo']],
-                    [f"{item['porcentaje']}%"]
-                ]
-                
-                container_table = Table(container_data, colWidths=[bar_width])
-                container_style = [
-                    ('ALIGN', (0, 1), (0, 2), 'CENTER'),
-                    ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
-                    ('FONTSIZE', (0, 1), (0, 1), 8),
-                    ('FONTSIZE', (0, 2), (0, 2), 9),
-                    ('TEXTCOLOR', (0, 1), (0, 1), colors.HexColor('#0f172a')),
-                    ('TEXTCOLOR', (0, 2), (0, 2), bar_color),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 2),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-                    ('TOPPADDING', (0, 0), (-1, -1), 2),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-                ]
-                
-                container_table.setStyle(TableStyle(container_style))
-                
-                # Add to elements (positioned horizontally)
-                if i == 0:
-                    # First bar - create row container
-                    row_data = [[container_table]]
-                else:
-                    # Add to existing row
-                    row_data[0].append(container_table)
-            
-            # Create final chart table with all bars
-            if chart_data:
-                chart_table = Table(row_data, colWidths=[bar_width + 0.3 * inch] * len(chart_data))
-                chart_style = [
-                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                    ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                    ('TOPPADDING', (0, 0), (-1, -1), 0),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-                ]
-                chart_table.setStyle(TableStyle(chart_style))
-                elements.append(chart_table)
-            
-            # Add legend
-            elements.append(Spacer(1, 0.2 * inch))
-            
-            legend_title_style = ParagraphStyle(
-                'LegendTitle',
-                parent=styles['Normal'],
-                fontSize=10,
-                textColor=colors.HexColor('#0f172a'),
-                spaceAfter=5
-            )
-            elements.append(Paragraph("Leyenda de Porcentajes:", legend_title_style))
-            
-            # Legend items
-            legend_data = [
-                ['Alta', 'Media', 'Baja'],
-                ['Alta (>75%)', '■ Media (40-75%)', 'Baja (<40%)']
-            ]
-            
-            legend_table = Table(legend_data, colWidths=[2.0 * inch, 2.0 * inch, 2.0 * inch])
-            legend_style = [
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f8fafc')),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 9),
-                ('FONTSIZE', (0, 1), (-1, -1), 8),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5f5')),
-                ('LEFTPADDING', (0, 0), (-1, -1), 5),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-                ('TOPPADDING', (0, 0), (-1, -1), 3),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-            ]
-            
-            # Add color indicators for legend
-            legend_style.append(('TEXTCOLOR', (0, 1), (0, 1), colors.HexColor('#16a34a')))  # Green
-            legend_style.append(('TEXTCOLOR', (1, 1), (1, 1), colors.HexColor('#ca8a04')))  # Yellow  
-            legend_style.append(('TEXTCOLOR', (2, 1), (2, 1), colors.HexColor('#9333ea')))  # Purple
-            
-            legend_table.setStyle(TableStyle(legend_style))
-            elements.append(legend_table)
-
-        doc.build(elements)
-        buffer.seek(0)
-        response = FileResponse(
-            buffer,
-            as_attachment=True,
-            filename=f'reporte-capacidad-{lunes.isoformat()}.pdf'
-        )
-        response['Content-Type'] = 'application/pdf'
-        return response
-    except ImportError:
-        return JsonResponse({"error": "ReportLab no está instalado"}, status=500)
+        contenido = reportes_pdf.capacidad(capacidad, lunes, sabado)
+        return _descarga_pdf(contenido, f'reporte-capacidad-{lunes.isoformat()}.pdf')
     except Exception as e:
         import traceback
         error_msg = f"{str(e)}\n{traceback.format_exc()}"
