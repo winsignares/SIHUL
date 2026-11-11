@@ -31,7 +31,7 @@ Cada app vive en `backend/<app>/` con su `models.py`/`views.py`/`urls.py` están
 | `periodos` | Periodos académicos (usado también como filtro global `ETL_PERIODO`). |
 | `grupos` | Grupos académicos + staging Oracle. |
 | `asignaturas` | Asignaturas y su relación con programas + ETL. |
-| `horario` | Núcleo de horarios académicos, ETL Oracle, reportes de horarios sin espacio asignado. |
+| `horario` | Núcleo de horarios académicos, ETL Oracle, reportes de horarios sin espacio asignado. `exportaciones.py`: archivos PDF y Excel de horarios (por grupo, por docente e individual) a partir de la lista de horarios. |
 | `espacios` | Espacios físicos (aulas, laboratorios), `EspacioPermitido` (autorización de supervisores), ETL Oracle. |
 | `recursos` | Recursos/equipos asociados a espacios. |
 | `prestamos` | Préstamos de espacios/recursos, lógica de disponibilidad (`availability.py`). |
