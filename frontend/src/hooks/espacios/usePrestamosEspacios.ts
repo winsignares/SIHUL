@@ -24,7 +24,6 @@ import {
     PRESTAMOS_CHANGED_EVENT,
     PRESTAMOS_CHANGED_STORAGE_KEY
 } from '../../services/prestamos/prestamosChanges';
-import { trackedFetch } from '../../core/apiActivity';
 
 const PRESTAMOS_CACHE_KEY = 'prestamos-espacios';
 const PRESTAMOS_SYNC_INTERVAL_MS = 15_000;
@@ -180,14 +179,20 @@ export function usePrestamosEspacios() {
             // Detectar si el rol supervisa espacios para usar el endpoint específico.
             const esSupervisor = esSupervisorPorRol || esSupervisorPorEspacios;
 
-            // Cargar TODOS los préstamos (autenticados + públicos) desde la API combinada
+            // Cargar TODOS los préstamos: los de usuarios autenticados y las solicitudes públicas.
             // Si es supervisor, usar endpoint específico de prestamos de espacios permitidos
-            const prestamosResponse = esSupervisor
-                ? await prestamoService.listarPrestamosSupervisor()
-                : await prestamoService.listarTodosPrestamosAdmin();
+            const [prestamosResponse, publicosResponse] = await Promise.all([
+                esSupervisor
+                    ? prestamoService.listarPrestamosSupervisor()
+                    : prestamoService.listarTodosPrestamosAdmin(),
+                prestamosPublicAPI.listarParaAdministracion(),
+            ]);
 
             // Transformar datos del backend al formato UI
-            const prestamosUI: PrestamoEspacio[] = prestamosResponse.prestamos.map(p => {
+            const prestamosUI: PrestamoEspacio[] = [
+                ...prestamosResponse.prestamos,
+                ...publicosResponse.prestamos,
+            ].map(p => {
                 const esPublico = Boolean(
                     p.usuario_id == null && (
                         p.solicitante_publico_identificacion ||
@@ -270,42 +275,13 @@ export function usePrestamosEspacios() {
 
             const { tipo, id: numericId } = parsed;
 
-            // Obtener datos completos del préstamo desde el backend
-            let prestamoCompleto;
-            if (tipo === 'publico') {
-                // Usar endpoint de préstamos públicos
-                const response = await trackedFetch(`/api/prestamos/public/${numericId}/`);
-                if (!response.ok) throw new Error('Error al obtener préstamo público');
-                prestamoCompleto = await response.json();
-            } else {
-                // Usar endpoint de préstamos autenticados
-                prestamoCompleto = await prestamoService.obtenerPrestamo(numericId);
-            }
-
             // Actualizar el estado y registrar el administrador que aprobó
             if (tipo === 'publico') {
-                // Actualizar préstamo público
-                const response = await trackedFetch(`/api/prestamos/public/update/`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: numericId,
-                        espacio_id: prestamoCompleto.espacio_id,
-                        nombre_solicitante: prestamoCompleto.usuario_nombre,
-                        correo_solicitante: prestamoCompleto.usuario_correo,
-                        telefono_solicitante: prestamoCompleto.telefono,
-                        administrador_id: user.id,
-                        tipo_actividad_id: prestamoCompleto.tipo_actividad_id,
-                        fecha: prestamoCompleto.fecha,
-                        hora_inicio: prestamoCompleto.hora_inicio,
-                        hora_fin: prestamoCompleto.hora_fin,
-                        motivo: prestamoCompleto.motivo,
-                        asistentes: prestamoCompleto.asistentes,
-                        estado: 'Aprobado'
-                    })
-                });
-                if (!response.ok) throw new Error('Error al actualizar préstamo público');
+                await prestamosPublicAPI.cambiarEstadoSolicitud(numericId, 'Aprobado', user.id);
             } else {
+                // Obtener datos completos del préstamo desde el backend
+                const prestamoCompleto = await prestamoService.obtenerPrestamo(numericId);
+
                 // Actualizar préstamo autenticado
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const updatePayload: any = {
@@ -374,42 +350,13 @@ export function usePrestamosEspacios() {
 
             const { tipo, id: numericId } = parsed;
 
-            // Obtener datos completos del préstamo desde el backend
-            let prestamoCompleto;
-            if (tipo === 'publico') {
-                // Usar endpoint de préstamos públicos
-                const response = await trackedFetch(`/api/prestamos/public/${numericId}/`);
-                if (!response.ok) throw new Error('Error al obtener préstamo público');
-                prestamoCompleto = await response.json();
-            } else {
-                // Usar endpoint de préstamos autenticados
-                prestamoCompleto = await prestamoService.obtenerPrestamo(numericId);
-            }
-
             // Actualizar el estado y registrar el administrador que rechazó
             if (tipo === 'publico') {
-                // Actualizar préstamo público
-                const response = await trackedFetch(`/api/prestamos/public/update/`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: numericId,
-                        espacio_id: prestamoCompleto.espacio_id,
-                        nombre_solicitante: prestamoCompleto.usuario_nombre,
-                        correo_solicitante: prestamoCompleto.usuario_correo,
-                        telefono_solicitante: prestamoCompleto.telefono,
-                        administrador_id: user.id,
-                        tipo_actividad_id: prestamoCompleto.tipo_actividad_id,
-                        fecha: prestamoCompleto.fecha,
-                        hora_inicio: prestamoCompleto.hora_inicio,
-                        hora_fin: prestamoCompleto.hora_fin,
-                        motivo: prestamoCompleto.motivo,
-                        asistentes: prestamoCompleto.asistentes,
-                        estado: 'Rechazado'
-                    })
-                });
-                if (!response.ok) throw new Error('Error al actualizar préstamo público');
+                await prestamosPublicAPI.cambiarEstadoSolicitud(numericId, 'Rechazado', user.id);
             } else {
+                // Obtener datos completos del préstamo desde el backend
+                const prestamoCompleto = await prestamoService.obtenerPrestamo(numericId);
+
                 // Actualizar préstamo autenticado
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const updatePayload: any = {
