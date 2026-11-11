@@ -72,19 +72,19 @@ export function useMiHorario() {
             // Mapear horarios del servicio al formato local
             const horariosData: HorarioExtendido[] = (response.horarios || []).map(h => ({
                 id: h.id,
-                diaSemana: h.dia_semana,
-                horaInicio: h.hora_inicio,
-                horaFin: h.hora_fin,
-                asignatura: h.asignatura_nombre,
-                asignaturaId: h.asignatura_id,
-                docente: h.docente_nombre,
-                docenteId: h.docente_id ?? undefined,
-                grupo: h.grupo_nombre,
-                grupoId: h.grupo_id,
-                espacio: h.espacio_nombre,
-                espacioId: h.espacio_id ?? 0,
-                cantidadEstudiantes: h.cantidad_estudiantes ?? undefined,
-                programa: h.programa_nombre,
+                diaSemana: h.diaSemana,
+                horaInicio: h.horaInicio,
+                horaFin: h.horaFin,
+                asignatura: h.asignatura,
+                asignaturaId: h.asignaturaId,
+                docente: h.docente,
+                docenteId: h.docenteId ?? undefined,
+                grupo: h.grupo,
+                grupoId: h.grupoId,
+                espacio: h.espacio,
+                espacioId: h.espacioId ?? 0,
+                cantidadEstudiantes: h.cantidadEstudiantes ?? undefined,
+                programa: h.programa ?? undefined,
                 semestre: h.semestre
             }));
             setHorarios(horariosData);

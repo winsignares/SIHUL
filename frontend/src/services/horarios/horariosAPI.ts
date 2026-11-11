@@ -117,6 +117,29 @@ export interface ListHorariosExtendidosResponse {
     horarios: HorarioExtendido[];
 }
 
+/** Clase del horario propio (mi-horario y mi-horario-estudiante): el backend responde en camelCase. */
+export interface MiHorarioItem {
+    id: number;
+    diaSemana: string;
+    horaInicio: string;
+    horaFin: string;
+    asignaturaId: number;
+    asignatura: string;
+    grupoId: number;
+    grupo: string;
+    espacioId: number | null;
+    espacio: string;
+    docenteId: number | null;
+    docente: string;
+    cantidadEstudiantes: number | null;
+    programa: string | null;
+    semestre: number;
+}
+
+export interface MiHorarioResponse {
+    horarios: MiHorarioItem[];
+}
+
 /**
  * Interfaz para horarios por período con información agregada
  */
@@ -337,15 +360,15 @@ export const horarioService = {
     /**
      * Obtiene el horario del docente autenticado
      */
-    miHorario: async (usuarioId: number): Promise<ListHorariosExtendidosResponse> => {
-        return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/mi-horario/?usuario_id=${usuarioId}`);
+    miHorario: async (usuarioId: number): Promise<MiHorarioResponse> => {
+        return apiClient.get<MiHorarioResponse>(`/horarios/mi-horario/?usuario_id=${usuarioId}`);
     },
 
     /**
      * Obtiene el horario del estudiante autenticado
      */
-    miHorarioEstudiante: async (usuarioId: number): Promise<ListHorariosExtendidosResponse> => {
-        return apiClient.get<ListHorariosExtendidosResponse>(`/horarios/mi-horario-estudiante/?usuario_id=${usuarioId}`);
+    miHorarioEstudiante: async (usuarioId: number): Promise<MiHorarioResponse> => {
+        return apiClient.get<MiHorarioResponse>(`/horarios/mi-horario-estudiante/?usuario_id=${usuarioId}`);
     },
 
     /**
