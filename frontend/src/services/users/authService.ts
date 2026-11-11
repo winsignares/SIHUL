@@ -335,10 +335,12 @@ export const authService = {
   },
 
   /**
-   * Cambia la contraseña del usuario
+   * Cambia la contraseña del usuario.
+   * El backend responde 401 cuando la contraseña actual no es correcta: no es una sesión vencida,
+   * así que no debe limpiar la sesión ni mandar al login (requiresAuth: false).
    */
   changePassword: async (payload: ChangePasswordPayload): Promise<{ message: string }> => {
-    return apiClient.put('/usuarios/change-password/', payload);
+    return apiClient.put('/usuarios/change-password/', payload, { requiresAuth: false });
   },
 
   /**

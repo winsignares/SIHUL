@@ -247,7 +247,9 @@ export function useAjustes() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error('Error al cambiar contraseña:', error);
-            setPasswordError(error.message || 'Error al cambiar la contraseña');
+            setPasswordError(error?.status === 401
+                ? 'La contraseña actual no es correcta'
+                : (error.message || 'Error al cambiar la contraseña'));
         } finally {
             setIsSaving(false);
         }
