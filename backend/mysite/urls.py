@@ -7,26 +7,15 @@ from rest_framework.routers import DefaultRouter
 
 from mysite import health
 
-from mysite.api_views import (
-    AsignaturaProgramaViewSet,
-    AsignaturaViewSet,
-    EspacioFisicoViewSet,
-    EspacioPermitidoViewSet,
-    FacultadViewSet,
-    GrupoViewSet,
-    HorarioEstudianteViewSet,
-    HorarioFusionadoViewSet,
-    HorarioViewSet,
-    ProgramaViewSet,
-    RecursoViewSet,
-    EspacioRecursoViewSet,
-    RolViewSet,
-    SeccionalViewSet,
-    SedeViewSet,
-    SolicitudEspacioViewSet,
-    TipoEspacioViewSet,
-    UsuarioViewSet,
-)
+from asignaturas.viewsets import AsignaturaProgramaViewSet, AsignaturaViewSet
+from espacios.viewsets import EspacioFisicoViewSet, EspacioPermitidoViewSet, TipoEspacioViewSet
+from facultades.viewsets import FacultadViewSet
+from grupos.viewsets import GrupoViewSet
+from horario.viewsets import HorarioEstudianteViewSet, HorarioFusionadoViewSet, HorarioViewSet, SolicitudEspacioViewSet
+from programas.viewsets import ProgramaViewSet
+from recursos.viewsets import EspacioRecursoViewSet, RecursoViewSet
+from sedes.viewsets import SeccionalViewSet, SedeViewSet
+from usuarios.viewsets import RolViewSet, UsuarioViewSet
 
 router = DefaultRouter()
 router.register(r'seccionales', SeccionalViewSet, basename='seccional')

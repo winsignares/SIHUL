@@ -187,7 +187,7 @@ def componentes_de_rol_efectivos(usuario):
 def get_componente_permiso(user, nombre_componente):
     """Resuelve el permiso efectivo ('VER'/'EDITAR'/None) de `user` sobre el
     Componente `nombre_componente`, replicando la precedencia usada por
-    mysite.api_views para construir la lista de componentes del frontend:
+    usuarios.viewsets para construir la lista de componentes del frontend:
     el override de ComponenteUsuario (si existe y está activo) reemplaza al
     permiso del rol; si el override existe pero activo=False, se revoca el
     acceso aunque el rol lo conceda; si no hay grant de rol pero sí un
@@ -239,7 +239,7 @@ def get_componente_permiso(user, nombre_componente):
 def construir_componentes(usuario):
     """Lista de componentes que recibe el frontend (login y session-auth-state).
 
-    Es la ÚNICA fuente: la usan tanto `mysite.api_views.UsuarioViewSet` como las vistas de
+    Es la ÚNICA fuente: la usan tanto `usuarios.viewsets.UsuarioViewSet` como las vistas de
     `usuarios.views` (a las que nginx reescribe /api/usuarios/login/ y /session-auth-state/).
     Precedencia: el permiso individual (ComponenteUsuario) reemplaza al del rol, uno inactivo lo
     revoca, y uno activo sin permiso de rol concede el acceso. Además, quien es responsable de

@@ -14,6 +14,8 @@ Django 5.2.7 + Django REST Framework, sirviendo tanto la API académica como el 
 
 Proyecto Django raíz: `backend/mysite/` (contiene `settings.py`, `urls.py`, y no es una app de dominio sino el núcleo transversal: autenticación de sesión, permisos, middleware, seeders).
 
+Los ViewSets DRF de cada app están en `<app>/viewsets.py` (sedes, facultades, programas, grupos, asignaturas, espacios, horario, usuarios y recursos) y se registran en el router de `mysite/urls.py`.
+
 ## Apps Django
 
 Cada app vive en `backend/<app>/` con su `models.py`/`views.py`/`urls.py` estándar.
