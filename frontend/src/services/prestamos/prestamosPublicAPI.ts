@@ -1,6 +1,6 @@
 import { apiClient } from '../../core/apiClient';
 import { notifyPrestamosChanged } from './prestamosChanges';
-import type { RecursoPrestamo } from './prestamoAPI';
+import type { PrestamoEspacio, RecursoPrestamo } from './prestamoAPI';
 
 export interface SedeAPI {
     id: number;
@@ -103,6 +103,12 @@ interface PrestamoPublicoApi {
     serie_id?: string | null;
     es_ocurrencia_generada?: boolean;
     prestamo_padre?: number | null;
+    espacio_nombre?: string;
+    espacio_tipo?: string;
+    administrador_nombre?: string;
+    tipo_actividad_nombre?: string;
+    periodo?: number | null;
+    periodo_nombre?: string | null;
 }
 
 export interface ActualizarPrestamoPublicoPayload {
@@ -272,6 +278,43 @@ const toPrestamoPublicoListado = (item: PrestamoPublicoApi): PrestamoPublicoList
     prestamo_padre_id: item.prestamo_padre ?? null,
 });
 
+/** Solicitud pública con la forma de los préstamos internos, para la pantalla de administración de préstamos. */
+const toPrestamoAdministracion = (item: PrestamoPublicoApi): PrestamoEspacio => ({
+    id: item.id,
+    espacio_id: item.espacio,
+    espacio_nombre: item.espacio_nombre,
+    espacio_tipo: item.espacio_tipo,
+    usuario_id: null,
+    solicitante_publico_nombre: item.nombre_solicitante,
+    solicitante_publico_correo: item.correo_solicitante,
+    solicitante_publico_telefono: item.telefono_solicitante,
+    solicitante_publico_identificacion: item.identificacion_solicitante,
+    administrador_id: item.administrador,
+    administrador_nombre: item.administrador_nombre,
+    tipo_actividad_id: item.tipo_actividad,
+    tipo_actividad_nombre: item.tipo_actividad_nombre,
+    fecha: item.fecha,
+    hora_inicio: item.hora_inicio,
+    hora_fin: item.hora_fin,
+    motivo: item.motivo ?? undefined,
+    asistentes: item.asistentes,
+    telefono: item.telefono_solicitante,
+    estado: item.estado,
+    recursos: item.recursos,
+    es_recurrente: item.es_recurrente,
+    frecuencia: item.frecuencia,
+    intervalo: item.intervalo,
+    dias_semana: item.dias_semana,
+    fin_repeticion_tipo: item.fin_repeticion_tipo,
+    fin_repeticion_fecha: item.fin_repeticion_fecha,
+    fin_repeticion_ocurrencias: item.fin_repeticion_ocurrencias,
+    serie_id: item.serie_id,
+    es_ocurrencia_generada: item.es_ocurrencia_generada,
+    prestamo_padre_id: item.prestamo_padre ?? null,
+    periodo_id: item.periodo ?? null,
+    periodo_nombre: item.periodo_nombre ?? null,
+});
+
 export const prestamosPublicAPI = {
     /**
      * Obtiene la lista de tipos de actividad
@@ -338,6 +381,14 @@ export const prestamosPublicAPI = {
     },
 
     /**
+     * Solicitudes públicas que ve quien administra préstamos (el servidor aplica su seccional y sus espacios)
+     */
+    listarParaAdministracion: async (): Promise<{ prestamos: PrestamoEspacio[] }> => {
+        const prestamos = await apiClient.get<PrestamoPublicoApi[]>('/prestamos/publicos/');
+        return { prestamos: prestamos.map(toPrestamoAdministracion) };
+    },
+
+    /**
      * Lista las solicitudes públicas por identificación y correo
      */
     listarMisSolicitudes: async (
@@ -389,6 +440,22 @@ export const prestamosPublicAPI = {
             fin_repeticion_tipo: payload.fin_repeticion_tipo,
             fin_repeticion_fecha: payload.fin_repeticion_fecha,
             fin_repeticion_ocurrencias: payload.fin_repeticion_ocurrencias,
+        });
+        notifyPrestamosChanged();
+        return { message: 'Solicitud actualizada', id: updated.id };
+    },
+
+    /**
+     * Aprueba o rechaza una solicitud pública desde la administración de préstamos
+     */
+    cambiarEstadoSolicitud: async (
+        id: number,
+        estado: 'Aprobado' | 'Rechazado',
+        administradorId: number
+    ): Promise<{ message: string; id: number }> => {
+        const updated = await apiClient.patch<PrestamoPublicoApi>(`/prestamos/publicos/${id}/`, {
+            estado,
+            administrador: administradorId,
         });
         notifyPrestamosChanged();
         return { message: 'Solicitud actualizada', id: updated.id };
