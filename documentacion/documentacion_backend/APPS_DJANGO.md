@@ -37,7 +37,7 @@ Cada app vive en `backend/<app>/` con su `models.py`/`views.py`/`urls.py` están
 | `prestamos` | Préstamos de espacios/recursos, lógica de disponibilidad (`availability.py`). |
 | `chatbot` | App puente Django ↔ servicio FastAPI: `api_views.py`/`api_urls.py` actúan de proxy hacia `CHATBOT_FASTAPI_URL`. |
 | `notificaciones` | Notificaciones vía señales Django (`signals.py`), consumidas por el frontend con polling cada 30s. Ver `backend/notificaciones/README.md` para el detalle completo de tipos de evento y prioridades. |
-| `financiero` | Módulo de facturación institucional. Ver [MODULO_FINANCIERO.md](MODULO_FINANCIERO.md). |
+| `financiero` | Módulo de facturación institucional. Ver [MODULO_FINANCIERO.md](MODULO_FINANCIERO.md). `flujo_factura.py`: pasos del flujo de la factura (radicar, alistar, auditoría, Dirección Financiera, Rectoría, control de pago, devolución), con su historial y notificaciones. |
 
 ## Documentos relacionados en esta carpeta
 
