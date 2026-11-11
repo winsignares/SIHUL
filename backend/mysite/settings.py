@@ -110,6 +110,7 @@ if MICROSOFT_OAUTH_ENABLED:
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'mysite.compresion.GZipJSONMiddleware',  # gzip para JSON; antes de lo que lee o cambia el cuerpo
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
