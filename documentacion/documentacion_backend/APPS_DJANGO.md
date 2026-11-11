@@ -23,7 +23,7 @@ Cada app vive en `backend/<app>/` con su `models.py`/`views.py`/`urls.py` están
 | App | Responsabilidad |
 |---|---|
 | `mysite` | Núcleo transversal: settings, urls raíz, autenticación de sesión custom (`seccional_auth.py`), helpers de roles (`auth_helpers.py`), permisos DRF (`permissions.py`), middleware de sede (`middleware.py`), vistas de auth (`auth_views.py`), adaptador OAuth (`social_adapter.py`), filtro Oracle por seccional (`oracle_seccional_filter.py`), seeders (`management/commands/seed_initial_data.py` + `seeders/*`). |
-| `usuarios` | Modelo `Usuario` (custom, login por `correo`), `Rol`, staging Oracle de docentes/estudiantes, comandos ETL relacionados. |
+| `usuarios` | Modelo `Usuario` (custom, login por `correo`), `Rol`, staging Oracle de docentes/estudiantes, comandos ETL relacionados. `sesion.py`: inicio de sesión con bloqueo por intentos, estado de la sesión y cambio de contraseña, sin depender de la petición HTTP. |
 | `componentes` | Sistema de permisos dinámico: `Componente`, `ComponenteRol`, `ComponenteUsuario`. Ver [AUTENTICACION_Y_PERMISOS.md](AUTENTICACION_Y_PERMISOS.md). |
 | `sedes` | `Sede`, `Seccional` (Bogotá, Cali, Barranquilla, Cúcuta, Cartagena, Pereira, El Socorro, Virtual, Nacional) + ETL. |
 | `facultades` | Facultades académicas. |
