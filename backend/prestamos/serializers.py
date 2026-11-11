@@ -1,8 +1,8 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from mysite.auth_helpers import is_authenticated_user, user_can_edit_componente
-from . import privacidad
+from mysite.auth_helpers import is_authenticated_user
+from . import privacidad, reglas
 from .availability import validar_disponibilidad_prestamo
 from .models import (
     PrestamoEspacio,
@@ -12,43 +12,6 @@ from .models import (
     TipoActividad,
 )
 from recursos.models import Recurso
-
-COMPONENTE_DISPONIBILIDAD_ESPACIOS = 'Disponibilidad de Espacios'
-
-
-def _reevaluar_estado_si_estaba_aprobado(instance, validated_data, request, estado_original=None):
-    """Si se edita un préstamo que estaba Aprobado y el estado enviado sigue
-    siendo Aprobado (es decir, no es una acción explícita de aprobar/rechazar
-    a otro estado), lo mantiene Aprobado solo cuando quien edita tiene
-    permiso EDITAR en "Disponibilidad de Espacios"; de lo contrario lo
-    regresa a Pendiente para que sea reaprobado.
-    """
-    # `validate` copia los datos nuevos sobre la instancia para validar disponibilidad: se compara con el estado
-    # que tenía antes de la edición, no con el ya sobrescrito (si no, aprobar uno pendiente lo devolvía a pendiente).
-    if (estado_original if estado_original is not None else instance.estado) != 'Aprobado':
-        return
-
-    nuevo_estado = validated_data.get('estado', instance.estado)
-    if nuevo_estado != 'Aprobado':
-        return
-
-    user = getattr(request, 'user', None) if request else None
-    if not user_can_edit_componente(user, COMPONENTE_DISPONIBILIDAD_ESPACIOS):
-        validated_data['estado'] = 'Pendiente'
-
-
-def _proteger_aprobacion(attrs, instance, request):
-    """Solo quien gestiona préstamos aprueba o asigna administrador. Quien solicita (docente, público) crea el
-    préstamo «Pendiente», y si edita uno ya aprobado vuelve a quedar pendiente para que se reapruebe."""
-    if request is None:
-        return
-    if privacidad.puede_aprobar_prestamos(getattr(request, 'user', None)):
-        return
-    attrs.pop('administrador', None)
-    if instance is None:
-        attrs['estado'] = 'Pendiente'
-    else:
-        attrs['estado'] = 'Pendiente' if instance.estado == 'Aprobado' else instance.estado
 
 
 def _administra_prestamos(request):
@@ -75,7 +38,68 @@ class RecursoPrestamoInputSerializer(serializers.Serializer):
     cantidad = serializers.IntegerField(min_value=1, default=1)
 
 
-class PrestamoEspacioSerializer(serializers.ModelSerializer):
+class _ReglasDePrestamoMixin:
+    """Validación y guardado comunes a los préstamos internos y públicos.
+
+    Cada serializer indica en `modelo_recurso` dónde se guardan sus recursos.
+    """
+    modelo_recurso = None
+
+    def _usuario(self):
+        request = self.context.get('request')
+        return getattr(request, 'user', None) if request else None
+
+    def validate(self, attrs):
+        self._estado_original = getattr(self.instance, 'estado', None)
+        if self.context.get('request') is not None:
+            reglas.proteger_aprobacion(attrs, self.instance, self._usuario())
+        instance = self.instance or self.Meta.model()
+        for field, value in attrs.items():
+            if field == 'prestamo_recursos':
+                continue
+            setattr(instance, field, value)
+        validar_disponibilidad_prestamo(instance)
+        return attrs
+
+    def validate_recursos(self, recursos):
+        if reglas.recursos_repetidos(recursos):
+            raise serializers.ValidationError('No se puede solicitar el mismo recurso más de una vez.')
+        return recursos
+
+    def _guardar_recursos(self, prestamo, recursos):
+        self.modelo_recurso.objects.bulk_create([
+            self.modelo_recurso(
+                prestamo=prestamo,
+                recurso=item['recurso'],
+                cantidad=item['cantidad'],
+            )
+            for item in recursos
+        ])
+
+    @transaction.atomic
+    def create(self, validated_data):
+        recursos = validated_data.pop('prestamo_recursos', [])
+        prestamo = super().create(validated_data)
+        self._guardar_recursos(prestamo, recursos)
+        return prestamo
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        recursos = validated_data.pop('prestamo_recursos', None)
+        estado_original = getattr(self, '_estado_original', None)
+        reglas.reevaluar_estado_si_estaba_aprobado(
+            estado_original if estado_original is not None else instance.estado,
+            instance.estado, validated_data, self._usuario())
+        prestamo = super().update(instance, validated_data)
+        if recursos is not None:
+            prestamo.prestamo_recursos.all().delete()
+            self._guardar_recursos(prestamo, recursos)
+        return prestamo
+
+
+class PrestamoEspacioSerializer(_ReglasDePrestamoMixin, serializers.ModelSerializer):
+    modelo_recurso = PrestamoRecurso
+
     espacio_nombre = serializers.CharField(source='espacio.nombre', read_only=True)
     espacio_tipo = serializers.CharField(source='espacio.tipo.nombre', read_only=True)
     usuario_nombre = serializers.CharField(source='usuario.nombre', read_only=True)
@@ -103,54 +127,10 @@ class PrestamoEspacioSerializer(serializers.ModelSerializer):
                 privacidad.ocultar_campos(datos, privacidad.CAMPOS_PERSONALES_PRIVADO)
         return datos
 
-    def validate(self, attrs):
-        self._estado_original = getattr(self.instance, 'estado', None)
-        _proteger_aprobacion(attrs, self.instance, self.context.get('request'))
-        instance = self.instance or PrestamoEspacio()
-        for field, value in attrs.items():
-            if field == 'prestamo_recursos':
-                continue
-            setattr(instance, field, value)
-        validar_disponibilidad_prestamo(instance)
-        return attrs
 
-    def validate_recursos(self, recursos):
-        recurso_ids = [item['recurso'].id for item in recursos]
-        if len(recurso_ids) != len(set(recurso_ids)):
-            raise serializers.ValidationError('No se puede solicitar el mismo recurso más de una vez.')
-        return recursos
+class PrestamoEspacioPublicoSerializer(_ReglasDePrestamoMixin, serializers.ModelSerializer):
+    modelo_recurso = PrestamoRecursoPublico
 
-    @staticmethod
-    def _guardar_recursos(prestamo, recursos):
-        PrestamoRecurso.objects.bulk_create([
-            PrestamoRecurso(
-                prestamo=prestamo,
-                recurso=item['recurso'],
-                cantidad=item['cantidad'],
-            )
-            for item in recursos
-        ])
-
-    @transaction.atomic
-    def create(self, validated_data):
-        recursos = validated_data.pop('prestamo_recursos', [])
-        prestamo = super().create(validated_data)
-        self._guardar_recursos(prestamo, recursos)
-        return prestamo
-
-    @transaction.atomic
-    def update(self, instance, validated_data):
-        recursos = validated_data.pop('prestamo_recursos', None)
-        _reevaluar_estado_si_estaba_aprobado(
-            instance, validated_data, self.context.get('request'), getattr(self, '_estado_original', None))
-        prestamo = super().update(instance, validated_data)
-        if recursos is not None:
-            prestamo.prestamo_recursos.all().delete()
-            self._guardar_recursos(prestamo, recursos)
-        return prestamo
-
-
-class PrestamoEspacioPublicoSerializer(serializers.ModelSerializer):
     espacio_nombre = serializers.CharField(source='espacio.nombre', read_only=True)
     espacio_tipo = serializers.CharField(source='espacio.tipo.nombre', read_only=True)
     administrador_nombre = serializers.CharField(source='administrador.nombre', read_only=True)
@@ -179,52 +159,6 @@ class PrestamoEspacioPublicoSerializer(serializers.ModelSerializer):
             if not _administra_prestamos(request) and not privacidad.coincide_solicitante_publico(request, instance):
                 privacidad.ocultar_campos(datos, privacidad.CAMPOS_PERSONALES_PUBLICO)
         return datos
-
-    def validate(self, attrs):
-        self._estado_original = getattr(self.instance, 'estado', None)
-        _proteger_aprobacion(attrs, self.instance, self.context.get('request'))
-        instance = self.instance or PrestamoEspacioPublico()
-        for field, value in attrs.items():
-            if field == 'prestamo_recursos':
-                continue
-            setattr(instance, field, value)
-        validar_disponibilidad_prestamo(instance)
-        return attrs
-
-    def validate_recursos(self, recursos):
-        recurso_ids = [item['recurso'].id for item in recursos]
-        if len(recurso_ids) != len(set(recurso_ids)):
-            raise serializers.ValidationError('No se puede solicitar el mismo recurso más de una vez.')
-        return recursos
-
-    @staticmethod
-    def _guardar_recursos(prestamo, recursos):
-        PrestamoRecursoPublico.objects.bulk_create([
-            PrestamoRecursoPublico(
-                prestamo=prestamo,
-                recurso=item['recurso'],
-                cantidad=item['cantidad'],
-            )
-            for item in recursos
-        ])
-
-    @transaction.atomic
-    def create(self, validated_data):
-        recursos = validated_data.pop('prestamo_recursos', [])
-        prestamo = super().create(validated_data)
-        self._guardar_recursos(prestamo, recursos)
-        return prestamo
-
-    @transaction.atomic
-    def update(self, instance, validated_data):
-        recursos = validated_data.pop('prestamo_recursos', None)
-        _reevaluar_estado_si_estaba_aprobado(
-            instance, validated_data, self.context.get('request'), getattr(self, '_estado_original', None))
-        prestamo = super().update(instance, validated_data)
-        if recursos is not None:
-            prestamo.prestamo_recursos.all().delete()
-            self._guardar_recursos(prestamo, recursos)
-        return prestamo
 
 
 class PrestamoRecursoSerializer(serializers.ModelSerializer):
