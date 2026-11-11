@@ -1,0 +1,218 @@
+"""Inicio de sesión, estado de sesión y cambio de contraseña de /api/usuarios/: caracterización del comportamiento actual.
+
+- Tras 5 intentos fallidos (clave incorrecta o correo inexistente) desde la misma IP, ese correo queda bloqueado
+  2 minutos desde esa IP, incluso con la clave correcta. Un inicio correcto reinicia el conteo.
+- El correo se compara sin mayúsculas ni espacios alrededor.
+- Un hash heredado (werkzeug) se migra al formato de Django al iniciar sesión.
+"""
+import json
+import time
+from unittest import mock
+
+from django.contrib.auth.hashers import make_password
+from django.core.cache import cache
+from django.test import TestCase
+from werkzeug.security import generate_password_hash
+
+from espacios.models import EspacioFisico, EspacioPermitido, TipoEspacio
+from sedes.models import Seccional, Sede
+from usuarios.models import Rol, Usuario
+
+CLAVE = 'Clave-test-1'
+LOGIN = '/api/usuarios/login/'
+ESTADO = '/api/usuarios/session-auth-state/'
+CAMBIO = '/api/usuarios/change-password/'
+SALIDA = '/api/usuarios/logout/'
+BLOQUEO = {'error': 'Demasiados intentos. Intenta de nuevo en unos minutos.'}
+INVALIDAS = {'error': 'Credenciales inválidas'}
+
+
+def _con_clave(usuario, hash_clave=None):
+    hash_clave = hash_clave or make_password(CLAVE)
+    Usuario.objects.filter(pk=usuario.pk).update(contrasena_hash=hash_clave, password=hash_clave)
+
+
+class InicioDeSesionTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        seccional = Seccional.objects.create(ciudad='Barranquilla')
+        cls.sede = Sede.objects.create(nombre='Sede Centro', seccional=seccional, direccion='Calle 1')
+        otra_sede = Sede.objects.create(nombre='Sede Norte', seccional=seccional)
+        cls.rol = Rol.objects.create(nombre='supervisor_prueba', descripcion='Supervisa', supervisa_espacios=True)
+        cls.usuario = Usuario.objects.create_user(correo='docente@prueba.test', nombre='Docente', rol=cls.rol, sede=cls.sede)
+        _con_clave(cls.usuario)
+        tipo = TipoEspacio.objects.create(nombre='Aula')
+        cls.espacio = EspacioFisico.objects.create(sede=cls.sede, tipo=tipo, capacidad=30, ubicacion='Piso 2')
+        lejano = EspacioFisico.objects.create(sede=otra_sede, tipo=tipo, capacidad=10)
+        EspacioPermitido.objects.create(usuario=cls.usuario, espacio=cls.espacio)
+        EspacioPermitido.objects.create(usuario=cls.usuario, espacio=lejano)
+
+        rol_admin = Rol.objects.get_or_create(nombre='admin_global')[0]
+        cls.admin = Usuario.objects.create_user(correo='admin@prueba.test', nombre='Admin', rol=rol_admin, sede=cls.sede)
+        _con_clave(cls.admin)
+
+    def setUp(self):
+        cache.clear()
+
+    def entrar(self, correo=None, contrasena=CLAVE, ip=None, cliente=None):
+        extra = {'HTTP_X_FORWARDED_FOR': ip} if ip else {}
+        return (cliente or self.client).post(
+            LOGIN, json.dumps({'correo': correo or self.usuario.correo, 'contrasena': contrasena}),
+            content_type='application/json', **extra)
+
+    # ------------------------------------------------ datos y credenciales
+    def test_sin_correo_o_sin_clave_responde_400(self):
+        for datos in ({}, {'correo': self.usuario.correo}, {'contrasena': CLAVE}):
+            r = self.client.post(LOGIN, json.dumps(datos), content_type='application/json')
+            self.assertEqual((r.status_code, r.json()), (400, {'error': 'correo y contrasena son requeridos'}))
+
+    def test_correo_inexistente_o_clave_incorrecta_responden_401(self):
+        for r in (self.entrar(correo='nadie@prueba.test'), self.entrar(contrasena='otra')):
+            self.assertEqual((r.status_code, r.json()), (401, INVALIDAS))
+        self.assertIsNone(self.client.session.get('user_id'))
+
+    def test_el_correo_se_compara_sin_mayusculas_ni_espacios(self):
+        r = self.entrar(correo='  DOCENTE@Prueba.TEST ')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()['id'], self.usuario.id)
+
+    # ------------------------------------------------ bloqueo por intentos
+    def test_al_quinto_fallo_bloquea_aunque_luego_la_clave_sea_correcta(self):
+        codigos = [self.entrar(contrasena='mala').status_code for _ in range(6)]
+        self.assertEqual(codigos, [401, 401, 401, 401, 429, 429])
+        r = self.entrar()
+        self.assertEqual((r.status_code, r.json()), (429, BLOQUEO))
+        self.assertIsNone(self.client.session.get('user_id'))
+
+    def test_los_correos_inexistentes_tambien_cuentan(self):
+        codigos = [self.entrar(correo='Nadie@prueba.test ', contrasena='x').status_code for _ in range(5)]
+        self.assertEqual(codigos, [401, 401, 401, 401, 429])
+        self.assertEqual(self.entrar(correo='nadie@prueba.test').json(), BLOQUEO)
+
+    def test_un_inicio_correcto_reinicia_el_conteo(self):
+        for _ in range(4):
+            self.entrar(contrasena='mala')
+        self.assertEqual(self.entrar().status_code, 200)
+        self.assertEqual([self.entrar(contrasena='mala').status_code for _ in range(5)], [401, 401, 401, 401, 429])
+
+    def test_el_bloqueo_es_por_correo(self):
+        for _ in range(5):
+            self.entrar(contrasena='mala')
+        self.assertEqual(self.entrar(correo=self.admin.correo).status_code, 200)
+
+    def test_el_bloqueo_es_por_ip_y_usa_la_primera_de_x_forwarded_for(self):
+        for _ in range(5):
+            self.entrar(contrasena='mala', ip='10.0.0.1, 10.9.9.9')
+        self.assertEqual(self.entrar(ip='10.0.0.1').status_code, 429)
+        self.assertEqual(self.entrar(ip='10.9.9.9').status_code, 200)
+        self.assertEqual(self.entrar().status_code, 200)  # sin X-Forwarded-For usa REMOTE_ADDR
+
+    def test_el_bloqueo_dura_dos_minutos(self):
+        inicio = time.time()
+        for _ in range(5):
+            self.entrar(contrasena='mala')
+        with mock.patch('time.time', return_value=inicio + 115):
+            self.assertEqual(self.entrar().status_code, 429)
+        with mock.patch('time.time', return_value=inicio + 125):
+            self.assertEqual(self.entrar().status_code, 200)
+
+    def test_los_fallos_vencen_a_los_dos_minutos(self):
+        inicio = time.time()
+        for _ in range(4):
+            self.entrar(contrasena='mala')
+        with mock.patch('time.time', return_value=inicio + 125):
+            self.assertEqual([self.entrar(contrasena='mala').status_code for _ in range(4)], [401] * 4)
+
+    def test_cuenta_desactivada_con_clave_correcta_reinicia_el_conteo_y_responde_403(self):
+        Usuario.objects.filter(pk=self.usuario.pk).update(activo=False)
+        for _ in range(4):
+            self.entrar(contrasena='mala')
+        self.assertEqual(self.entrar().status_code, 403)
+        self.assertEqual([self.entrar(contrasena='mala').status_code for _ in range(4)], [401] * 4)
+
+    # ------------------------------------------------ inicio correcto
+    def test_un_hash_heredado_se_migra_al_formato_de_django(self):
+        _con_clave(self.usuario, generate_password_hash(CLAVE, method='pbkdf2:sha256'))
+        self.assertEqual(self.entrar().status_code, 200)
+        usuario = Usuario.objects.get(pk=self.usuario.pk)
+        self.assertTrue(usuario.contrasena_hash.startswith('pbkdf2_'))
+        self.assertEqual(usuario.password, usuario.contrasena_hash)
+        self.assertEqual(self.entrar().status_code, 200)
+
+    def test_un_hash_de_django_no_se_reescribe(self):
+        antes = Usuario.objects.get(pk=self.usuario.pk).contrasena_hash
+        self.entrar()
+        self.assertEqual(Usuario.objects.get(pk=self.usuario.pk).contrasena_hash, antes)
+
+    def test_la_sesion_guarda_el_usuario_el_rol_y_el_token(self):
+        datos = self.entrar().json()
+        sesion = self.client.session
+        self.assertEqual(
+            {k: sesion.get(k) for k in ('user_id', 'correo', 'is_authenticated', 'token', 'rol', 'id_rol')},
+            {'user_id': self.usuario.id, 'correo': self.usuario.correo, 'is_authenticated': True,
+             'token': datos['token'], 'rol': self.rol.nombre, 'id_rol': self.rol.id})
+
+    def test_la_respuesta_trae_el_perfil_los_permisos_y_los_espacios_de_su_sede(self):
+        datos = self.entrar().json()
+        self.assertEqual(len(datos.pop('token')), 43)
+        self.assertEqual(datos.pop('componentes'), [])
+        self.assertEqual(datos, {
+            'message': 'Login exitoso',
+            'id': self.usuario.id,
+            'nombre': 'Docente',
+            'correo': 'docente@prueba.test',
+            'rol': {'id': self.rol.id, 'nombre': 'supervisor_prueba', 'descripcion': 'Supervisa',
+                    'supervisa_espacios': True},
+            'facultad': None,
+            'sede': {'id': self.sede.id, 'nombre': 'Sede Centro', 'seccional_id': self.sede.seccional_id,
+                     'seccional_ciudad': 'Barranquilla', 'direccion': 'Calle 1'},
+            'seccional': {'id': self.sede.seccional_id, 'ciudad': 'Barranquilla'},
+            'espacios_permitidos': [{'id': self.espacio.id, 'tipo': 'Aula', 'capacidad': 30, 'ubicacion': 'Piso 2',
+                                     'disponible': True, 'sede_id': self.sede.id, 'sede_nombre': 'Sede Centro'}],
+            'tipos_espacio_permitidos': [],
+            'puede_crear_espacios': False,
+        })
+
+    # ------------------------------------------------ estado de sesión
+    def test_estado_de_sesion_solo_envia_los_permisos_si_cambiaron(self):
+        self.entrar()
+        r = self.client.get(ESTADO)
+        self.assertEqual(r.status_code, 200)
+        datos = r.json()
+        firma = datos['signature']
+        self.assertEqual(len(firma), 16)
+        self.assertEqual(datos, {'changed': True, 'signature': firma, 'componentes': [], 'rol': {
+            'id': self.rol.id, 'nombre': 'supervisor_prueba', 'descripcion': 'Supervisa', 'supervisa_espacios': True}})
+        self.assertEqual(self.client.get(ESTADO, {'since': firma}).json(), {'changed': False, 'signature': firma})
+        self.assertTrue(self.client.get(ESTADO, {'since': 'otra'}).json()['changed'])
+
+    def test_estado_de_sesion_sin_sesion_no_responde_datos(self):
+        self.assertEqual(self.client.get(ESTADO).status_code, 403)
+
+    # ------------------------------------------------ cambio de contraseña y salida
+    def test_cambiar_contrasena(self):
+        self.entrar(correo=self.admin.correo)
+
+        def cambiar(**datos):
+            return self.client.put(CAMBIO, json.dumps(datos), content_type='application/json')
+
+        r = cambiar(correo=self.usuario.correo, old_contrasena=CLAVE)
+        self.assertEqual((r.status_code, r.json()),
+                         (400, {'error': 'correo, old_contrasena y new_contrasena son requeridos'}))
+        for datos in ({'correo': 'nadie@prueba.test', 'old_contrasena': CLAVE, 'new_contrasena': 'Nueva-1'},
+                      {'correo': self.usuario.correo, 'old_contrasena': 'mala', 'new_contrasena': 'Nueva-1'}):
+            r = cambiar(**datos)
+            self.assertEqual((r.status_code, r.json()), (401, INVALIDAS))
+        r = cambiar(correo=self.usuario.correo, old_contrasena=CLAVE, new_contrasena='Nueva-1')
+        self.assertEqual((r.status_code, r.json()), (200, {'message': 'Contraseña cambiada exitosamente'}))
+        usuario = Usuario.objects.get(pk=self.usuario.pk)
+        self.assertEqual(usuario.password, usuario.contrasena_hash)
+        cliente = self.client_class()
+        self.assertEqual(self.entrar(contrasena=CLAVE, cliente=cliente).status_code, 401)
+        self.assertEqual(self.entrar(contrasena='Nueva-1', cliente=cliente).status_code, 200)
+
+    def test_salir_borra_la_sesion(self):
+        self.entrar(correo=self.admin.correo)
+        r = self.client.post(SALIDA)
+        self.assertEqual((r.status_code, r.json()), (200, {'message': 'Logout exitoso'}))
+        self.assertIsNone(self.client.session.get('user_id'))

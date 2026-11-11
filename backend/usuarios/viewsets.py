@@ -1,21 +1,16 @@
-import hashlib
-import secrets
 import unicodedata
 
-from django.contrib.auth.hashers import make_password
-from django.core.cache import cache
 from django.db.models import Q
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from espacios import alcance as alcance_espacios
 from usuarios.models import Rol, Usuario
 from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
 from mysite.auth_helpers import (
-    CUENTA_DESACTIVADA, is_admin_global, q_usuarios_de_seccional, is_admin_sistema, seccional_para_sesion, user_supervisa_espacios,
+    is_admin_global, q_usuarios_de_seccional, is_admin_sistema,
 )
 from financiero.permissions import es_solo_admin_financiero
 from mysite.cache_utils import CachedCatalogMixin
@@ -25,11 +20,15 @@ from mysite.permissions import (
     IsAdminUserManagement,
 )
 
-from usuarios.contrasenas import password_valida as _password_valida
+from usuarios import sesion
 
 
-MAX_LOGIN_ATTEMPTS = 5
-LOGIN_LOCKOUT_SECONDS = 2 * 60
+_ESTADO_DE_RECHAZO = {
+    sesion.DatosIncompletos: status.HTTP_400_BAD_REQUEST,
+    sesion.CredencialesInvalidas: status.HTTP_401_UNAUTHORIZED,
+    sesion.CuentaDesactivada: status.HTTP_403_FORBIDDEN,
+    sesion.DemasiadosIntentos: status.HTTP_429_TOO_MANY_REQUESTS,
+}
 
 
 def _get_client_ip(request):
@@ -177,30 +176,6 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset[inicio:inicio + tamano], many=True)
         return Response({'count': total, 'page': pagina, 'page_size': tamano, 'results': serializer.data})
 
-    def _build_componentes(self, usuario):
-        from mysite.auth_helpers import construir_componentes
-
-        return construir_componentes(usuario)
-
-    def _build_espacios_permitidos(self, usuario):
-        from espacios.models import EspacioPermitido
-
-        espacios_permisos = EspacioPermitido.objects.filter(usuario=usuario).select_related('espacio', 'espacio__sede', 'espacio__tipo')
-        if getattr(usuario, 'sede_id', None):
-            espacios_permisos = espacios_permisos.filter(espacio__sede_id=usuario.sede_id)
-        return [
-            {
-                'id': ep.espacio.id,
-                'tipo': ep.espacio.tipo.nombre if ep.espacio.tipo else None,
-                'capacidad': ep.espacio.capacidad,
-                'ubicacion': ep.espacio.ubicacion,
-                'disponible': ep.espacio.estado == 'Disponible',
-                'sede_id': ep.espacio.sede.id,
-                'sede_nombre': ep.espacio.sede.nombre,
-            }
-            for ep in espacios_permisos
-        ]
-
     @action(
         detail=False,
         methods=['post'],
@@ -209,100 +184,13 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         permission_classes=[permissions.AllowAny],
     )
     def login(self, request):
-        correo = request.data.get('correo')
-        contrasena = request.data.get('contrasena')
-
-        if not correo or not contrasena:
-            return Response({'error': 'correo y contrasena son requeridos'}, status=status.HTTP_400_BAD_REQUEST)
-
-        correo_normalizado = correo.strip().lower()
-        ip_cliente = _get_client_ip(request)
-        lock_key = f"login_lock:{correo_normalizado}:{ip_cliente}"
-        if cache.get(lock_key):
-            return Response(
-                {'error': 'Demasiados intentos. Intenta de nuevo en unos minutos.'},
-                status=status.HTTP_429_TOO_MANY_REQUESTS,
-            )
-
         try:
-            usuario = Usuario.objects.select_related('sede', 'sede__seccional', 'rol', 'facultad').get(correo=correo_normalizado)
-        except Usuario.DoesNotExist:
-            attempts_key = f"login_attempts:{correo_normalizado}:{ip_cliente}"
-            attempts = cache.get(attempts_key, 0) + 1
-            if attempts >= MAX_LOGIN_ATTEMPTS:
-                cache.set(lock_key, True, LOGIN_LOCKOUT_SECONDS)
-                cache.delete(attempts_key)
-                return Response(
-                    {'error': 'Demasiados intentos. Intenta de nuevo en unos minutos.'},
-                    status=status.HTTP_429_TOO_MANY_REQUESTS,
-                )
-            cache.set(attempts_key, attempts, LOGIN_LOCKOUT_SECONDS)
-            return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
+            usuario = sesion.autenticar(request.data.get('correo'), request.data.get('contrasena'), _get_client_ip(request))
+        except sesion.SesionRechazada as rechazo:
+            return Response({'error': rechazo.mensaje}, status=_ESTADO_DE_RECHAZO[type(rechazo)])
 
-        password_ok, es_legacy = _password_valida(usuario, contrasena)
-        if not password_ok:
-            attempts_key = f"login_attempts:{correo_normalizado}:{ip_cliente}"
-            attempts = cache.get(attempts_key, 0) + 1
-            if attempts >= MAX_LOGIN_ATTEMPTS:
-                cache.set(lock_key, True, LOGIN_LOCKOUT_SECONDS)
-                cache.delete(attempts_key)
-                return Response(
-                    {'error': 'Demasiados intentos. Intenta de nuevo en unos minutos.'},
-                    status=status.HTTP_429_TOO_MANY_REQUESTS,
-                )
-            cache.set(attempts_key, attempts, LOGIN_LOCKOUT_SECONDS)
-            return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        cache.delete(f"login_attempts:{correo_normalizado}:{ip_cliente}")
-
-        if not usuario.activo:
-            return Response({'error': CUENTA_DESACTIVADA}, status=status.HTTP_403_FORBIDDEN)
-
-        if es_legacy:
-            nuevo_hash = make_password(contrasena)
-            usuario.contrasena_hash = nuevo_hash
-            usuario.password = nuevo_hash
-            usuario.save(update_fields=['contrasena_hash', 'password'])
-
-        componentes = self._build_componentes(usuario)
-        espacios_permitidos = self._build_espacios_permitidos(usuario)
-
-        request.session['user_id'] = usuario.id
-        request.session['correo'] = usuario.correo
-        request.session['is_authenticated'] = True
-        token = secrets.token_urlsafe(32)
-        request.session['token'] = token
-        request.session['rol'] = usuario.rol.nombre if usuario.rol else None
-        request.session['id_rol'] = usuario.rol.id if usuario.rol else None
-
-        return Response({
-            'message': 'Login exitoso',
-            'id': usuario.id,
-            'nombre': usuario.nombre,
-            'correo': usuario.correo,
-            'rol': {
-                'id': usuario.rol.id,
-                'nombre': usuario.rol.nombre,
-                'descripcion': usuario.rol.descripcion,
-                'supervisa_espacios': usuario.rol.supervisa_espacios,
-            } if usuario.rol else None,
-            'facultad': {
-                'id': usuario.facultad.id,
-                'nombre': usuario.facultad.nombre,
-            } if usuario.facultad else None,
-            'sede': {
-                'id': usuario.sede.id,
-                'nombre': usuario.sede.nombre,
-                'seccional_id': usuario.sede.seccional_id,
-                'seccional_ciudad': usuario.sede.seccional.ciudad if usuario.sede.seccional else None,
-                'direccion': usuario.sede.direccion,
-            } if usuario.sede else None,
-            'seccional': seccional_para_sesion(usuario),
-            'componentes': componentes,
-            'espacios_permitidos': espacios_permitidos,
-            **alcance_espacios.resumen_sesion(usuario),
-            'token': token,
-        }, status=status.HTTP_200_OK)
+        token = sesion.abrir_sesion(request.session, usuario)
+        return Response(sesion.datos_de_inicio(usuario, token), status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get', 'post'], url_path='logout')
     def logout(self, request):
@@ -320,50 +208,15 @@ class UsuarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
         except Usuario.DoesNotExist:
             return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
-        componentes = self._build_componentes(usuario)
-        parts = [f"{c['id']}:{c['permiso']}" for c in sorted(componentes, key=lambda item: (item['id'], item['permiso']))]
-        role_part = str(usuario.rol.id) if usuario.rol else 'no-role'
-        supervisa_part = 'supervisa-espacios' if user_supervisa_espacios(usuario) else 'no-supervisa-espacios'
-        signature_source = f"{role_part}|{supervisa_part}|{'|'.join(parts)}"
-        signature = hashlib.sha256(signature_source.encode('utf-8')).hexdigest()[:16]
-
-        since = request.query_params.get('since')
-        if since and since == signature:
-            return Response({'changed': False, 'signature': signature}, status=status.HTTP_200_OK)
-
-        return Response({
-            'changed': True,
-            'signature': signature,
-            'rol': {
-                'id': usuario.rol.id,
-                'nombre': usuario.rol.nombre,
-                'descripcion': usuario.rol.descripcion,
-                'supervisa_espacios': usuario.rol.supervisa_espacios,
-            } if usuario.rol else None,
-            'componentes': componentes,
-        }, status=status.HTTP_200_OK)
+        return Response(sesion.estado_de_sesion(usuario, request.query_params.get('since')), status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['put'], url_path='change-password')
     def change_password(self, request):
-        correo = request.data.get('correo')
-        old_contrasena = request.data.get('old_contrasena')
-        new_contrasena = request.data.get('new_contrasena')
-
-        if not correo or not old_contrasena or not new_contrasena:
-            return Response({'error': 'correo, old_contrasena y new_contrasena son requeridos'}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
-            usuario = Usuario.objects.get(correo=correo)
-        except Usuario.DoesNotExist:
-            return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        password_ok, _ = _password_valida(usuario, old_contrasena)
-        if not password_ok:
-            return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        usuario.contrasena_hash = make_password(new_contrasena)
-        usuario.password = usuario.contrasena_hash
-        usuario.save()
+            sesion.cambiar_contrasena(
+                request.data.get('correo'), request.data.get('old_contrasena'), request.data.get('new_contrasena'))
+        except sesion.SesionRechazada as rechazo:
+            return Response({'error': rechazo.mensaje}, status=_ESTADO_DE_RECHAZO[type(rechazo)])
         return Response({'message': 'Contraseña cambiada exitosamente'}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], url_path='docentes', permission_classes=[permissions.IsAuthenticated])
