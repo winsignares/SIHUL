@@ -117,7 +117,8 @@ Estos puntos cambiarían un comportamiento visible y por eso no forman parte de 
 - Exportar el horario individual (PDF/Excel): hoy incluye horarios en cualquier estado. ¿Solo aprobados?
 - Aprobar o rechazar solicitudes públicas desde la pantalla de préstamos de espacios llama a rutas que no existen bajo
   `/api`. ¿Se corrige el frontend para usar `/api/prestamos/publicos/<id>/`?
-- Rol `admin_global` sin ser superusuario: ¿ve todas las seccionales o solo la suya?
+- ~~Rol `admin_global` sin ser superusuario: ¿ve todas las seccionales o solo la suya?~~ Decidido: ve todas, como el
+  superusuario (`auth_helpers.ve_todas_las_seccionales`).
 - Permiso EDITAR en «Gestión de Usuarios» para quien no es administrador: ¿qué personas puede gestionar?
 - Paginación de los listados grandes (cambia la respuesta y el frontend).
 - Ajustes de configuración del servidor (fase 7).
