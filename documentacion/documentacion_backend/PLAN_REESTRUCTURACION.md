@@ -122,6 +122,8 @@ Estos puntos cambiarían un comportamiento visible y por eso no forman parte de 
 - ~~Permiso EDITAR en «Gestión de Usuarios» para quien no es administrador: ¿qué personas puede gestionar?~~
   Decidido: las de su seccional, sin roles ni cuentas de administración y sin cambiar su propio rol, estado ni
   seccional; con VER consulta la lista de su seccional (`usuarios/gestion.py`).
-- Paginación de los listados grandes (cambia la respuesta y el frontend).
+- ~~Paginación de los listados grandes (cambia la respuesta y el frontend).~~ Decidido: las pantallas que los usan
+  necesitan la lista completa, así que en lugar de paginar se comprimen las respuestas JSON con gzip
+  (`mysite/compresion.py`): de 610 KB a 34 KB en los horarios extendidos.
 - Ajustes de configuración del servidor (fase 7).
 - Separar el chat del asistente del resto del backend para que no comparta hilos.
