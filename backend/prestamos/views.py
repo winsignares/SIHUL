@@ -4,7 +4,7 @@ from .models import PrestamoEspacio, PrestamoEspacioPublico
 from espacios.models import EspacioFisico
 from horario.models import Horario
 from mysite.auth_helpers import (
-    SECCIONAL_PUBLICA_REQUERIDA, get_user_seccional_id, is_superuser_effective,
+    SECCIONAL_PUBLICA_REQUERIDA, get_user_seccional_id, ve_todas_las_seccionales,
     seccional_publica,
 )
 import datetime
@@ -45,7 +45,7 @@ def list_espacios_disponibles_publico(request):
                 if not seccional_id:
                     return JsonResponse(SECCIONAL_PUBLICA_REQUERIDA, status=400)
                 espacios_query = espacios_query.filter(sede__seccional_id=seccional_id)
-            elif not is_superuser_effective(usuario):
+            elif not ve_todas_las_seccionales(usuario):
                 espacios_query = espacios_query.filter(sede__seccional_id=get_user_seccional_id(usuario))
             if sede_id:
                 espacios_query = espacios_query.filter(sede_id=sede_id)

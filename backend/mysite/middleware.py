@@ -20,7 +20,7 @@ class SedeFilterMiddleware(MiddlewareMixin):
         if user_id:
             try:
                 from usuarios.models import Usuario
-                usuario = Usuario.objects.select_related('sede').get(id=user_id)
+                usuario = Usuario.objects.select_related('rol', 'sede').get(id=user_id)
                 if not usuario.activo:
                     # Una cuenta desactivada pierde la sesión que tuviera abierta
                     request.session.flush()

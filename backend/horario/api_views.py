@@ -14,7 +14,7 @@ from espacios.models import EspacioFisico
 
 from . import exportaciones
 from .models import Horario, HorarioEstudiante, SolicitudEspacio
-from mysite.auth_helpers import SECCIONAL_PUBLICA_REQUERIDA, is_superuser_effective, seccional_publica
+from mysite.auth_helpers import SECCIONAL_PUBLICA_REQUERIDA, seccional_publica, ve_todas_las_seccionales
 from mysite.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def _get_authenticated_seccional_scope(request):
     user = _get_request_user(request)
     if not user:
         return None, False
-    if is_superuser_effective(user):
+    if ve_todas_las_seccionales(user):
         return None, True
     return get_user_seccional_id(user), False
 
@@ -675,7 +675,7 @@ def horarios_por_periodo(request):
         seccional_pedida = seccional_publica(request)
         if usuario is None and not seccional_pedida:
             return JsonResponse(SECCIONAL_PUBLICA_REQUERIDA, status=400)
-        if usuario is not None and not is_superuser_effective(usuario):
+        if usuario is not None and not ve_todas_las_seccionales(usuario):
             seccional_id = get_user_seccional_id(usuario)
             if not seccional_id:
                 return _missing_seccional_response()

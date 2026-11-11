@@ -129,9 +129,9 @@ class UsuarioSerializer(serializers.ModelSerializer):
         if sede is not None and seccional is not None and sede.seccional_id and sede.seccional_id != seccional.id:
             raise serializers.ValidationError({'seccional': 'La seccional no corresponde a la sede elegida.'})
 
-        # Quien administra una seccional solo puede dejar usuarios en la suya. El administrador global
-        # (superusuario) puede asignar cualquiera.
-        from mysite.auth_helpers import get_user_seccional_id, is_admin_global, is_superuser_effective
+        # Quien administra una seccional solo puede dejar usuarios en la suya. El administrador general
+        # (superusuario o rol admin_global) puede asignar cualquiera.
+        from mysite.auth_helpers import get_user_seccional_id, is_admin_global, ve_todas_las_seccionales
 
         request = self.context.get('request')
         solicitante = (getattr(request, 'user_obj', None) or getattr(request, 'user', None)) if request else None
@@ -147,7 +147,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             if not es_rol_gestionable_por_admin_financiero(rol):
                 raise serializers.ValidationError({'rol': 'Solo puedes gestionar usuarios con roles financieros.'})
 
-        if autenticado and not is_superuser_effective(solicitante) and not admin_financiero:
+        if autenticado and not ve_todas_las_seccionales(solicitante) and not admin_financiero:
             propia = get_user_seccional_id(solicitante)
             destino = sede.seccional_id if sede is not None else (seccional.id if seccional is not None else None)
             if propia and destino and destino != propia:

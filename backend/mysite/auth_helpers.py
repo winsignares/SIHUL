@@ -41,6 +41,13 @@ def is_admin_global(user):
     rol_nombre = (getattr(rol, 'nombre', '') or '').strip().lower()
     return rol_nombre in {'admin_global'}
 
+
+def ve_todas_las_seccionales(user):
+    """El administrador general (superusuario o rol admin_global) consulta y gestiona los datos de todas las
+    seccionales; los demás, solo los de la suya."""
+    return is_admin_global(user)
+
+
 def is_admin_sistema(user):
     if not user:
         return False

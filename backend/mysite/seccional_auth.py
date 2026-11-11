@@ -9,7 +9,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
-from .auth_helpers import MISSING_SECCIONAL_MESSAGE, is_superuser_effective
+from .auth_helpers import MISSING_SECCIONAL_MESSAGE, ve_todas_las_seccionales
 
 
 class SessionUsuarioAuthentication(BaseAuthentication):
@@ -27,7 +27,7 @@ class SessionUsuarioAuthentication(BaseAuthentication):
         from usuarios.models import Usuario
 
         try:
-            usuario = Usuario.objects.select_related('sede', 'seccional').get(id=user_id, activo=True)
+            usuario = Usuario.objects.select_related('rol', 'sede', 'seccional').get(id=user_id, activo=True)
         except Usuario.DoesNotExist as exc:
             raise AuthenticationFailed('Usuario de sesión no válido.') from exc
 
@@ -37,7 +37,7 @@ class SessionUsuarioAuthentication(BaseAuthentication):
 class SeccionalMixin:
     """Filtra los querysets por la seccional del usuario autenticado.
 
-    - Superuser: retorna todo.
+    - Administrador general (superusuario o rol admin_global): retorna todo.
     - Usuario normal: filtra por el campo configurado en `seccional_lookup`.
     """
 
@@ -74,7 +74,7 @@ class SeccionalMixin:
         if not user:
             return queryset.none()
 
-        if is_superuser_effective(user):
+        if ve_todas_las_seccionales(user):
             return queryset
 
         seccional = self.get_user_seccional()
@@ -91,7 +91,7 @@ class SeccionalMixin:
         user = self.get_current_user()
         if not user:
             return {}
-        if is_superuser_effective(user):
+        if ve_todas_las_seccionales(user):
             return {}
 
         defaults = {}
