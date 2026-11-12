@@ -185,7 +185,7 @@ class FlujoFacturaArchivosTests(TestCase):
 
     def test_el_pago_aplicado_ante_errores_inesperados(self):
         f = self.factura('Autorizada', numero_confirmacion='CONF-2026-0001')
-        guardar = 'financiero.views._guardar_documento_en_carpeta_compartida'
+        guardar = 'financiero.api.facturas._guardar_documento_en_carpeta_compartida'
         with mock.patch(guardar, side_effect=RuntimeError('disco lleno')):
             r = self.pagar(f, numero_transaccion='TRX-9')
         self.assertEqual((r.status_code, r.data), (500, {'error': 'No fue posible registrar el pago aplicado.',
