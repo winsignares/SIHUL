@@ -4,7 +4,7 @@ Ver también [PAGINAS_INDICE.md](PAGINAS_INDICE.md).
 
 ## `frontend/src/pages/chatbot/`
 
-- `AsistentesVirtuales.tsx` — UI del chatbot, reutilizada con distinta ruta según el rol (admin, supervisor, docente, estudiante, pública). Ver [../documentacion_chatbot/ARQUITECTURA_RAG_CHATBOT.md](../documentacion_chatbot/ARQUITECTURA_RAG_CHATBOT.md) para el backend RAG.
+- `AsistentesVirtuales.tsx` — UI del chatbot, reutilizada con distinta ruta según el rol (admin, supervisor, docente, estudiante, pública). La lista de asistentes, el encabezado, los mensajes y la caja de texto están en `features/chatbot/components/asistentes/`. Ver [../documentacion_chatbot/ARQUITECTURA_RAG_CHATBOT.md](../documentacion_chatbot/ARQUITECTURA_RAG_CHATBOT.md) para el backend RAG.
 
 ## `frontend/src/pages/financiero/`
 
