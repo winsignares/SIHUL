@@ -5,7 +5,7 @@ Provides sanitization and validation functions to prevent XSS attacks
 
 import re
 import html
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from django.utils.html import escape
 from django.core.exceptions import ValidationError
 

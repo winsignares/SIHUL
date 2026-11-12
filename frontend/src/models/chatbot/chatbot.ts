@@ -39,12 +39,3 @@ export interface Mensaje {
     leido?: boolean;
     anexos?: AnexoChatbot[];
 }
-
-export interface ChatMessage {
-    id: string;
-    remitenteId: string;
-    destinatarioId: string;
-    mensaje: string;
-    leido: boolean;
-    fecha: string;
-}

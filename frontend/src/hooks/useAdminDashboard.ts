@@ -5,8 +5,6 @@ import { isSpaceSupervisorRole } from '../context/spaceSupervisorRole';
 import { getRouteForComponent, getIconForComponent } from '../config/componentRoutes';
 import { resolveCanonicalFinancialRole } from '../context/financialRoleUtils';
 
-export type MenuOption = 'home' | 'facultades' | 'espacios' | 'asignacion' | 'centrohorarios' | 'periodos' | 'reportes' | 'prestamos' | 'recursos' | 'ocupacion' | 'notificaciones' | 'ajustes' | 'chat' | 'usuarios' | 'asistentes' | 'mihorario';
-
 interface MenuItem {
     id: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

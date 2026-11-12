@@ -11,7 +11,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from componentes.models import ComponenteRol, ComponenteUsuario
+from componentes.models import ComponenteUsuario
 from espacios.models import EspacioPermitido
 from espacios import alcance as alcance_espacios
 from mysite.auth_helpers import componentes_de_rol_efectivos, role_supervisa_espacios, seccional_para_sesion

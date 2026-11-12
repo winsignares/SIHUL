@@ -8,7 +8,7 @@ from mysite.auth_helpers import (
     get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_authenticated_user,
     q_usuarios_de_seccional,
 )
-from financiero.permissions import es_componente_financiero, es_rol_financiero
+from mysite.roles_financieros import es_componente_financiero, es_rol_financiero
 from mysite.permissions import IsAdminOnly
 from sedes.models import Seccional
 

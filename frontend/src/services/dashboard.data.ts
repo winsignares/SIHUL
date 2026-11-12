@@ -1,23 +1,19 @@
 import {
-    Building2,
-    MapPin,
-    Clock,
-    BookOpen,
-    Activity as ActivityIcon,
-    Users,
-    CheckCircle2,
-    TrendingUp,
-    FileText,
-    BarChart3,
-    HandCoins,
-    DoorOpen,
-    Layers,
-    Calendar,
-    CheckCircle,
-    XCircle,
-    AlertCircle
+  Building2,
+  MapPin,
+  Clock,
+  BookOpen,
+  Activity as ActivityIcon,
+  Users,
+  CheckCircle2,
+  TrendingUp,
+  DoorOpen,
+  Layers,
+  Calendar,
+  CheckCircle,
+  AlertCircle,
 } from 'lucide-react';
-import type { DashboardStat, Activity, QuickAction, UpcomingEvent, OccupancyData } from '../models/dashboard/types';
+import type { DashboardStat, Activity, QuickAction, OccupancyData } from '../models/dashboard/types';
 
 // DashboardHome Data
 export const dashboardHomeStats: DashboardStat[] = [
@@ -177,148 +173,6 @@ export const dashboardHomeOccupationStats: OccupancyData[] = [
     { day: 'Sábado', value: 45, color: 'bg-slate-600' }
 ];
 
-// ConsultorDashboard Data
-export const consultorStats: DashboardStat[] = [
-    {
-        label: 'Espacios Disponibles',
-        value: '28',
-        change: '+5 desde ayer',
-        icon: MapPin,
-        gradient: 'from-blue-500 to-blue-600',
-        bgGradient: 'from-blue-500/10 to-blue-600/10',
-        iconBg: 'bg-blue-500',
-        changePositive: true
-    },
-    {
-        label: 'Horarios Consultados',
-        value: '156',
-        change: '+12 esta semana',
-        icon: Clock,
-        gradient: 'from-emerald-500 to-emerald-600',
-        bgGradient: 'from-emerald-500/10 to-emerald-600/10',
-        iconBg: 'bg-emerald-500',
-        changePositive: true
-    },
-    {
-        label: 'Reportes Generados',
-        value: '24',
-        change: '+8 este mes',
-        icon: FileText,
-        gradient: 'from-amber-500 to-amber-600',
-        bgGradient: 'from-amber-500/10 to-amber-600/10',
-        iconBg: 'bg-amber-500',
-        changePositive: true
-    },
-    {
-        label: 'Ocupación Promedio',
-        value: '82%',
-        change: 'Óptimo',
-        icon: BarChart3,
-        gradient: 'from-violet-500 to-violet-600',
-        bgGradient: 'from-violet-500/10 to-violet-600/10',
-        iconBg: 'bg-violet-500',
-        changePositive: true
-    }
-];
-
-export const consultorQuickActions: QuickAction[] = [
-    {
-        title: 'Consultar Horarios',
-        description: 'Ver horarios disponibles',
-        icon: Clock,
-        color: 'from-emerald-500 to-emerald-600',
-        action: 'horarios'
-    },
-    {
-        title: 'Ver Disponibilidad',
-        description: 'Espacios disponibles ahora',
-        icon: MapPin,
-        color: 'from-blue-500 to-blue-600',
-        action: 'espacios'
-    },
-    {
-        title: 'Generar Reporte',
-        description: 'Crear nuevo reporte',
-        icon: FileText,
-        color: 'from-amber-500 to-amber-600',
-        action: 'reportes'
-    },
-    {
-        title: 'Ver Ocupación',
-        description: 'Estadísticas de uso',
-        icon: BarChart3,
-        color: 'from-violet-500 to-violet-600',
-        action: 'ocupacion'
-    }
-];
-
-export const consultorRecentActivities: Activity[] = [
-    {
-        title: 'Consulta de Horario',
-        description: 'Ingeniería de Sistemas - Grupo A',
-        time: 'Hace 5 minutos',
-        status: 'completed',
-        icon: Clock,
-        color: 'bg-emerald-500'
-    },
-    {
-        title: 'Reporte Generado',
-        description: 'Ocupación Semanal - Periodo 2025-1',
-        time: 'Hace 15 minutos',
-        status: 'completed',
-        icon: FileText,
-        color: 'bg-amber-500'
-    },
-    {
-        title: 'Espacio Consultado',
-        description: 'Laboratorio 301 - Edificio C',
-        time: 'Hace 1 hora',
-        status: 'completed',
-        icon: MapPin,
-        color: 'bg-blue-500'
-    },
-    {
-        title: 'Préstamo Solicitado',
-        description: 'Auditorio Central - 15 de Octubre',
-        time: 'Hace 2 horas',
-        status: 'pending',
-        icon: HandCoins,
-        color: 'bg-violet-500'
-    }
-];
-
-export const consultorUpcomingEvents: UpcomingEvent[] = [
-    {
-        date: '22 Oct',
-        title: 'Mantenimiento Programado',
-        location: 'Laboratorio 301',
-        time: '14:00 - 17:00',
-        type: 'maintenance'
-    },
-    {
-        date: '23 Oct',
-        title: 'Evento Académico',
-        location: 'Auditorio Central',
-        time: '09:00 - 12:00',
-        type: 'event'
-    },
-    {
-        date: '24 Oct',
-        title: 'Reserva Aprobada',
-        location: 'Sala de Juntas 2',
-        time: '10:00 - 11:30',
-        type: 'approved'
-    }
-];
-
-export const consultorOccupancyData: OccupancyData[] = [
-    { day: 'Lun', percentage: 85, classes: 68 },
-    { day: 'Mar', percentage: 92, classes: 72 },
-    { day: 'Mié', percentage: 78, classes: 65 },
-    { day: 'Jue', percentage: 70, classes: 58 },
-    { day: 'Vie', percentage: 55, classes: 45 }
-];
-
 // SupervisorGeneral Data
 export const supervisorMetrics: DashboardStat[] = [
     {
@@ -398,66 +252,4 @@ export const supervisorActivityLogs: Activity[] = [
     { title: 'Proyector en B-203 reportado en mantenimiento', time: 'Hace 15 minutos', tipo: 'mantenimiento', description: '', icon: AlertCircle },
     { title: 'Salón C-305 cerrado', time: 'Hace 30 minutos', tipo: 'cierre', description: '', icon: DoorOpen },
     { title: 'Auditorio Principal reservado', time: 'Hace 1 hora', tipo: 'reserva', description: '', icon: Calendar }
-];
-
-// Audiovisual Data
-export const audiovisualStats: DashboardStat[] = [
-    {
-        label: 'Solicitudes Pendientes',
-        value: '5',
-        change: '+2 hoy',
-        icon: Clock,
-        gradient: 'from-amber-500 to-amber-600',
-        changePositive: false
-    },
-    {
-        label: 'Aprobadas Hoy',
-        value: '8',
-        change: '+3 esta semana',
-        icon: CheckCircle,
-        gradient: 'from-emerald-500 to-emerald-600',
-        changePositive: true
-    },
-    {
-        label: 'Rechazadas Hoy',
-        value: '2',
-        change: '-1 vs ayer',
-        icon: XCircle,
-        gradient: 'from-red-500 to-red-600',
-        changePositive: true
-    },
-    {
-        label: 'Préstamos Activos',
-        value: '12',
-        change: 'En curso',
-        icon: Calendar,
-        gradient: 'from-blue-500 to-blue-600',
-        changePositive: true
-    }
-];
-
-export const audiovisualRequests: Activity[] = [
-    { id: '1', solicitante: 'María González', espacio: 'Auditorio Central', fecha: '2025-11-05', hora: '14:00', estado: 'pendiente', title: '', description: '', time: '', icon: Clock },
-    { id: '2', solicitante: 'Carlos Ruiz', espacio: 'Laboratorio 301', fecha: '2025-11-04', hora: '18:00', estado: 'pendiente', title: '', description: '', time: '', icon: Clock },
-    { id: '3', solicitante: 'Ana Martínez', espacio: 'Sala de Juntas 1', fecha: '2025-11-03', hora: '09:00', estado: 'aprobado', title: '', description: '', time: '', icon: Clock },
-    { id: '4', solicitante: 'Pedro López', espacio: 'Aula 205', fecha: '2025-11-02', hora: '16:00', estado: 'aprobado', title: '', description: '', time: '', icon: Clock },
-    { id: '5', solicitante: 'Juan Pérez', espacio: 'Auditorio Central', fecha: '2025-11-01', hora: '08:00', estado: 'rechazado', title: '', description: '', time: '', icon: Clock }
-];
-
-export const audiovisualUpcomingLoans: UpcomingEvent[] = [
-    { espacio: 'Auditorio Central', fecha: '2025-11-05', hora: '10:00', solicitante: 'Depto. Sistemas', title: '', date: '', time: '' },
-    { espacio: 'Lab 301', fecha: '2025-11-05', hora: '15:00', solicitante: 'Prof. García', title: '', date: '', time: '' },
-    { espacio: 'Sala Juntas 2', fecha: '2025-11-06', hora: '09:00', solicitante: 'Decanatura', title: '', date: '', time: '' }
-];
-
-export const consultorDocenteStats: DashboardStat[] = [
-    { label: 'Asignaturas', value: '3 materias', icon: BookOpen, color: 'blue' },
-    { label: 'Horas Semanales', value: '18 horas', icon: Clock, color: 'green' },
-    { label: 'Grupos', value: '5 grupos', icon: Users, color: 'purple' }
-];
-
-export const consultorEstudianteStats: DashboardStat[] = [
-    { label: 'Semestre Actual', value: '2025-1', icon: BookOpen, color: 'blue' },
-    { label: 'Horas Semanales', value: '24 horas', icon: Clock, color: 'green' },
-    { label: 'Asignaturas', value: '6 materias', icon: Calendar, color: 'purple' }
 ];

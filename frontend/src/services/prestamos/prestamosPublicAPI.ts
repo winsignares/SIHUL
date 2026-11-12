@@ -2,11 +2,6 @@ import { apiClient } from '../../core/apiClient';
 import { notifyPrestamosChanged } from './prestamosChanges';
 import type { PrestamoEspacio, RecursoPrestamo } from './prestamoAPI';
 
-export interface SedeAPI {
-    id: number;
-    nombre: string;
-}
-
 export interface TipoActividadAPI {
     id: number;
     nombre: string;

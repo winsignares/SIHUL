@@ -18,12 +18,6 @@ export interface EspacioFisico {
     fechaCreacion: string;
 }
 
-export interface EquipamientoEspacio {
-    item: string;
-    cantidad: number;
-    estado: 'Disponible' | 'Mantenimiento' | 'No Disponible';
-}
-
 export interface PrestamoEspacio {
     id: string;
     espacioId: string;

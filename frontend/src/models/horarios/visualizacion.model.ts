@@ -9,14 +9,3 @@ export interface AsignaturaHorario {
     espacioId: string;
     espacioNombre: string;
 }
-
-export interface HorarioCompleto {
-    id: string;
-    grupoNombre: string; // ej: "1A", "1B"
-    facultadId: string;
-    programaId: string;
-    semestre: number;
-    periodo: string; // fijo "2025-1"
-    asignaturas: AsignaturaHorario[];
-    fechaCreacion: string;
-}

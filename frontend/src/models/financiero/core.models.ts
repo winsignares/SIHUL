@@ -250,17 +250,6 @@ export interface ComentarioFactura {
   fecha_creacion: string;
 }
 
-export interface RechazoDevolucion {
-  id: number;
-  factura_id: number;
-  tipo: 'Rechazo' | 'Devolución';
-  etapa_rechazo: string;
-  motivo: string;
-  estado_devolucion: string;
-  fecha_rechazo: string;
-  usuario_rechaza_id: number;
-}
-
 export interface CreateFacturaDTO {
   numero_factura?: string;
   proveedor_id: number;
@@ -298,18 +287,6 @@ export interface ParametroSLA {
   descripcion?: string;
   activo: boolean;
   aplica_dias_habiles: boolean;
-}
-
-export interface UpdateFacturaEstadoDTO {
-  motivo?: string;
-  observacion?: string;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
 }
 
 export interface PaginatedResponse<T> {

@@ -12,7 +12,7 @@ from usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, Usuari
 from mysite.auth_helpers import (
     is_admin_global, q_usuarios_de_seccional, is_admin_sistema,
 )
-from financiero.permissions import es_solo_admin_financiero
+from mysite.roles_financieros import es_solo_admin_financiero
 from mysite.cache_utils import CachedCatalogMixin
 from mysite.seccional_auth import SeccionalMixin
 from mysite.permissions import (

@@ -135,7 +135,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
         request = self.context.get('request')
         solicitante = (getattr(request, 'user_obj', None) or getattr(request, 'user', None)) if request else None
-        from financiero.permissions import es_rol_gestionable_por_admin_financiero, es_solo_admin_financiero
+        from mysite.roles_financieros import es_rol_gestionable_por_admin_financiero, es_solo_admin_financiero
 
         autenticado = bool(solicitante) and getattr(solicitante, 'is_authenticated', True)
         admin_financiero = autenticado and es_solo_admin_financiero(solicitante)

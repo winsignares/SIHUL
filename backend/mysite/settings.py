@@ -154,6 +154,11 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", "mysecretpassword"),
         "HOST": os.getenv("DB_HOST", "db"),
         "PORT": os.getenv("DB_PORT", "5432"),
+        # Conexiones persistentes: 0 (una conexión nueva por petición) es el valor de siempre. En
+        # producción conviene DB_CONN_MAX_AGE=60 junto con DB_CONN_HEALTH_CHECKS=true, y revisar
+        # antes que `max_connections` de PostgreSQL cubra GUNICORN_WORKERS x GUNICORN_THREADS.
+        "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "0")),
+        "CONN_HEALTH_CHECKS": env_bool("DB_CONN_HEALTH_CHECKS", False),
     }
 }
 
@@ -304,6 +309,11 @@ CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', [
     "http://127.0.0.1:3000",
     "https://sihul.unilibre.edu.co",
 ])
+
+# Sesión en base de datos (la de siempre). Con REDIS_URL, SESSION_CACHED_DB=true la sirve desde la caché
+# (cached_db): se evita una consulta por petición y la sesión sigue guardada en la base.
+if env_bool('SESSION_CACHED_DB', False) and REDIS_URL:
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
