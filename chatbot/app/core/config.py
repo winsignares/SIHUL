@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # Django espera 30 s al RAG: embedding (mitad de este tiempo) + LLM, sin reintentos,
     # deben sumar menos para poder responder con un error limpio.
     OPENAI_TIMEOUT_SECONDS: float = 18
+    # Pool de conexiones a la base: los valores por defecto de SQLAlchemy (5 + 10). Ajustar a
+    # UVICORN_WORKERS y al `max_connections` de PostgreSQL.
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
     OPENAI_INGEST_TIMEOUT_SECONDS: float = 60
 
     class Config:
