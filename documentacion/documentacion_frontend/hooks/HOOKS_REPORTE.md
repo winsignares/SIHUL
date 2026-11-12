@@ -4,7 +4,7 @@ Ver también [HOOKS_INDICE.md](HOOKS_INDICE.md), [PAGINAS_REPORTES_PERMISOS_USUA
 
 ## `useReportes.ts` (876 líneas) — el hook más grande de `reporte/`
 
-Usado en `pages/reporte/Reportes.tsx`. Combina 5 tipos de reporte en un solo hook: ocupación, horarios-docente, horarios-programa, disponibilidad, capacidad.
+Usado en `pages/reporte/Reportes.tsx`, que muestra cada reporte y cada modal de horario con los componentes de `features/reporte/components/reportes/`. Combina 5 tipos de reporte en un solo hook: ocupación, horarios-docente, horarios-programa, disponibilidad, capacidad.
 
 - Servicios: `reporteOcupacionService`, `disponibilidadService`, `capacidadService` (los tres en `services/reporte/`), `horarioService.listExtendidos`, `programaService`, `periodoActivoService`, `userService.listarDocentes`.
 - Exportación PDF vía backend (`/espacios/reporte/{ocupacion,disponibilidad,capacidad}/pdf/`, `/horarios/exportar-pdf{,-docente}/`) usando `trackedFetch` de `core/apiActivity.ts` **directamente**, no `apiClient` (ver [SERVICES_CORE.md](SERVICES_CORE.md)). Exportación Excel local con `exceljs` para los reportes sin endpoint backend dedicado.
