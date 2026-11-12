@@ -42,7 +42,7 @@ models/models.py        → Document, Chunk (vector), ChatMessage, QAEmbedding
 routers/                → chat.py, documents.py, chatbots.py, qa.py
 schemas/schemas.py      → modelos Pydantic de entrada/salida
 services/
-  text_extraction.py    → extracción de texto y troceado estructurado
+  text_extraction/     → extracción de texto (PDF, CSV, texto plano) y troceado estructurado, un módulo por tema
   document_service.py   → ingesta (validaciones, duplicados, embeddings, persistencia)
   embedding_service.py  → embeddings por lotes
   chat_service.py       → RAG: recuperación, memoria del hilo, LLM, caché
