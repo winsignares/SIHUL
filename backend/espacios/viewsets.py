@@ -17,7 +17,7 @@ from mysite.permissions import (
     IsAuthenticatedReadOnlyOrAdminWrite,
 )
 
-from espacios import api_views
+from espacios import api
 from espacios import views
 
 
@@ -95,11 +95,11 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='horarios/all', permission_classes=[permissions.AllowAny])
     def horarios_all(self, request):
-        return api_views.list_all_espacios_with_horarios(request._request)
+        return api.list_all_espacios_with_horarios(request._request)
 
     @action(detail=False, methods=['get'], url_path='horarios/disponibles/all', permission_classes=[permissions.AllowAny])
     def horarios_disponibles_all(self, request):
-        return api_views.list_all_espacios_disponibles_with_horarios(request._request)
+        return api.list_all_espacios_disponibles_with_horarios(request._request)
 
     @action(detail=False, methods=['get'], url_path='disponibles/por-horario')
     def disponibles_por_horario(self, request):
@@ -109,23 +109,23 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path=r'horarios/supervisor/(?P<usuario_id>\d+)')
     def horarios_supervisor(self, request, usuario_id=None):
         _exigir_ver_usuario(self.get_current_user(), usuario_id)
-        return api_views.list_supervisor_espacios_with_horarios(request._request, usuario_id=usuario_id)
+        return api.list_supervisor_espacios_with_horarios(request._request, usuario_id=usuario_id)
 
     @action(detail=False, methods=['get'], url_path=r'horarios/disponibles/supervisor/(?P<usuario_id>\d+)')
     def horarios_disponibles_supervisor(self, request, usuario_id=None):
         _exigir_ver_usuario(self.get_current_user(), usuario_id)
-        return api_views.list_supervisor_espacios_disponibles_with_horarios(request._request, usuario_id=usuario_id)
+        return api.list_supervisor_espacios_disponibles_with_horarios(request._request, usuario_id=usuario_id)
 
     @action(detail=False, methods=['get'], url_path='apertura-cierre/proximos')
     def apertura_cierre_proximos(self, request):
-        return api_views.proximos_apertura_cierre(request._request)
+        return api.proximos_apertura_cierre(request._request)
 
     @action(detail=True, methods=['get', 'put'], url_path='estado')
     def estado(self, request, pk=None):
         denied = self._deny_unassigned_space_for_supervisor(pk)
         if denied:
             return denied
-        return api_views.get_estado_espacio(request._request, espacio_id=pk)
+        return api.get_estado_espacio(request._request, espacio_id=pk)
 
     @action(detail=True, methods=['post'], url_path='cerrar')
     def cerrar_espacio(self, request, pk=None):
@@ -133,7 +133,7 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
         denied = self._deny_unassigned_space_for_supervisor(pk)
         if denied:
             return denied
-        return api_views.cerrar_espacio(request._request, espacio_id=pk)
+        return api.cerrar_espacio(request._request, espacio_id=pk)
 
     @action(detail=True, methods=['post'], url_path='abrir')
     def abrir_espacio(self, request, pk=None):
@@ -141,18 +141,18 @@ class EspacioFisicoViewSet(SeccionalMixin, viewsets.ModelViewSet):
         denied = self._deny_unassigned_space_for_supervisor(pk)
         if denied:
             return denied
-        return api_views.abrir_espacio(request._request, espacio_id=pk)
+        return api.abrir_espacio(request._request, espacio_id=pk)
 
     @action(detail=True, methods=['get'], url_path='horario')
     def horario(self, request, pk=None):
         denied = self._deny_unassigned_space_for_supervisor(pk)
         if denied:
             return denied
-        return api_views.get_horario_espacio(request._request, espacio_id=pk)
+        return api.get_horario_espacio(request._request, espacio_id=pk)
 
     @action(detail=False, methods=['get'], url_path='ocupacion/semanal')
     def ocupacion_semanal(self, request):
-        return api_views.ocupacion_semanal(request._request)
+        return api.ocupacion_semanal(request._request)
 
     @action(detail=False, methods=['post'], url_path='ocupacion/pdf')
     def ocupacion_pdf(self, request):
@@ -198,4 +198,4 @@ class EspacioPermitidoViewSet(SeccionalMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path=r'usuario/(?P<usuario_id>\d+)')
     def por_usuario(self, request, usuario_id=None):
         _exigir_ver_usuario(self.get_current_user(), usuario_id)
-        return api_views.list_espacios_by_usuario(request._request, usuario_id=usuario_id)
+        return api.list_espacios_by_usuario(request._request, usuario_id=usuario_id)

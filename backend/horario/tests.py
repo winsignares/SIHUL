@@ -12,7 +12,7 @@ from programas.models import Programa
 from sedes.models import Seccional, Sede
 from usuarios.models import Rol, Usuario
 
-from .api_views import list_horarios_asignacion_espacios
+from .api.consultas import list_horarios_asignacion_espacios
 from .models import Horario
 
 
