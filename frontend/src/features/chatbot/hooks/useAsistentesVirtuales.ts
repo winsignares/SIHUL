@@ -1,106 +1,30 @@
 import { useState, useRef, useEffect } from 'react';
-import {
-    BookOpen,
-    DoorOpen,
-    Trophy,
-    Headphones,
-    Bot
-} from 'lucide-react';
 import type { Asistente, Mensaje } from '../../../models/index';
-import { chatbotAPI, type AgenteAPI } from '../services/chatbotAPI';
+import { chatbotAPI } from '../services/chatbotAPI';
 import { useAuth } from '../../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
-
-const ASISTENTES_VIRTUALES_CACHE_KEY = 'chatbot-asistentes-virtuales';
-type CachedAsistente = Omit<Asistente, 'icon' | 'icono'> & {
-    icon?: unknown;
-    icono?: string;
-};
-
-const SECCIONALES_PUBLICAS_CHATBOT = [
-    'Barranquilla',
-    'Bogota',
-    'Cali',
-    'Cartagena',
-    'Cucuta',
-    'Pereira',
-    'El Socorro',
-    'Nacional',
-    'Virtual',
-];
-
-// Mapeo de nombres de iconos a componentes de icono
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const iconMap: Record<string, any> = {
-    'BookOpen': BookOpen,
-    'DoorOpen': DoorOpen,
-    'Trophy': Trophy,
-    'Headphones': Headphones,
-    'Bot': Bot
-};
-
-const obtenerIcono = (icono?: string) => iconMap[icono || 'Bot'] || Bot;
-
-const rehidratarAsistente = (asistente: CachedAsistente): Asistente => {
-    const icono = asistente.icono || (typeof asistente.icon === 'string' ? asistente.icon : 'Bot');
-
-    return {
-        ...asistente,
-        icono,
-        icon: obtenerIcono(icono)
-    };
-};
-
-const serializarAsistente = (asistente: Asistente): CachedAsistente => {
-    const { icon, ...serializable } = asistente;
-    void icon;
-    return serializable;
-};
-
-const normalizarAgentes = (response: unknown): AgenteAPI[] => {
-    if (Array.isArray(response)) {
-        return response as AgenteAPI[];
-    }
-
-    if (!response || typeof response !== 'object') {
-        return [];
-    }
-
-    const data = response as {
-        agentes?: unknown;
-        results?: unknown;
-        data?: unknown;
-    };
-
-    const candidatos = [data.agentes, data.results, data.data];
-    for (const candidato of candidatos) {
-        if (Array.isArray(candidato)) {
-            return candidato as AgenteAPI[];
-        }
-    }
-
-    return [];
-};
-
-// Función para convertir agente del API a formato UI
-const convertirAgenteAPI = (agenteAPI: AgenteAPI): Asistente => {
-    return {
-        id: agenteAPI.id.toString(),
-        nombre: agenteAPI.nombre,
-        subtitulo: agenteAPI.subtitulo || '',
-        descripcion: agenteAPI.descripcion,
-        icono: agenteAPI.icono || 'Bot',
-        icon: obtenerIcono(agenteAPI.icono),
-        color: agenteAPI.color || 'blue',
-        bgGradient: agenteAPI.bgGradient || 'from-blue-500 via-blue-600 to-indigo-600',
-        ultimoMensaje: '¿En qué puedo ayudarte?',
-        timestamp: 'Ahora',
-        online: true,
-        mensajeBienvenida: agenteAPI.mensajeBienvenida || '',
-        prompt: agenteAPI.id.toString(),
-        preguntasRapidas: agenteAPI.preguntasRapidas || []
-    };
-};
+import {
+    ASISTENTES_VIRTUALES_CACHE_KEY,
+    SECCIONALES_PUBLICAS_CHATBOT,
+    convertirAgenteAPI,
+    normalizarAgentes,
+    rehidratarAsistente,
+    serializarAsistente,
+    type CachedAsistente
+} from './asistentes/asistentesUI';
+import {
+    cargarChatIdsDesdeStorage as leerChatIds,
+    cargarHistorialPublico,
+    cargarMensajesDesdeStorage as leerMensajes,
+    construirConversacionPublica,
+    guardarChatIdsEnStorage as escribirChatIds,
+    guardarMensajesEnStorage as escribirMensajes,
+    registrarConversacionPublica,
+    type MapaChatIds,
+    type MapaMensajes
+} from './asistentes/almacenamientoChat';
+import { mensajeBienvenida, mensajesDesdeHistorial } from './asistentes/mensajesChat';
+import { useRotacionPreguntas } from './asistentes/useRotacionPreguntas';
 
 export interface OpcionesAsistentesVirtuales {
     /** Ignora cualquier sesión abierta y funciona siempre como chat público (página embebible). */
@@ -119,7 +43,6 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
     const [isTyping, setIsTyping] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
-    const [preguntasRotadas, setPreguntasRotadas] = useState<string[]>([]);
     const [chatIds, setChatIds] = useState<{ [key: string]: string }>({}); // Mapeo agente_id -> chat_id
     const [seccionalesPublico, setSeccionalesPublico] = useState<string[]>([]);
     const [seccionalPublica, setSeccionalPublica] = useState('');
@@ -131,92 +54,14 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Funciones para persistir chat_ids y mensajes en localStorage POR USUARIO
-    const obtenerClavesStorage = () => {
-        // En el enlace público con seccional elegible, cada seccional conserva su propia conversación: al cambiar
-        // de seccional no se mezclan respuestas que salieron de los documentos de otra.
-        const userId = user?.id || (opciones.seccionalFija ? `guest-${opciones.seccionalFija}` : 'guest');
-        return {
-            CHAT_IDS_KEY: `sihul_chat_ids_${userId}`,
-            MENSAJES_KEY: `sihul_mensajes_chat_${userId}`
-        };
-    };
+    // En el enlace público con seccional elegible, cada seccional conserva su propia conversación: al cambiar
+    // de seccional no se mezclan respuestas que salieron de los documentos de otra.
+    const idAlmacenamiento = user?.id || (opciones.seccionalFija ? `guest-${opciones.seccionalFija}` : 'guest');
 
-    // Historial público en caché de almacenamiento local para no-usuarios
-    const PUBLIC_HIST_KEY = 'sihul_public_history_cache';
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const cargarHistorialPublico = (): any[] => {
-        try {
-            const stored = localStorage.getItem(PUBLIC_HIST_KEY) || sessionStorage.getItem(PUBLIC_HIST_KEY);
-            return stored ? JSON.parse(stored) : [];
-        } catch {
-            return [];
-        }
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const guardarHistorialPublico = (lista: any[]) => {
-        try {
-            const limitada = lista.slice(0, 30);
-            const str = JSON.stringify(limitada);
-            localStorage.setItem(PUBLIC_HIST_KEY, str);
-            sessionStorage.setItem(PUBLIC_HIST_KEY, str);
-        } catch (error) {
-            console.error('Error al guardar historial público en caché:', error);
-        }
-    };
-
-    const cargarChatIdsDesdeStorage = (): { [key: string]: string } => {
-        try {
-            const { CHAT_IDS_KEY } = obtenerClavesStorage();
-            const stored = localStorage.getItem(CHAT_IDS_KEY);
-            return stored ? JSON.parse(stored) : {};
-        } catch (error) {
-            console.error('Error al cargar chat_ids desde localStorage:', error);
-            return {};
-        }
-    };
-
-    const guardarChatIdsEnStorage = (chatIdsMap: { [key: string]: string }) => {
-        try {
-            const { CHAT_IDS_KEY } = obtenerClavesStorage();
-            localStorage.setItem(CHAT_IDS_KEY, JSON.stringify(chatIdsMap));
-        } catch (error) {
-            console.error('Error al guardar chat_ids en localStorage:', error);
-        }
-    };
-
-    const cargarMensajesDesdeStorage = (): { [key: string]: Mensaje[] } => {
-        try {
-            const { MENSAJES_KEY } = obtenerClavesStorage();
-            const stored = localStorage.getItem(MENSAJES_KEY);
-            if (!stored) return {};
-            
-            const parsed = JSON.parse(stored);
-            // Convertir las fechas de string a Date
-            const mensajesConvertidos: { [key: string]: Mensaje[] } = {};
-            for (const [key, mensajes] of Object.entries(parsed)) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                mensajesConvertidos[key] = (mensajes as any[]).map(msg => ({
-                    ...msg,
-                    timestamp: new Date(msg.timestamp)
-                }));
-            }
-            return mensajesConvertidos;
-        } catch (error) {
-            console.error('Error al cargar mensajes desde localStorage:', error);
-            return {};
-        }
-    };
-
-    const guardarMensajesEnStorage = (mensajesMap: { [key: string]: Mensaje[] }) => {
-        try {
-            const { MENSAJES_KEY } = obtenerClavesStorage();
-            localStorage.setItem(MENSAJES_KEY, JSON.stringify(mensajesMap));
-        } catch (error) {
-            console.error('Error al guardar mensajes en localStorage:', error);
-        }
-    };
+    const cargarChatIdsDesdeStorage = (): MapaChatIds => leerChatIds(idAlmacenamiento);
+    const guardarChatIdsEnStorage = (chatIdsMap: MapaChatIds) => escribirChatIds(idAlmacenamiento, chatIdsMap);
+    const cargarMensajesDesdeStorage = (): MapaMensajes => leerMensajes(idAlmacenamiento);
+    const guardarMensajesEnStorage = (mensajesMap: MapaMensajes) => escribirMensajes(idAlmacenamiento, mensajesMap);
 
     const guardarSeccionalPublica = (valor: string) => {
         setSeccionalPublica(valor);
@@ -316,13 +161,7 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
                     const primerAgente = agentesUI[0];
                     setAsistenteActivo(primerAgente);
                     setMensajes({
-                        [primerAgente.id]: [{
-                            id: '1',
-                            tipo: 'bot',
-                            texto: primerAgente.mensajeBienvenida,
-                            timestamp: new Date(),
-                            leido: true
-                        }]
+                        [primerAgente.id]: [mensajeBienvenida(primerAgente.mensajeBienvenida)]
                     });
                 } else if (agentesUI.length > 0) {
                     // Mantener el agente ya activo (con los datos frescos) o caer al primero
@@ -332,13 +171,7 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
                     if (!mensajesGuardados[elegido.id]?.length) {
                         setMensajes((prev) => prev[elegido.id]?.length ? prev : {
                             ...prev,
-                            [elegido.id]: [{
-                                id: '1',
-                                tipo: 'bot',
-                                texto: elegido.mensajeBienvenida,
-                                timestamp: new Date(),
-                                leido: true
-                            }]
+                            [elegido.id]: [mensajeBienvenida(elegido.mensajeBienvenida)]
                         });
                     }
                 }
@@ -367,32 +200,9 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
     }, [mensajes]);
 
     // Rotación de preguntas sugeridas
-    useEffect(() => {
-        if (!asistenteActivo?.preguntasRapidas?.length) {
-            setPreguntasRotadas([]);
-            return;
-        }
+    const preguntasRotadas = useRotacionPreguntas(asistenteActivo);
 
-        const rotarPreguntas = () => {
-            const todas = asistenteActivo.preguntasRapidas;
-            // Si hay 4 o menos, mostrar todas sin rotar
-            if (todas.length <= 4) {
-                setPreguntasRotadas(todas);
-                return;
-            }
 
-            // Mezclar y tomar 4 aleatorias
-            const shuffled = [...todas].sort(() => 0.5 - Math.random());
-            setPreguntasRotadas(shuffled.slice(0, 4));
-        };
-
-        rotarPreguntas(); // Carga inicial
-
-        // Rotar cada 10 segundos
-        const interval = setInterval(rotarPreguntas, 10000);
-
-        return () => clearInterval(interval);
-    }, [asistenteActivo]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -410,13 +220,7 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
             if (!mensajes[asistente.id]) {
                 setMensajes(prev => ({
                     ...prev,
-                    [asistente.id]: [{
-                        id: '1',
-                        tipo: 'bot',
-                        texto: asistente.mensajeBienvenida,
-                        timestamp: new Date(),
-                        leido: true
-                    }]
+                    [asistente.id]: [mensajeBienvenida(asistente.mensajeBienvenida)]
                 }));
             }
             return;
@@ -440,14 +244,7 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
 
                 if (response.mensajes && response.mensajes.length > 0) {
                     // Hay historial, cargar los mensajes
-                    const mensajesHistorial = response.mensajes.map((msg) => ({
-                        id: msg.id,
-                        tipo: msg.tipo,
-                        texto: msg.texto,
-                        timestamp: new Date(msg.timestamp),
-                        leido: true,
-                        anexos: msg.anexos ?? []
-                    }));
+                    const mensajesHistorial = mensajesDesdeHistorial(response.mensajes);
 
                     // Solo actualizar si no tenemos mensajes locales o si el backend tiene más mensajes
                     const mensajesLocales = mensajes[asistente.id] || [];
@@ -470,13 +267,7 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
                 } else if (!tieneMensajesLocales) {
                     setMensajes(prev => ({
                         ...prev,
-                        [asistente.id]: [{
-                            id: '1',
-                            tipo: 'bot',
-                            texto: asistente.mensajeBienvenida,
-                            timestamp: new Date(),
-                            leido: true
-                        }]
+                        [asistente.id]: [mensajeBienvenida(asistente.mensajeBienvenida)]
                     }));
                 }
             } else {
@@ -484,13 +275,7 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
                 if (!tieneMensajesLocales) {
                     setMensajes(prev => ({
                         ...prev,
-                        [asistente.id]: [{
-                            id: '1',
-                            tipo: 'bot',
-                            texto: asistente.mensajeBienvenida,
-                            timestamp: new Date(),
-                            leido: true
-                        }]
+                        [asistente.id]: [mensajeBienvenida(asistente.mensajeBienvenida)]
                     }));
                 }
             }
@@ -500,13 +285,7 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
             if (!tieneMensajesLocales) {
                 setMensajes(prev => ({
                     ...prev,
-                    [asistente.id]: [{
-                        id: '1',
-                        tipo: 'bot',
-                        texto: asistente.mensajeBienvenida,
-                        timestamp: new Date(),
-                        leido: true
-                    }]
+                    [asistente.id]: [mensajeBienvenida(asistente.mensajeBienvenida)]
                 }));
             }
         }
@@ -599,29 +378,8 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
                 const nuevosMensajes = [...mensajesSinTemporal, mensajeUsuarioReal, mensajeAgente];
 
                 // Guardar historial síncronamente antes de actualizar estado
-                const userMsgs = nuevosMensajes.filter(m => m.tipo === 'user');
-                if (userMsgs.length > 0) {
-                    const item = {
-                        chat_id: activeChatId,
-                        agente_id: asistenteActivo.id,
-                        usuario: 'Invitado',
-                        primer_mensaje: userMsgs[0].texto.substring(0, 100),
-                        ultimo_mensaje: userMsgs[userMsgs.length - 1].texto.substring(0, 100),
-                        fecha_inicio: nuevosMensajes[0]?.timestamp ? new Date(nuevosMensajes[0].timestamp).toISOString() : new Date().toISOString(),
-                        fecha_actualizacion: new Date().toISOString(),
-                        total_interacciones: nuevosMensajes.length,
-                        mensajes: nuevosMensajes
-                    };
-                    const historial = cargarHistorialPublico();
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const idx = historial.findIndex((c: any) => c.chat_id === activeChatId);
-                    if (idx >= 0) {
-                        historial[idx] = item;
-                    } else {
-                        historial.unshift(item);
-                    }
-                    guardarHistorialPublico(historial);
-                }
+                const item = construirConversacionPublica(activeChatId, asistenteActivo.id, nuevosMensajes);
+                if (item) registrarConversacionPublica(item);
 
                 setMensajes(prev => ({
                     ...prev,
@@ -782,14 +540,7 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
                 });
 
                 if (response.mensajes && response.mensajes.length > 0) {
-                    const mensajesHistorial = response.mensajes.map((msg) => ({
-                        id: msg.id,
-                        tipo: msg.tipo,
-                        texto: msg.texto,
-                        timestamp: new Date(msg.timestamp),
-                        leido: true,
-                        anexos: msg.anexos ?? []
-                    }));
+                    const mensajesHistorial = mensajesDesdeHistorial(response.mensajes);
 
                     setMensajes(prev => ({
                         ...prev,
@@ -841,31 +592,10 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
             // Aseguramos que tomamos los mensajes más actualizados del state
             const currentChatId = chatIds[asistenteId];
             const msgsActuales = mensajes[asistenteId] || [];
-            const userMsgs = msgsActuales.filter(m => m.tipo === 'user');
 
-            if (userMsgs.length > 0 && currentChatId) {
-                const primerMensaje = userMsgs[0].texto;
-                const item = {
-                    chat_id: currentChatId,
-                    agente_id: asistenteId,
-                    usuario: 'Invitado',
-                    primer_mensaje: primerMensaje.substring(0, 100),
-                    ultimo_mensaje: userMsgs[userMsgs.length - 1].texto.substring(0, 100),
-                    fecha_inicio: msgsActuales[0]?.timestamp ? new Date(msgsActuales[0].timestamp).toISOString() : new Date().toISOString(),
-                    fecha_actualizacion: new Date().toISOString(),
-                    total_interacciones: msgsActuales.length,
-                    mensajes: msgsActuales
-                };
-
-                const historial = cargarHistorialPublico();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const idx = historial.findIndex((c: any) => String(c.chat_id) === String(currentChatId));
-                if (idx >= 0) {
-                    historial[idx] = item;
-                } else {
-                    historial.unshift(item);
-                }
-                guardarHistorialPublico(historial);
+            if (currentChatId) {
+                const item = construirConversacionPublica(currentChatId, asistenteId, msgsActuales);
+                if (item) registrarConversacionPublica(item);
             }
         }
 
@@ -891,13 +621,7 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
             if (asistente) {
                 setMensajes(prev => ({
                     ...prev,
-                    [asistenteId]: [{
-                        id: '1',
-                        tipo: 'bot',
-                        texto: asistente.mensajeBienvenida,
-                        timestamp: new Date(),
-                        leido: true
-                    }]
+                    [asistenteId]: [mensajeBienvenida(asistente.mensajeBienvenida)]
                 }));
             }
         }
