@@ -1,70 +1,29 @@
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { facultadService } from '../services/facultades/facultadesAPI';
-import type { Facultad as FacultadAPI } from '../services/facultades/facultadesAPI';
 import { programaService } from '../services/programas/programaAPI';
 import { asignaturaService, asignaturaProgramaService } from '../services/asignaturas/asignaturaAPI';
 import type { Asignatura, AsignaturaPrograma } from '../services/asignaturas/asignaturaAPI';
-import {
-  getPageNumbers,
-  getPageSlice,
-  getTargetPageForNextWindow,
-  getTargetPageForPrevWindow,
-  getTotalPages,
-  hasNextPageWindow,
-  hasPrevPageWindow,
-  normalizePage,
-  PAGE_SIZE_DEFAULT
-} from './paginacion';
 import { clearSessionCache, getSessionCacheData, setSessionCacheData, clearSessionCacheByPrefix } from '../../../core/sessionCache';
-
-const FACULTADES_CACHE_KEY = 'gestion-academica-facultades';
-const PROGRAMAS_CACHE_KEY = 'gestion-academica-programas';
-const ASIGNATURAS_CACHE_KEY = 'gestion-academica-asignaturas-list';
-const ASIGNATURAS_PROGRAMA_CACHE_KEY = 'gestion-academica-asignaturas-programa';
-const GESTION_USUARIOS_FACULTADES_CACHE_KEY = 'gestion-academica-facultades-usuarios';
-const ASIGNATURAS_STANDALONE_CACHE_KEY = 'gestion-academica-asignaturas';
-const ACADEMIC_CATALOG_UPDATED_EVENT = 'academic-catalog-updated';
-
-// Mapear tipos de API a modelo del frontend
-type Facultad = FacultadAPI;
-
-// Interfaz adaptada para Programa del frontend (con camelCase)
-interface Programa {
-    id?: number;
-    nombre: string;
-    facultadId: number | null; // Puede ser null si no tiene facultad asignada
-    semestres: number;
-    activo: boolean;
-}
-
-const enrichAsignaturasPrograma = (
-    items: AsignaturaPrograma[],
-    asignaturasCatalogo: Asignatura[]
-): AsignaturaPrograma[] => {
-    const asignaturasPorId = new Map(asignaturasCatalogo.map((asignatura) => [asignatura.id, asignatura]));
-
-    return items.map((item) => {
-        const asignatura = asignaturasPorId.get(item.asignatura_id);
-
-        return {
-            ...item,
-            asignatura_codigo: asignatura?.codigo,
-            asignatura_nombre: asignatura?.nombre,
-            creditos: asignatura?.creditos,
-            horas: asignatura?.horas,
-        };
-    });
-};
+import {
+    ACADEMIC_CATALOG_UPDATED_EVENT,
+    ASIGNATURAS_CACHE_KEY,
+    ASIGNATURAS_PROGRAMA_CACHE_KEY,
+    ASIGNATURAS_STANDALONE_CACHE_KEY,
+    FACULTADES_CACHE_KEY,
+    GESTION_USUARIOS_FACULTADES_CACHE_KEY,
+    PROGRAMAS_CACHE_KEY,
+    enrichAsignaturasPrograma,
+    type Facultad,
+    type Programa,
+} from './facultades/facultadesProgramsUtils';
+import { usePaginacionFacultadesProgramas } from './facultades/usePaginacionFacultadesProgramas';
 
 export type TabOption = 'sedes' | 'facultades' | 'programas' | 'asignaturas' | 'docentes' | 'grupos' | 'fusion' | 'espacios' | 'recursos' | 'gestion-recursos';
 
 export function useFacultadesPrograms() {
-    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<TabOption>('sedes');
-    const [currentFacultadPage, setCurrentFacultadPage] = useState(1);
-    const [currentProgramaPage, setCurrentProgramaPage] = useState(1);
 
     // Estados de datos
     const [facultades, setFacultades] = useState<Facultad[]>([]);
@@ -635,86 +594,8 @@ export function useFacultadesPrograms() {
         });
     }, [programas, searchTerm, selectedFacultadFilter]);
 
-    const totalFilteredFacultades = filteredFacultades.length;
-    const totalFacultadPages = getTotalPages(totalFilteredFacultades, PAGE_SIZE);
-    const facultadPageNumbers = useMemo(
-        () => getPageNumbers(totalFacultadPages, currentFacultadPage),
-        [totalFacultadPages, currentFacultadPage]
-    );
-    const paginatedFacultades = useMemo(() => {
-        return getPageSlice(filteredFacultades, currentFacultadPage, PAGE_SIZE);
-    }, [filteredFacultades, currentFacultadPage, PAGE_SIZE]);
+    const paginacion = usePaginacionFacultadesProgramas({ filteredFacultades, filteredProgramas, searchTerm, selectedFacultadFilter });
 
-    const totalFilteredProgramas = filteredProgramas.length;
-    const totalProgramaPages = getTotalPages(totalFilteredProgramas, PAGE_SIZE);
-    const programaPageNumbers = useMemo(
-        () => getPageNumbers(totalProgramaPages, currentProgramaPage),
-        [totalProgramaPages, currentProgramaPage]
-    );
-    const paginatedProgramas = useMemo(() => {
-        return getPageSlice(filteredProgramas, currentProgramaPage, PAGE_SIZE);
-    }, [filteredProgramas, currentProgramaPage, PAGE_SIZE]);
-
-    useEffect(() => {
-        setCurrentFacultadPage(1);
-        setCurrentProgramaPage(1);
-    }, [searchTerm]);
-
-    useEffect(() => {
-        setCurrentProgramaPage(1);
-    }, [selectedFacultadFilter]);
-
-    useEffect(() => {
-        setCurrentFacultadPage((prev) => normalizePage(prev, totalFacultadPages));
-    }, [totalFacultadPages]);
-
-    useEffect(() => {
-        setCurrentProgramaPage((prev) => normalizePage(prev, totalProgramaPages));
-    }, [totalProgramaPages]);
-
-    const goToFacultadPage = (page: number) => {
-        setCurrentFacultadPage(normalizePage(page, totalFacultadPages));
-    };
-
-    const goToNextFacultadPage = () => {
-        goToFacultadPage(currentFacultadPage + 1);
-    };
-
-    const goToPrevFacultadPage = () => {
-        goToFacultadPage(currentFacultadPage - 1);
-    };
-
-    const goToProgramaPage = (page: number) => {
-        setCurrentProgramaPage(normalizePage(page, totalProgramaPages));
-    };
-
-    const goToNextProgramaPage = () => {
-        goToProgramaPage(currentProgramaPage + 1);
-    };
-
-    const goToPrevProgramaPage = () => {
-        goToProgramaPage(currentProgramaPage - 1);
-    };
-
-    const goToPrevFacultadPageWindow = () => {
-        const target = getTargetPageForPrevWindow(currentFacultadPage, totalFacultadPages);
-        if (target != null) goToFacultadPage(target);
-    };
-
-    const goToNextFacultadPageWindow = () => {
-        const target = getTargetPageForNextWindow(currentFacultadPage, totalFacultadPages);
-        if (target != null) goToFacultadPage(target);
-    };
-
-    const goToPrevProgramaPageWindow = () => {
-        const target = getTargetPageForPrevWindow(currentProgramaPage, totalProgramaPages);
-        if (target != null) goToProgramaPage(target);
-    };
-
-    const goToNextProgramaPageWindow = () => {
-        const target = getTargetPageForNextWindow(currentProgramaPage, totalProgramaPages);
-        if (target != null) goToProgramaPage(target);
-    };
 
     // Contar programas por facultad
     const getProgramasCount = (facultadId: number | string) => {
@@ -789,32 +670,8 @@ export function useFacultadesPrograms() {
         handleRemoveAsignatura,
         handleUpdateAsignaturaPrograma,
         filteredFacultades,
-        paginatedFacultades,
-        totalFilteredFacultades,
-        currentFacultadPage,
-        totalFacultadPages,
-        facultadPageNumbers,
-        goToFacultadPage,
-        goToNextFacultadPage,
-        goToPrevFacultadPage,
-        hasPrevFacultadPageWindow: hasPrevPageWindow(currentFacultadPage, totalFacultadPages),
-        hasNextFacultadPageWindow: hasNextPageWindow(currentFacultadPage, totalFacultadPages),
-        goToPrevFacultadPageWindow,
-        goToNextFacultadPageWindow,
         filteredProgramas,
-        paginatedProgramas,
-        totalFilteredProgramas,
-        currentProgramaPage,
-        totalProgramaPages,
-        programaPageNumbers,
-        goToProgramaPage,
-        goToNextProgramaPage,
-        goToPrevProgramaPage,
-        hasPrevProgramaPageWindow: hasPrevPageWindow(currentProgramaPage, totalProgramaPages),
-        hasNextProgramaPageWindow: hasNextPageWindow(currentProgramaPage, totalProgramaPages),
-        goToPrevProgramaPageWindow,
-        goToNextProgramaPageWindow,
-        pageSize: PAGE_SIZE,
+        ...paginacion,
         getProgramasCount,
         getFacultadNombre,
         reloadAllData,
