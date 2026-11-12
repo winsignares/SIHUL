@@ -2,9 +2,18 @@
 
 Ver también [HOOKS_INDICE.md](HOOKS_INDICE.md), [SERVICES_CHATBOT.md](SERVICES_CHATBOT.md) y [RESUMEN_NOTIFICACIONES.md](RESUMEN_NOTIFICACIONES.md).
 
-## `hooks/chatbot/useAsistentesVirtuales.ts` (752 líneas)
+## `features/chatbot/hooks/useAsistentesVirtuales.ts`
 
-Único consumidor: `pages/chatbot/AsistentesVirtuales.tsx`.
+Único consumidor: `features/chatbot/pages/AsistentesVirtuales.tsx` (y la página embebida del asistente público).
+
+Las piezas que no dependen del estado del hook están en `features/chatbot/hooks/asistentes/`:
+
+| Archivo | Contenido |
+|---|---|
+| `asistentesUI.ts` | Íconos, seccionales públicas, conversión de agentes del servidor a la forma de la pantalla y su caché |
+| `almacenamientoChat.ts` | Lectura y escritura en el navegador de `chat_ids`, mensajes e historial del chat público |
+| `mensajesChat.ts` | Mensaje de bienvenida y conversión de los mensajes del historial |
+| `useRotacionPreguntas.ts` | Preguntas sugeridas que rotan cada 10 segundos |
 
 - Estado: `asistentes`, `asistenteActivo`, `mensajes` (por agente), `inputMensaje`, `isTyping`, `searchTerm`, `loading`, `preguntasRotadas`, `chatIds` (mapeo agente→chat_id), `seccionalesPublico`, `seccionalPublica`, `cargandoSeccionales`, `mostrarHistorial`, `conversacionesHistorial`, `cargandoHistorial`, `messagesEndRef`.
 - Expone: `abrirChat`, `enviarMensaje`, `enviarPreguntaRapida`, `handleKeyPress`, `limpiarConversacion`, `cargarHistorialConversaciones`, `cargarConversacionAnterior`, y getters derivados: `mensajesActuales`, `mostrarPreguntasRapidas`, `filteredAsistentes`, `esPublico`.
