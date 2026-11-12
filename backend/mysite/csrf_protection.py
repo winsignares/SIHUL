@@ -3,9 +3,7 @@ CSRF Protection Middleware y Decoradores
 Protege contra ataques CSRF sin romper JSON API
 """
 from django.middleware.csrf import CsrfViewMiddleware, get_token
-from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.http import JsonResponse
-from django.utils.decorators import decorator_from_middleware_with_args
 from functools import wraps
 import logging
 

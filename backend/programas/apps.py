@@ -6,4 +6,4 @@ class ProgramasConfig(AppConfig):
     name = 'programas'
 
     def ready(self):
-        import programas.signals
+        import programas.signals  # noqa: F401  (registra las señales)

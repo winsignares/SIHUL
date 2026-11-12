@@ -37,6 +37,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libpq-dev
       - name: Instalar dependencias
         run: pip install -r backend/requirements.txt
+      - name: Código sin uso (imports y variables)
+        run: |
+          pip install ruff==0.17.4
+          ruff check --select F --exclude migrations backend
       - name: Chequeos de Django
         working-directory: backend
         run: python manage.py check

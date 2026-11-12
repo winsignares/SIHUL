@@ -41,7 +41,6 @@ def list_espacios_disponibles_por_horario(request):
     dia_semana = request.GET.get('dia_semana')
     hora_inicio_raw = request.GET.get('hora_inicio')
     hora_fin_raw = request.GET.get('hora_fin')
-    seccional_id = request.GET.get('seccional_id')
     horario_id = request.GET.get('horario_id')
 
     if not dia_semana or not hora_inicio_raw or not hora_fin_raw:

@@ -9,7 +9,6 @@ from django.db.models import Count, Q, Sum
 from django.http import HttpResponse
 from django.conf import settings
 import hashlib
-import json
 import logging
 import mimetypes
 import threading

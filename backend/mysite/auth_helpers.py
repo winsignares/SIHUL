@@ -212,7 +212,7 @@ def get_componente_permiso(user, nombre_componente):
     if not is_authenticated_user(user):
         return None
 
-    from componentes.models import Componente, ComponenteRol, ComponenteUsuario
+    from componentes.models import Componente, ComponenteUsuario
 
     try:
         componente = Componente.objects.get(nombre=nombre_componente)
@@ -257,7 +257,7 @@ def construir_componentes(usuario):
     if not usuario or not getattr(usuario, 'rol', None):
         return []
 
-    from componentes.models import Componente, ComponenteRol, ComponenteUsuario
+    from componentes.models import Componente, ComponenteUsuario
 
     componentes_rol = componentes_de_rol_efectivos(usuario)
     componentes_usuario = list(ComponenteUsuario.objects.filter(usuario=usuario).select_related('componente'))

@@ -2,7 +2,6 @@ from collections import Counter
 from datetime import time as time_obj
 
 from django.core.management.base import BaseCommand
-from django.db.models import Q
 
 from horario.models import Horario, StgOracleHorario
 from usuarios.management.commands.migrate_staging_to_real import Command as MigrateCommand
