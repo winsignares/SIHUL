@@ -2,7 +2,7 @@ import { Wrench, Shield } from 'lucide-react';
 import { useMemo } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Button } from '../../share/button';
+import { Button } from '../../components/ui/button';
 import { toComponentSlug } from '../../config/componentRoutes';
 
 export default function DynamicComponentPage() {

@@ -1,0 +1,638 @@
+import type { ReactNode } from 'react';
+import { Button } from '../../../../components/ui/button';
+import { Input } from '../../../../components/ui/input';
+import { Label } from '../../../../components/ui/label';
+import { Textarea } from '../../../../components/ui/textarea';
+import { Badge } from '../../../../components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../../../components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
+import { Checkbox } from '../../../../components/ui/checkbox';
+import { Calendar, Check, X, User, FileText, Package, Sparkles, AlertCircle, Edit, Trash2, Save, X as XIcon } from 'lucide-react';
+import { type PeriodoAcademico } from '../../../gestionAcademica/services/periodos/periodoAPI';
+import { fechaFinPeriodo } from '../../../../utils/recurrenceLimits';
+
+import type { usePrestamosEspacios } from '../../hooks/usePrestamosEspacios';
+
+type Hook = ReturnType<typeof usePrestamosEspacios>;
+type Prestamo = Hook['paginatedPrestamos'][number];
+
+interface Props {
+  prestamo: Prestamo;
+  aprobarSolicitud: Hook['aprobarSolicitud'];
+  cancelarEdicion: Hook['cancelarEdicion'];
+  comentariosAccion: Hook['comentariosAccion'];
+  eliminarSolicitud: Hook['eliminarSolicitud'];
+  espaciosDisponibles: Hook['espaciosDisponibles'];
+  guardarEdicion: Hook['guardarEdicion'];
+  iniciarEdicion: Hook['iniciarEdicion'];
+  modoEdicion: Hook['modoEdicion'];
+  prestamoEditando: Hook['prestamoEditando'];
+  rechazarSolicitud: Hook['rechazarSolicitud'];
+  recursosDisponibles: Hook['recursosDisponibles'];
+  setComentariosAccion: Hook['setComentariosAccion'];
+  setPrestamoEditando: Hook['setPrestamoEditando'];
+  setVerSolicitudDialog: Hook['setVerSolicitudDialog'];
+  tiposActividad: Hook['tiposActividad'];
+  verSolicitudDialog: Hook['verSolicitudDialog'];
+  DIAS_LABELS: Record<number, string>;
+  frecuenciaAMaxIntervalo: (frecuencia: string | undefined) => number | null;
+  frecuenciaCabeEnPeriodo: (frecuencia: string) => boolean;
+  frecuenciaAMaxOcurrencias: (frecuencia: string | undefined, intervalo: number) => number | null;
+  recurrenceSummary: (prestamo: any) => string;
+  getEstadoBadge: (estado: string) => ReactNode;
+  getEstadoIcon: (estado: string) => ReactNode;
+  periodoEdicion: PeriodoAcademico | null;
+  puedeEditarEliminar: boolean;
+  puedeGestionarPrestamos: boolean;
+}
+
+/** Diálogo «Ver solicitud» de un préstamo en la lista de Préstamos de Espacios (detalle, edición y acciones). */
+export function SolicitudDialog({ prestamo, aprobarSolicitud, cancelarEdicion, comentariosAccion, eliminarSolicitud, espaciosDisponibles, guardarEdicion, iniciarEdicion, modoEdicion, prestamoEditando, rechazarSolicitud, recursosDisponibles, setComentariosAccion, setPrestamoEditando, setVerSolicitudDialog, tiposActividad, verSolicitudDialog, DIAS_LABELS, frecuenciaAMaxIntervalo, frecuenciaCabeEnPeriodo, frecuenciaAMaxOcurrencias, recurrenceSummary, getEstadoBadge, getEstadoIcon, periodoEdicion, puedeEditarEliminar, puedeGestionarPrestamos }: Props) {
+  return (
+    <Dialog open={verSolicitudDialog === prestamo.id} onOpenChange={(open) => {
+      if (!open) {
+        setVerSolicitudDialog(null);
+        setComentariosAccion('');
+        cancelarEdicion();
+      }
+    }}>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+          onClick={() => setVerSolicitudDialog(prestamo.id)}
+        >
+          <FileText className="w-4 h-4 mr-2" />
+          Ver Solicitud
+        </Button>
+      </DialogTrigger>
+      <div className="flex gap-2 mt-2">
+        {puedeEditarEliminar && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+              onClick={() => {
+                setVerSolicitudDialog(prestamo.id);
+                iniciarEdicion(prestamo);
+              }}
+              title="Editar solicitud"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+              onClick={() => {
+                if (window.confirm('¿Está seguro de eliminar esta solicitud?')) {
+                  eliminarSolicitud(prestamo.id);
+                }
+              }}
+              title="Eliminar solicitud"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </>
+        )}
+      </div>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl flex items-center gap-2">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${prestamo.estado === 'pendiente' ? 'bg-yellow-50 dark:bg-yellow-950/20' :
+                prestamo.estado === 'aprobado' ? 'bg-green-50 dark:bg-green-950/20' :
+                  'bg-red-50 dark:bg-red-950/20'
+              }`}>
+              {getEstadoIcon(prestamo.estado)}
+            </div>
+            Detalles de la Solicitud
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          {(() => {
+            const prestamoActual = puedeEditarEliminar && modoEdicion && prestamoEditando && prestamoEditando.id === prestamo.id
+              ? prestamoEditando
+              : prestamo;
+
+            return (
+              <>
+          {/* Estado */}
+          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+            <span className="text-sm text-slate-600 dark:text-slate-400">Estado actual</span>
+            {getEstadoBadge(prestamoActual.estado)}
+          </div>
+
+          {/* Información del Solicitante */}
+          <div className="space-y-3">
+            <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <User className="w-5 h-5 text-blue-600" />
+              Información del Solicitante
+            </h3>
+            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+              <div>
+                <Label className="text-slate-600 dark:text-slate-400 text-xs">Nombre</Label>
+                <p className="text-slate-900 dark:text-slate-100">{prestamoActual.solicitante}</p>
+              </div>
+              <div>
+                <Label className="text-slate-600 dark:text-slate-400 text-xs">Email</Label>
+                <p className="text-slate-900 dark:text-slate-100">{prestamoActual.email}</p>
+              </div>
+              <div>
+                <Label className="text-slate-600 dark:text-slate-400 text-xs">Teléfono</Label>
+                <p className="text-slate-900 dark:text-slate-100">{prestamoActual.telefono}</p>
+              </div>
+              <div>
+                <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha de Solicitud</Label>
+                <p className="text-slate-900 dark:text-slate-100">{prestamoActual.fechaSolicitud}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Detalles del Evento */}
+          <div className="space-y-3">
+            <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              Detalles del Evento
+            </h3>
+            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+              <div>
+                <Label className="text-slate-600 dark:text-slate-400 text-xs">Espacio Solicitado</Label>
+                {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                  <Select
+                    value={prestamoEditando.espacio_id ? String(prestamoEditando.espacio_id) : ''}
+                    onValueChange={(v) => {
+                      const espacioSeleccionado = espaciosDisponibles.find((e) => String(e.id) === v);
+                      setPrestamoEditando({
+                        ...prestamoEditando,
+                        espacio_id: Number(v),
+                        espacio: espacioSeleccionado?.nombre || prestamoEditando.espacio
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Espacio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {espaciosDisponibles.map((e) => (
+                        <SelectItem key={e.id} value={String(e.id)}>{e.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.espacio}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-slate-600 dark:text-slate-400 text-xs">Tipo de Evento</Label>
+                {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                  <Select
+                    value={prestamoEditando.tipo_actividad_id ? String(prestamoEditando.tipo_actividad_id) : ''}
+                    onValueChange={(v) => {
+                      const tipoSeleccionado = tiposActividad.find((t) => String(t.id) === v);
+                      setPrestamoEditando({
+                        ...prestamoEditando,
+                        tipo_actividad_id: Number(v),
+                        tipoEvento: tipoSeleccionado?.nombre || prestamoEditando.tipoEvento
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Tipo de evento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposActividad.map((t) => (
+                        <SelectItem key={t.id} value={String(t.id)}>{t.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.tipoEvento}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha</Label>
+                {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                  <Input
+                    type="date"
+                    value={prestamoEditando.fecha}
+                    onChange={(e) => setPrestamoEditando({ ...prestamoEditando, fecha: e.target.value })}
+                    className="mt-1"
+                  />
+                ) : (
+                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.fecha}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-slate-600 dark:text-slate-400 text-xs">Horario</Label>
+                {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                  <div className="flex gap-2 items-center mt-1">
+                    <Input
+                      type="time"
+                      value={prestamoEditando.horaInicio}
+                      onChange={(e) => setPrestamoEditando({ ...prestamoEditando, horaInicio: e.target.value })}
+                    />
+                    <span>-</span>
+                    <Input
+                      type="time"
+                      value={prestamoEditando.horaFin}
+                      onChange={(e) => setPrestamoEditando({ ...prestamoEditando, horaFin: e.target.value })}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.horaInicio} - {prestamoActual.horaFin}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-slate-600 dark:text-slate-400 text-xs">Número de Asistentes</Label>
+                {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                  <Input
+                    type="number"
+                    min="1"
+                    value={prestamoEditando.asistentes}
+                    onChange={(e) => setPrestamoEditando({ ...prestamoEditando, asistentes: parseInt(e.target.value) || 1 })}
+                    className="mt-1"
+                  />
+                ) : (
+                  <p className="text-slate-900 dark:text-slate-100">{prestamoActual.asistentes}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Repetición */}
+          <div className="space-y-3">
+            <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-indigo-600" />
+              Repetición
+            </h3>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700 space-y-4">
+              {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                <>
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="edit-es-recurrente"
+                      checked={Boolean(prestamoEditando.es_recurrente)}
+                      onCheckedChange={(checked) => setPrestamoEditando({
+                        ...prestamoEditando,
+                        es_recurrente: Boolean(checked),
+                        frecuencia: checked ? (prestamoEditando.frecuencia || 'weekly') : 'none',
+                        intervalo: checked ? (prestamoEditando.intervalo || 1) : 1,
+                        dias_semana: checked ? (prestamoEditando.dias_semana || []) : [],
+                        fin_repeticion_tipo: checked ? (prestamoEditando.fin_repeticion_tipo || 'never') : 'never',
+                        fin_repeticion_fecha: checked ? (prestamoEditando.fin_repeticion_fecha || null) : null,
+                        fin_repeticion_ocurrencias: checked ? (prestamoEditando.fin_repeticion_ocurrencias || null) : null,
+                      })}
+                    />
+                    <Label htmlFor="edit-es-recurrente">Repetir préstamo</Label>
+                  </div>
+
+                  {prestamoEditando.es_recurrente && (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-slate-600 dark:text-slate-400 text-xs">Frecuencia</Label>
+                          <Select
+                            value={prestamoEditando.frecuencia || 'weekly'}
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            onValueChange={(v: any) => setPrestamoEditando({
+                              ...prestamoEditando,
+                              frecuencia: v,
+                              dias_semana: v === 'weekly' ? (prestamoEditando.dias_semana || []) : []
+                            })}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="Frecuencia" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No se repite</SelectItem>
+                              <SelectItem value="daily" disabled={!frecuenciaCabeEnPeriodo('daily')}>Diario</SelectItem>
+                              <SelectItem value="weekly" disabled={!frecuenciaCabeEnPeriodo('weekly')}>Semanal</SelectItem>
+                              <SelectItem value="monthly" disabled={!frecuenciaCabeEnPeriodo('monthly')}>Mensual</SelectItem>
+                              <SelectItem value="weekdays" disabled={!frecuenciaCabeEnPeriodo('weekdays')}>Días laborales</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-slate-600 dark:text-slate-400 text-xs">Intervalo</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max={frecuenciaAMaxIntervalo(prestamoEditando.frecuencia) ?? undefined}
+                            value={prestamoEditando.intervalo || 1}
+                            onChange={(e) => {
+                              const maxValue = frecuenciaAMaxIntervalo(prestamoEditando.frecuencia) ?? Infinity;
+                              setPrestamoEditando({
+                                ...prestamoEditando,
+                                intervalo: Math.max(1, Math.min(maxValue, Number(e.target.value) || 1))
+                              });
+                            }}
+                            className="mt-1"
+                          />
+                          {frecuenciaAMaxIntervalo(prestamoEditando.frecuencia) != null && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              Máximo {frecuenciaAMaxIntervalo(prestamoEditando.frecuencia)} por lo que resta del periodo.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {prestamoEditando.frecuencia === 'weekly' && (
+                        <div className="space-y-2">
+                          <Label className="text-slate-600 dark:text-slate-400 text-xs">Días de la semana</Label>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {[0, 1, 2, 3, 4, 5, 6].map((dia) => {
+                              const selected = (prestamoEditando.dias_semana || []).includes(dia);
+                              return (
+                                <button
+                                  key={dia}
+                                  type="button"
+                                  className={`px-2 py-1 rounded-md border text-xs text-left ${selected
+                                    ? 'bg-blue-100 border-blue-400 text-blue-800 dark:bg-blue-950/40 dark:border-blue-700 dark:text-blue-200'
+                                    : 'bg-white border-slate-300 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'
+                                  }`}
+                                  onClick={() => {
+                                    const current = prestamoEditando.dias_semana || [];
+                                    const exists = current.includes(dia);
+                                    const updated = exists ? current.filter((d) => d !== dia) : [...current, dia].sort((a, b) => a - b);
+                                    setPrestamoEditando({ ...prestamoEditando, dias_semana: updated });
+                                  }}
+                                >
+                                  {DIAS_LABELS[dia]}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-slate-600 dark:text-slate-400 text-xs">Finaliza repetición</Label>
+                          <Select
+                            value={prestamoEditando.fin_repeticion_tipo || 'never'}
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            onValueChange={(v: any) => setPrestamoEditando({
+                              ...prestamoEditando,
+                              fin_repeticion_tipo: v,
+                              fin_repeticion_fecha: v === 'until_date' ? prestamoEditando.fin_repeticion_fecha : null,
+                              fin_repeticion_ocurrencias: v === 'count' ? prestamoEditando.fin_repeticion_ocurrencias : null
+                            })}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="Finaliza" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="never">Nunca</SelectItem>
+                              <SelectItem value="until_date">Hasta una fecha</SelectItem>
+                              <SelectItem value="count">Después de N repeticiones</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {prestamoEditando.fin_repeticion_tipo === 'until_date' && (
+                          <div>
+                            <Label className="text-slate-600 dark:text-slate-400 text-xs">Fecha fin</Label>
+                            <Input
+                              type="date"
+                              max={fechaFinPeriodo(periodoEdicion) ?? undefined}
+                              value={prestamoEditando.fin_repeticion_fecha || ''}
+                              onChange={(e) => {
+                                const tope = fechaFinPeriodo(periodoEdicion);
+                                const value = tope && e.target.value > tope ? tope : e.target.value;
+                                setPrestamoEditando({ ...prestamoEditando, fin_repeticion_fecha: value });
+                              }}
+                              className="mt-1"
+                            />
+                            {periodoEdicion && (
+                              <p className="text-xs text-slate-500 mt-1">
+                                El periodo académico finaliza el {new Date(`${periodoEdicion.fecha_fin}T00:00:00`).toLocaleDateString('es-CO')}.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {prestamoEditando.fin_repeticion_tipo === 'count' && (
+                          <div>
+                            <Label className="text-slate-600 dark:text-slate-400 text-xs">N repeticiones</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max={frecuenciaAMaxOcurrencias(prestamoEditando.frecuencia, prestamoEditando.intervalo || 1) ?? undefined}
+                              value={prestamoEditando.fin_repeticion_ocurrencias || ''}
+                              onChange={(e) => {
+                                const maxValue = frecuenciaAMaxOcurrencias(prestamoEditando.frecuencia, prestamoEditando.intervalo || 1);
+                                let value = Number(e.target.value) || null;
+                                if (maxValue != null && value != null && value > maxValue) value = maxValue;
+                                setPrestamoEditando({ ...prestamoEditando, fin_repeticion_ocurrencias: value });
+                              }}
+                              className="mt-1"
+                            />
+                            {frecuenciaAMaxOcurrencias(prestamoEditando.frecuencia, prestamoEditando.intervalo || 1) != null && (
+                              <p className="text-xs text-slate-500 mt-1">
+                                Máximo {frecuenciaAMaxOcurrencias(prestamoEditando.frecuencia, prestamoEditando.intervalo || 1)} repeticiones dentro del periodo.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-900 dark:text-slate-100">{recurrenceSummary(prestamoActual)}</p>
+                  {prestamoActual.es_recurrente && prestamoActual.serie_id && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Serie: {prestamoActual.serie_id}</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Motivo */}
+          <div className="space-y-3">
+            <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-orange-600" />
+              Motivo de la Solicitud
+            </h3>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+              {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+                <Textarea
+                  value={prestamoEditando.motivo}
+                  onChange={(e) => setPrestamoEditando({ ...prestamoEditando, motivo: e.target.value })}
+                  rows={3}
+                />
+              ) : (
+                <p className="text-slate-900 dark:text-slate-100">{prestamoActual.motivo}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Recursos Necesarios */}
+          <div className="space-y-3">
+            <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Package className="w-5 h-5 text-green-600" />
+              Recursos Necesarios
+            </h3>
+            {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id ? (
+              <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                {(prestamoEditando.recursos || []).map((r, idx) => (
+                  <div key={r.recurso_id} className="flex items-center gap-2">
+                    <Select
+                      value={String(r.recurso_id)}
+                      onValueChange={(v) => {
+                        const nuevo = [...(prestamoEditando.recursos || [])];
+                        const recursoSeleccionado = recursosDisponibles.find((rec) => String(rec.id) === v);
+                        nuevo[idx] = {
+                          ...nuevo[idx],
+                          recurso_id: Number(v),
+                          recurso_nombre: recursoSeleccionado?.nombre
+                        };
+                        setPrestamoEditando({ ...prestamoEditando, recursos: nuevo });
+                      }}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Recurso" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {recursosDisponibles.map((rec) => (
+                          <SelectItem key={rec.id} value={String(rec.id)}>{rec.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={r.cantidad}
+                      onChange={(e) => {
+                        const nuevo = [...(prestamoEditando.recursos || [])];
+                        nuevo[idx] = { ...nuevo[idx], cantidad: parseInt(e.target.value) || 1 };
+                        setPrestamoEditando({ ...prestamoEditando, recursos: nuevo });
+                      }}
+                      className="w-20"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const nuevo = (prestamoEditando.recursos || []).filter((_, i) => i !== idx);
+                        setPrestamoEditando({ ...prestamoEditando, recursos: nuevo });
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const yaUsados = new Set((prestamoEditando.recursos || []).map((r) => r.recurso_id));
+                    const disponible = recursosDisponibles.find((rec) => rec.id != null && !yaUsados.has(rec.id));
+                    if (!disponible?.id) return;
+                    setPrestamoEditando({
+                      ...prestamoEditando,
+                      recursos: [...(prestamoEditando.recursos || []), { recurso_id: disponible.id, recurso_nombre: disponible.nombre, cantidad: 1 }]
+                    });
+                  }}
+                >
+                  + Agregar recurso
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                {prestamoActual.recursosNecesarios.length > 0 ? (
+                  prestamoActual.recursosNecesarios.map((recurso) => (
+                    <Badge
+                      key={recurso}
+                      variant="outline"
+                      className="bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 text-blue-900 dark:text-blue-100"
+                    >
+                      {recurso}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Sin recursos solicitados</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Información del Administrador (si existe) */}
+          {prestamoActual.administradorNombre && (prestamoActual.estado === 'aprobado' || prestamoActual.estado === 'rechazado') && (
+            <div className="space-y-3">
+              <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <User className="w-5 h-5 text-indigo-600" />
+                {prestamoActual.estado === 'aprobado' ? 'Aprobado por' : 'Rechazado por'}
+              </h3>
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                <p className="text-slate-900 dark:text-slate-100 font-medium">{prestamoActual.administradorNombre}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Comentarios del Admin (si existen) */}
+          {prestamoActual.comentariosAdmin && (
+            <div className="space-y-3">
+              <h3 className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-slate-600" />
+                Comentarios del Administrador
+              </h3>
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                <p className="text-slate-900 dark:text-slate-100">{prestamoActual.comentariosAdmin}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Acciones (solo para pendientes) */}
+          {puedeGestionarPrestamos && prestamoActual.estado === 'pendiente' && !modoEdicion && (
+            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+              <Label htmlFor="comentarios">Comentarios (opcional para aprobar, obligatorio para rechazar)</Label>
+              <Textarea
+                id="comentarios"
+                value={comentariosAccion}
+                onChange={(e) => setComentariosAccion(e.target.value)}
+                placeholder="Agregar comentarios o instrucciones..."
+                rows={3}
+                className="resize-none"
+              />
+              <div className="flex justify-end gap-3">
+                <Button
+                  onClick={() => rechazarSolicitud(prestamo.id, comentariosAccion)}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Rechazar
+                </Button>
+                <Button
+                  onClick={() => aprobarSolicitud(prestamo.id, comentariosAccion)}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Confirmar
+                </Button>
+              </div>
+            </div>
+          )}
+          {puedeEditarEliminar && modoEdicion && prestamoEditando?.id === prestamo.id && (
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+              <Button onClick={cancelarEdicion} variant="outline">
+                <XIcon className="w-4 h-4 mr-2" />
+                Cancelar
+              </Button>
+              <Button onClick={guardarEdicion} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Save className="w-4 h-4 mr-2" />
+                Guardar Cambios
+              </Button>
+            </div>
+          )}
+              </>
+            );
+          })()}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

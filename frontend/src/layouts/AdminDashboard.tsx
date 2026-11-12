@@ -10,9 +10,9 @@ import {
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Avatar, AvatarFallback } from '../share/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../share/tooltip';
-import { Button } from '../share/button';
+import { Avatar, AvatarFallback } from '../components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
+import { Button } from '../components/ui/button';
 
 import { useAdminDashboard } from '../hooks/useAdminDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';

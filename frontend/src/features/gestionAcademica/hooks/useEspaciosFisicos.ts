@@ -1,0 +1,585 @@
+import { useState, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
+import { useAuth } from '../../../context/AuthContext';
+import { espacioService, type EspacioFisico } from '../../espacios/services/espaciosAPI';
+import { sedeService, type Sede } from '../../../services/sedes/sedeAPI';
+import { recursoService, espacioRecursoService, type Recurso } from '../../../services/recursos/recursoAPI';
+import { tipoEspacioService, type TipoEspacio } from '../../espacios/services/tipoEspacioAPI';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from './paginacion';
+import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+
+const ESPACIOS_FISICOS_CACHE_KEY = 'gestion-academica-espacios-fisicos';
+const ESTADO_RECURSOS_CACHE_KEY = 'gestion-academica-estado-recursos';
+const GESTION_USUARIOS_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios-v4';
+const GESTION_USUARIOS_TIPOS_ESPACIO_CACHE_KEY = 'gestion-academica-tipos-espacio-usuarios';
+const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
+const RECURSOS_UPDATED_EVENT = 'recursos-updated';
+const SEDES_UPDATED_EVENT = 'sedes-updated';
+
+export function useEspaciosFisicos() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
+    const { user, espaciosScope } = useAuth();
+    const [cargando, setCargando] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterTipo, setFilterTipo] = useState<string>('all');
+    const [filterSede, setFilterSede] = useState<string>('all');
+    const [currentPage, setCurrentPage] = useState(1);
+
+    // Estados de datos
+    const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
+    const [sedes, setSedes] = useState<Sede[]>([]);
+    const [tiposEspacio, setTiposEspacio] = useState<TipoEspacio[]>([]);
+    const [recursosDisponibles, setRecursosDisponibles] = useState<Recurso[]>([]);
+
+    // Modales
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [showCreateTipoDialog, setShowCreateTipoDialog] = useState(false);
+    const [showEditDialog, setShowEditDialog] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+    const [tipoEspacioForm, setTipoEspacioForm] = useState({
+        nombre: '',
+        descripcion: ''
+    });
+
+    // Formulario
+    const [espacioForm, setEspacioForm] = useState({
+        nombre: '',
+        tipo_id: '',
+        capacidad: '',
+        sede_id: '',
+        ubicacion: '',
+        descripcion: '',
+        estado: 'Disponible' as 'Disponible' | 'Mantenimiento' | 'No Disponible'
+    });
+
+    // Estado para recursos
+    const [recursoSeleccionado, setRecursoSeleccionado] = useState<number | null>(null);
+    const [recursosAgregados, setRecursosAgregados] = useState<Recurso[]>([]);
+    const [mostrandoRecursos, setMostrandoRecursos] = useState(true);
+
+    const [selectedEspacio, setSelectedEspacio] = useState<EspacioFisico | null>(null);
+
+    const notifyEspaciosUpdated = () => {
+        clearSessionCache(ESTADO_RECURSOS_CACHE_KEY);
+        clearSessionCache(`${ESPACIOS_FISICOS_CACHE_KEY}-espacios`);
+        clearSessionCache(GESTION_USUARIOS_ESPACIOS_CACHE_KEY);
+        clearSessionCache(GESTION_USUARIOS_TIPOS_ESPACIO_CACHE_KEY);
+        window.dispatchEvent(new Event(ESPACIOS_UPDATED_EVENT));
+    };
+
+    const syncRecursosEspacio = async (espacioId: number, recursosDeseados: Recurso[]) => {
+        const { recursos: recursosActuales } = await espacioRecursoService.listarPorEspacio(espacioId);
+        const idsDeseados = new Set(
+            recursosDeseados
+                .map((recurso) => recurso.id)
+                .filter((id): id is number => id != null)
+        );
+        const idsActuales = new Set(recursosActuales.map((recurso) => recurso.recurso_id));
+
+        const recursosNuevos = [...idsDeseados].filter((id) => !idsActuales.has(id));
+        const recursosEliminar = [...idsActuales].filter((id) => !idsDeseados.has(id));
+
+        await Promise.all([
+            ...recursosNuevos.map((recursoId) =>
+                espacioRecursoService.crearEspacioRecurso({
+                    espacio_id: espacioId,
+                    recurso_id: recursoId,
+                    estado: 'disponible'
+                })
+            ),
+            ...recursosEliminar.map((recursoId) =>
+                espacioRecursoService.eliminarEspacioRecurso(espacioId, recursoId)
+            )
+        ]);
+    };
+
+    // Cargar datos
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
+        try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{
+                    espacios: EspacioFisico[];
+                    sedes: Sede[];
+                    tiposEspacio: TipoEspacio[];
+                    recursosDisponibles: Recurso[];
+                }>(ESPACIOS_FISICOS_CACHE_KEY, activeToken);
+
+            if (cachedData) {
+                setEspacios(cachedData.espacios);
+                setSedes(cachedData.sedes);
+                setTiposEspacio(cachedData.tiposEspacio);
+                setRecursosDisponibles(cachedData.recursosDisponibles);
+            }
+
+            const [espaciosRes, sedesRes, tiposRes, recursosRes] = await Promise.all([
+                espacioService.list(),
+                sedeService.listarSedes(),
+                tipoEspacioService.listarTiposEspacio(),
+                recursoService.listarRecursos()
+            ]);
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const espaciosData = (espaciosRes as any).espacios || (Array.isArray(espaciosRes) ? espaciosRes : []);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const sedesData = (sedesRes as any).sedes || (Array.isArray(sedesRes) ? sedesRes : []);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const tiposData = (tiposRes as any).tipos_espacio || (Array.isArray(tiposRes) ? tiposRes : []);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const recursosData = (recursosRes as any).recursos || (Array.isArray(recursosRes) ? recursosRes : []);
+
+            setEspacios(espaciosData);
+            setSedes(sedesData);
+            setTiposEspacio(tiposData);
+            setRecursosDisponibles(recursosData);
+            setSessionCacheData(ESPACIOS_FISICOS_CACHE_KEY, activeToken, {
+                espacios: espaciosData,
+                sedes: sedesData,
+                tiposEspacio: tiposData,
+                recursosDisponibles: recursosData
+            });
+        } catch (error) {
+            console.error('Error loading data:', error);
+            toast.error('Error al cargar los datos');
+        } finally {
+            setCargando(false);
+        }
+    };
+
+    useEffect(() => {
+        const handleCatalogoUpdated = () => {
+            void loadData({ force: true });
+        };
+
+        window.addEventListener(RECURSOS_UPDATED_EVENT, handleCatalogoUpdated);
+        window.addEventListener(SEDES_UPDATED_EVENT, handleCatalogoUpdated);
+        return () => {
+            window.removeEventListener(RECURSOS_UPDATED_EVENT, handleCatalogoUpdated);
+            window.removeEventListener(SEDES_UPDATED_EVENT, handleCatalogoUpdated);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const loadEspacios = async ({ force = false }: { force?: boolean } = {}) => {
+        try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedEspacios = force
+                ? null
+                : getSessionCacheData<EspacioFisico[]>(`${ESPACIOS_FISICOS_CACHE_KEY}-espacios`, activeToken);
+
+            if (cachedEspacios) {
+                setEspacios(cachedEspacios);
+            }
+
+            const espaciosRes = await espacioService.list();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const data = (espaciosRes as any).espacios || (Array.isArray(espaciosRes) ? espaciosRes : []);
+
+            setEspacios(data);
+            setSessionCacheData(`${ESPACIOS_FISICOS_CACHE_KEY}-espacios`, activeToken, data);
+        } catch (error) {
+            console.error('Error loading espacios:', error);
+        }
+    };
+
+    // ==================== CREAR ESPACIO ====================
+
+    const handleCreateEspacio = async () => {
+        // Validaciones
+        if (!espacioForm.nombre.trim()) {
+            toast.error('El nombre es obligatorio');
+            return;
+        }
+        if (!espacioForm.tipo_id) {
+            toast.error('Debe seleccionar un tipo');
+            return;
+        }
+        if (!espacioForm.capacidad || Number(espacioForm.capacidad) < 1) {
+            toast.error('La capacidad debe ser mayor a 0');
+            return;
+        }
+        if (!espacioForm.sede_id) {
+            toast.error('Debe seleccionar una sede');
+            return;
+        }
+
+        try {
+            // Preparar recursos para el payload
+            const recursosPayload = recursosAgregados.map(r => ({
+                id: r.id!,
+                estado: 'disponible' // Estado por defecto al crear
+            }));
+
+            const ubicacionTrim = espacioForm.ubicacion.trim();
+            // 1. Crear el espacio con recursos
+            const created = await espacioService.create({
+                nombre: espacioForm.nombre.trim(),
+                tipo_id: Number(espacioForm.tipo_id),
+                capacidad: Number(espacioForm.capacidad),
+                sede_id: Number(espacioForm.sede_id),
+                ubicacion: ubicacionTrim.length > 0 ? ubicacionTrim : null,
+                estado: 'Disponible',
+                descripcion: espacioForm.descripcion,
+                recursos: recursosPayload
+            });
+
+            if (created.id && recursosAgregados.length > 0) {
+                await syncRecursosEspacio(created.id, recursosAgregados);
+            }
+
+            // Actualizar lista
+            await loadData({ force: true });
+            notifyEspaciosUpdated();
+
+            // Limpiar y cerrar
+            resetForm();
+            setShowCreateDialog(false);
+
+            // Notificación
+            toast.success('Registro guardado exitosamente');
+        } catch (error) {
+            console.error('Error creating espacio:', error);
+            toast.error('Error al crear el espacio');
+        }
+    };
+
+    // ==================== CREAR TIPO DE ESPACIO ====================
+
+    const handleCreateTipoEspacio = async () => {
+        const nombre = tipoEspacioForm.nombre.trim();
+        const descripcion = tipoEspacioForm.descripcion.trim();
+
+        if (!nombre) {
+            toast.error('El nombre del tipo es obligatorio');
+            return;
+        }
+
+        const existeTipo = tiposEspacio.some(t => t.nombre.toLowerCase() === nombre.toLowerCase());
+        if (existeTipo) {
+            toast.error('Ya existe un tipo de espacio con ese nombre');
+            return;
+        }
+
+        try {
+            const response = await tipoEspacioService.crearTipoEspacio({
+                nombre,
+                descripcion: descripcion || undefined
+            });
+
+            await loadData({ force: true });
+            notifyEspaciosUpdated();
+
+            setTipoEspacioForm({ nombre: '', descripcion: '' });
+            setShowCreateTipoDialog(false);
+
+            if (response?.id) {
+                setEspacioForm(prev => ({ ...prev, tipo_id: String(response.id) }));
+            }
+
+            toast.success('Tipo de espacio creado exitosamente');
+        } catch (error) {
+            console.error('Error creating tipo espacio:', error);
+            toast.error('Error al crear el tipo de espacio');
+        }
+    };
+
+    // ==================== EDITAR ESPACIO ====================
+
+    const openEditDialog = async (espacio: EspacioFisico) => {
+        setSelectedEspacio(espacio);
+        setEspacioForm({
+            nombre: espacio.nombre || '',
+            tipo_id: String(espacio.tipo_id || ''),
+            capacidad: String(espacio.capacidad || ''),
+            sede_id: String(espacio.sede_id || ''),
+            ubicacion: espacio.ubicacion || '',
+            descripcion: espacio.descripcion || '',
+            estado: espacio.estado || 'Disponible'
+        });
+
+        // Cargar recursos reales desde la relación EspacioRecurso
+        try {
+            const { recursos } = await espacioRecursoService.listarPorEspacio(espacio.id!);
+            const mappedRecursos = recursos.map(r => ({
+                id: r.recurso_id,
+                nombre: r.nombre,
+                descripcion: ''
+            }));
+            setRecursosAgregados(mappedRecursos);
+            setMostrandoRecursos(mappedRecursos.length === 0);
+        } catch (error) {
+            console.error('Error cargando recursos del espacio:', error);
+            setRecursosAgregados([]);
+            setMostrandoRecursos(true);
+        }
+
+        setShowEditDialog(true);
+    };
+
+    const handleEditEspacio = async () => {
+        if (!selectedEspacio) return;
+        // Validaciones
+        if (!espacioForm.nombre.trim()) {
+            toast.error('El nombre es obligatorio');
+            return;
+        }
+        if (!espacioForm.tipo_id) {
+            toast.error('Debe seleccionar un tipo');
+            return;
+        }
+        if (!espacioForm.capacidad || Number(espacioForm.capacidad) < 1) {
+            toast.error('La capacidad debe ser mayor a 0');
+            return;
+        }
+        if (!espacioForm.sede_id) {
+            toast.error('Debe seleccionar una sede');
+            return;
+        }
+
+        try {
+            const estadoAnterior = selectedEspacio.estado;
+
+            // Preparar recursos para el payload
+            const recursosPayload = recursosAgregados.map(r => ({
+                id: r.id!,
+                estado: 'disponible'
+            }));
+
+            const ubicacionTrim = espacioForm.ubicacion.trim();
+            // 1. Actualizar espacio con recursos
+            await espacioService.update({
+                id: selectedEspacio.id!,
+                nombre: espacioForm.nombre.trim(),
+                tipo_id: Number(espacioForm.tipo_id),
+                capacidad: Number(espacioForm.capacidad),
+                sede_id: Number(espacioForm.sede_id),
+                ubicacion: ubicacionTrim.length > 0 ? ubicacionTrim : null,
+                descripcion: espacioForm.descripcion.trim(),
+                recursos: recursosPayload
+            });
+
+            if (estadoAnterior !== espacioForm.estado) {
+                await espacioService.cambiarEstado(selectedEspacio.id!, espacioForm.estado);
+            }
+
+            await syncRecursosEspacio(selectedEspacio.id!, recursosAgregados);
+
+            // Actualizar lista
+            await loadData({ force: true });
+            notifyEspaciosUpdated();
+
+            // Cerrar y limpiar
+            setShowEditDialog(false);
+            setSelectedEspacio(null);
+            resetForm();
+
+            // Notificación
+            toast.info('Actualización exitosa');
+        } catch (error) {
+            console.error('Error updating espacio:', error);
+            toast.error('Error al actualizar el espacio');
+        }
+    };
+
+    // ==================== ELIMINAR ESPACIO ====================
+
+    const openDeleteDialog = (espacio: EspacioFisico) => {
+        setSelectedEspacio(espacio);
+        setShowDeleteDialog(true);
+    };
+
+    const handleDeleteEspacio = async () => {
+        if (!selectedEspacio) return;
+
+        try {
+            await espacioService.delete({ id: selectedEspacio.id! });
+
+            // Actualizar lista
+            await loadData({ force: true });
+            notifyEspaciosUpdated();
+
+            // Cerrar
+            setShowDeleteDialog(false);
+            setSelectedEspacio(null);
+
+            toast.error('Espacio eliminado correctamente');
+        } catch (error) {
+            console.error('Error deleting espacio:', error);
+            toast.error('Error al eliminar el espacio');
+        }
+    };
+
+    // ==================== UTILIDADES ====================
+
+    const resetForm = () => {
+        setEspacioForm({
+            nombre: '',
+            tipo_id: '',
+            capacidad: '',
+            sede_id: '',
+            ubicacion: '',
+            descripcion: '',
+            estado: 'Disponible'
+        });
+        setRecursosAgregados([]);
+        setRecursoSeleccionado(null);
+        setMostrandoRecursos(true);
+    };
+
+    const resetTipoEspacioForm = () => {
+        setTipoEspacioForm({ nombre: '', descripcion: '' });
+    };
+
+    // ==================== FILTROS ====================
+
+    const filteredEspacios = useMemo(() => {
+        return espacios.filter(espacio => {
+            // Find sede name for search
+            const sede = sedes.find(s => s.id === espacio.sede_id);
+            const sedeNombre = sede ? sede.nombre : '';
+            const tipoNombre = espacio.tipo_espacio?.nombre || '';
+
+            const matchSearch =
+                (espacio.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                (sedeNombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                (tipoNombre?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+
+            const matchTipo = filterTipo === 'all' || espacio.tipo_id.toString() === filterTipo;
+            const matchSede = filterSede === 'all' || espacio.sede_id.toString() === filterSede;
+
+            return matchSearch && matchTipo && matchSede;
+        });
+    }, [espacios, sedes, searchTerm, filterTipo, filterSede]);
+
+    const totalFilteredEspacios = filteredEspacios.length;
+    const totalPages = getTotalPages(totalFilteredEspacios, PAGE_SIZE);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
+
+    const paginatedEspacios = useMemo(() => {
+        return getPageSlice(filteredEspacios, currentPage, PAGE_SIZE);
+    }, [filteredEspacios, currentPage, PAGE_SIZE]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterTipo, filterSede]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => normalizePage(prev, totalPages));
+    }, [totalPages]);
+
+    const goToPage = (page: number) => {
+        setCurrentPage(normalizePage(page, totalPages));
+    };
+
+    const goToNextPage = () => {
+        goToPage(currentPage + 1);
+    };
+
+    const goToPrevPage = () => {
+        goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    // Badge de estado
+    const getEstadoBadge = (estado: string) => {
+        switch (estado) {
+            case 'Disponible':
+                return { className: "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-400", label: "Disponible" };
+            case 'Mantenimiento':
+                return { className: "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-950/30 dark:text-yellow-400", label: "Mantenimiento" };
+            case 'No Disponible':
+                return { className: "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-400", label: "No Disponible" };
+            default:
+                return { className: "variant='outline'", label: "Desconocido" };
+        }
+    };
+
+    // Alcance del supervisor de espacios (el backend es quien lo aplica; aquí solo se ajusta la
+    // pantalla): por tipo puede crear espacios de esos tipos en su sede; individual no crea ninguno.
+    const tiposPermitidos = useMemo(() => espaciosScope?.tiposPermitidos ?? [], [espaciosScope]);
+    const puedeCrearEspacios = espaciosScope?.puedeCrearEspacios ?? true;
+    const supervisorRestringido = !puedeCrearEspacios || tiposPermitidos.length > 0;
+    const sedeUsuarioId = user?.sede?.id;
+    const tiposParaFormulario = useMemo(
+        () => (tiposPermitidos.length ? tiposEspacio.filter((tipo) => tipo.id != null && tiposPermitidos.includes(tipo.id)) : tiposEspacio),
+        [tiposEspacio, tiposPermitidos],
+    );
+    const sedesParaFormulario = useMemo(
+        () => (supervisorRestringido && sedeUsuarioId != null ? sedes.filter((sede) => sede.id === sedeUsuarioId) : sedes),
+        [sedes, supervisorRestringido, sedeUsuarioId],
+    );
+
+    return {
+        cargando,
+        puedeCrearEspacios,
+        puedeCrearTipos: !supervisorRestringido,
+        tiposParaFormulario,
+        sedesParaFormulario,
+        searchTerm, setSearchTerm,
+        filterTipo, setFilterTipo,
+        filterSede, setFilterSede,
+        espacios,
+        sedes,
+        tiposEspacio,
+        recursosDisponibles,
+        showCreateDialog, setShowCreateDialog,
+        showCreateTipoDialog, setShowCreateTipoDialog,
+        showEditDialog, setShowEditDialog,
+        showDeleteDialog, setShowDeleteDialog,
+        espacioForm, setEspacioForm,
+        tipoEspacioForm, setTipoEspacioForm,
+        recursoSeleccionado, setRecursoSeleccionado,
+        recursosAgregados, setRecursosAgregados,
+        mostrandoRecursos, setMostrandoRecursos,
+        selectedEspacio, setSelectedEspacio,
+        handleCreateEspacio,
+        handleCreateTipoEspacio,
+        openEditDialog,
+        handleEditEspacio,
+        openDeleteDialog,
+        handleDeleteEspacio,
+        resetForm,
+        resetTipoEspacioForm,
+        filteredEspacios,
+        paginatedEspacios,
+        totalFilteredEspacios,
+        currentPage,
+        totalPages,
+        pageNumbers,
+        pageSize: PAGE_SIZE,
+        goToPage,
+        goToNextPage,
+        goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow,
+        getEstadoBadge,
+        loadEspacios
+    };
+}

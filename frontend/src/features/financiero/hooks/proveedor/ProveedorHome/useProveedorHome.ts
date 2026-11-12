@@ -1,0 +1,107 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Receipt, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
+import { proveedoresService } from '../../../services';
+import type { Factura } from '../../../models/core.models';
+
+const toList = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+  if (typeof data === 'object' && data !== null && Array.isArray((data as { results?: unknown }).results)) {
+    return (data as { results: T[] }).results;
+  }
+  return [];
+};
+
+export function useProveedorHome(miProveedorId?: number) {
+  const [facturas, setFacturas] = useState<Factura[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadFacturas = useCallback(async (silent = false) => {
+    if (!miProveedorId) {
+      if (!silent) setLoading(false);
+      return;
+    }
+    if (!silent) setLoading(true);
+    try {
+      const resp = await proveedoresService.getMisFacturas(miProveedorId, { limit: 20 });
+      setFacturas(toList<Factura>(resp));
+    } catch {
+      if (!silent) setFacturas([]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [miProveedorId]);
+
+  useEffect(() => {
+    void loadFacturas();
+  }, [loadFacturas]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadFacturas(true);
+    };
+    const intervalId = window.setInterval(refreshWhenVisible, 30000);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('focus', refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('focus', refreshWhenVisible);
+    };
+  }, [loadFacturas]);
+
+  const stats = [
+    {
+      title: 'Facturas Enviadas',
+      value: facturas.length,
+      icon: Receipt,
+      color: 'from-blue-600 to-blue-700',
+      iconColor: 'text-blue-100',
+      trend: 'Total histórico',
+    },
+    {
+      title: 'En Proceso',
+      value: facturas.filter((f) => !['Pagada', 'Pago Aplicado', 'Rechazada', 'Anulada', 'Devuelta'].includes(f.estado)).length,
+      icon: Clock,
+      color: 'from-orange-600 to-orange-700',
+      iconColor: 'text-orange-100',
+      trend: 'Siendo procesadas',
+    },
+    {
+      title: 'Pagadas',
+      value: facturas.filter((f) => f.estado === 'Pagada' || f.estado === 'Pago Aplicado').length,
+      icon: CheckCircle2,
+      color: 'from-green-600 to-green-700',
+      iconColor: 'text-green-100',
+      trend: 'Completadas',
+    },
+    {
+      title: 'Devueltas',
+      value: facturas.filter((f) => f.estado === 'Devuelta' || f.estado === 'Rechazada').length,
+      icon: TrendingUp,
+      color: 'from-red-600 to-red-700',
+      iconColor: 'text-red-100',
+      trend: 'Requieren atención',
+    },
+  ];
+
+  const recentFacturas = useMemo(
+    () =>
+      [...facturas]
+        .sort((a, b) => {
+          const fechaA = new Date(a.fecha_modificacion || a.fecha_recepcion || a.fecha_creacion || a.fecha_factura || 0).getTime();
+          const fechaB = new Date(b.fecha_modificacion || b.fecha_recepcion || b.fecha_creacion || b.fecha_factura || 0).getTime();
+          if (fechaB !== fechaA) return fechaB - fechaA;
+          return (b.id || 0) - (a.id || 0);
+        })
+        .slice(0, 4),
+    [facturas],
+  );
+
+  return {
+    loading,
+    stats,
+    recentFacturas,
+    hasMoreRecent: facturas.length > recentFacturas.length,
+  };
+}
