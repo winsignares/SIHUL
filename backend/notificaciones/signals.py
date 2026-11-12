@@ -1,7 +1,7 @@
 """
 Signals para crear notificaciones automáticas en operaciones CRUD
 """
-from django.db.models.signals import post_save, post_delete, pre_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import AnonymousUser
 from threading import local

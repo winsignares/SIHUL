@@ -3,13 +3,11 @@ Seeder de horarios para Sede Norte.
 Este archivo se llenará gradualmente con los datos específicos de la sede norte.
 """
 
-from datetime import time
 from django.db.models import Q
 from sedes.models import Sede
-from espacios.models import TipoEspacio, EspacioFisico
+from espacios.models import EspacioFisico
 from usuarios.models import Rol, Usuario
 from asignaturas.models import Asignatura
-from programas.models import Programa
 from periodos.models import PeriodoAcademico
 from grupos.models import Grupo
 from horario.models import Horario
@@ -984,7 +982,7 @@ def create_horarios_sede_principal(stdout, style):
                 continue
             
             # Crear el horario (ya limpiamos todos los anteriores)
-            horario = Horario.objects.create(
+            Horario.objects.create(
                 asignatura=asignatura,
                 grupo=grupo,
                 dia_semana=dia_normalizado,

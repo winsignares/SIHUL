@@ -7,7 +7,6 @@ y valida solapamientos/capacidad antes de guardar
 from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
-from datetime import datetime, timedelta
 import unicodedata
 from .models import Horario, HorarioFusionado
 

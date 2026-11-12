@@ -6,7 +6,7 @@ from datetime import time
 from django.db.models import Q
 from sedes.models import Sede
 from espacios.models import TipoEspacio, EspacioFisico
-from usuarios.models import Rol, Usuario
+from usuarios.models import Usuario
 from asignaturas.models import Asignatura
 from programas.models import Programa
 from periodos.models import PeriodoAcademico
@@ -1298,17 +1298,6 @@ def create_horarios_sede_centro(stdout, style):
 
     }
 
-    # Semestres asociados a cada nombre formal de grupo DERECHO
-    semestres_derecho = {
-        'I':   1, 'II':  2, 'III': 3, 'IV':  4, 'V':   5,
-        'VI':  6, 'VII': 7, 'VIII':8, 'IX':  9, 'X':  10,
-    }
-    # Nombres formales registrados con su semestre
-    grupos_formales_derecho = {
-        'DERECHO A': None, 'DERECHO B': None,
-        'DERECHO C': None, 'DERECHO D': None,
-        'DERECHO E': None,
-    }
 
     for grupo_nombre, materia_nombre, profesor_nombre, dia, hora_inicio_str, hora_fin_str, espacio_nombre in horarios_data:
         try:
@@ -1322,7 +1311,6 @@ def create_horarios_sede_centro(stdout, style):
             if not asignatura:
                 # Crear la asignatura automáticamente con código único
                 import hashlib
-                codigo_base = materia_nombre.strip()[:15].upper().replace(' ', '-').replace(':', '')
                 codigo_hash = hashlib.sha256(materia_nombre.encode()).hexdigest()[:6].upper()
                 codigo_unico = f'{codigo_hash}'
                 
