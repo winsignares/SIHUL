@@ -1,4 +1,3 @@
-import type { Factura } from '../../core.models';
 
 export interface FuncionarioConsultaRow {
   id: string;
@@ -16,18 +15,6 @@ export interface FuncionarioConsultaRow {
   fechaFactura: string;
   fechaRecepcion: string;
   dias: number;
-}
-
-export interface FuncionarioSeguimientoResponse {
-  factura?: Factura;
-  historial?: Array<{
-    fecha_accion?: string;
-    accion?: string;
-    estado_anterior?: string;
-    estado_nuevo?: string;
-    usuario_nombre?: string;
-    observacion?: string;
-  }>;
 }
 
 export interface FuncionarioEstadoChange {

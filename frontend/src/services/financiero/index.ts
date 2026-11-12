@@ -8,5 +8,4 @@ export * from './centros-costo/centrosCostoAPI';
 export * from './parametros-sla/parametrosSlaAPI';
 export * from './documentos/documentosAPI';
 export * from './historial/historialAPI';
-export * from './comentarios/comentariosAPI';
 export * from './reportes/reportesAPI';

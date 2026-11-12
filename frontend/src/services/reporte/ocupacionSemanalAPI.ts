@@ -8,14 +8,6 @@ export interface OcupacionSemanalResponse {
   ocupacion: EspacioOcupacion[];
 }
 
-export interface TipoEspacioResponse {
-  tipos_espacio: Array<{
-    id: number;
-    nombre: string;
-    descripcion?: string;
-  }>;
-}
-
 class OcupacionSemanalService {
   /**
    * Obtiene la ocupación semanal de espacios
