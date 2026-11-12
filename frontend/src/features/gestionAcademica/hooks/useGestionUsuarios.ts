@@ -1,11 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNotification } from '../../../components/ui/notificationBanner';
-import { userService, rolService, type Usuario, type Rol } from '../../users/services/authService';
-import { espacioService, espacioPermitidoService, type EspacioFisico, type TipoEspacio } from '../../espacios/services/espaciosAPI';
-import { facultadService } from '../services/facultades/facultadesAPI';
-import { sedeService } from '../../../services/sedes/sedeAPI';
-import { seccionalService, type Seccional } from '../../../services/seccionales/seccionalAPI';
-import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { userService, type Usuario } from '../../users/services/authService';
+import { espacioPermitidoService } from '../../espacios/services/espaciosAPI';
 import { isSpaceSupervisorRole } from '../../../context/spaceSupervisorRole';
 import {
     PAGE_SIZE_DEFAULT,
@@ -17,63 +13,33 @@ import {
     getTargetPageForNextWindow,
     getTargetPageForPrevWindow,
 } from './paginacion';
-
-// El servidor entrega los usuarios en bloques de 100; la tabla los muestra de PAGE_SIZE en PAGE_SIZE
-const USUARIOS_POR_BLOQUE = 100;
-const BUSQUEDA_ESPERA_MS = 300;
-const GESTION_ROLES_CACHE_KEY = 'gestion-academica-roles-v3';
-const GESTION_FACULTADES_CACHE_KEY = 'gestion-academica-facultades-usuarios';
-const GESTION_ESPACIOS_CACHE_KEY = 'gestion-academica-espacios-usuarios-v4';
-const GESTION_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios-v2';
-const GESTION_TIPOS_ESPACIO_CACHE_KEY = 'gestion-academica-tipos-espacio-usuarios';
-const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
-const SEDES_UPDATED_EVENT = 'sedes-updated';
-const ACADEMIC_CATALOG_UPDATED_EVENT = 'academic-catalog-updated';
-const ROLES_UPDATED_EVENT = 'roles-updated';
-
-type EspacioAsignable = {
-    id: number;
-    nombre: string;
-    tipo_id: number;
-    sede_id: number;
-    sede_seccional_id: number | null;
-};
-
-type SedeAsignable = {
-    id: number;
-    nombre: string;
-    seccional_id: number | null;
-};
-
-const getRelationId = (value: unknown): number | null => {
-    if (typeof value === 'number') return value;
-    if (value && typeof value === 'object' && 'id' in value) {
-        const id = (value as { id?: unknown }).id;
-        return typeof id === 'number' ? id : null;
-    }
-    return null;
-};
-
-const normalizeEspacioAsignable = (espacio: EspacioFisico): EspacioAsignable | null => {
-    const tipoId = espacio.tipo_id ?? espacio.tipo_espacio?.id ?? getRelationId(espacio.tipo);
-    const sedeId = espacio.sede_id ?? getRelationId(espacio.sede);
-
-    if (!espacio.id || !tipoId || !sedeId) {
-        return null;
-    }
-
-    return {
-        id: espacio.id,
-        nombre: espacio.nombre,
-        tipo_id: tipoId,
-        sede_id: sedeId,
-        sede_seccional_id: espacio.sede_seccional_id ?? null,
-    };
-};
+import {
+    BUSQUEDA_ESPERA_MS,
+    USUARIOS_POR_BLOQUE,
+    getRelationId,
+    normalizeEspacioAsignable,
+    resolverSeleccionPendiente,
+    type EspacioAsignable,
+} from './usuarios/usuariosUtils';
+import { useCatalogosUsuarios } from './usuarios/useCatalogosUsuarios';
 
 export function useGestionUsuarios() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
     const { notification, showNotification } = useNotification();
+    const {
+        rolesDisponibles,
+        facultadesDisponibles,
+        espaciosDisponibles, setEspaciosDisponibles,
+        sedesDisponibles,
+        seccionalesDisponibles,
+        tiposEspacioDisponibles,
+        loadRoles,
+        loadFacultades,
+        loadEspacios,
+        loadSedes,
+        loadSeccionales,
+        loadTiposEspacio,
+    } = useCatalogosUsuarios();
 
     // Bloque de usuarios cargado (hasta 100), su número y el total que coincide con la búsqueda
     const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -108,12 +74,6 @@ export function useGestionUsuarios() {
     const [sedeSeleccionada, setSedeSeleccionada] = useState('');
     const [seccionalSeleccionada, setSeccionalSeleccionada] = useState('');
 
-    // Estados para datos dinámicos desde backend
-    const [rolesDisponibles, setRolesDisponibles] = useState<Rol[]>([]);
-    const [facultadesDisponibles, setFacultadesDisponibles] = useState<Array<{ id: number, nombre: string }>>([]);
-    const [espaciosDisponibles, setEspaciosDisponibles] = useState<EspacioAsignable[]>([]);
-    const [sedesDisponibles, setSedesDisponibles] = useState<SedeAsignable[]>([]);
-    const [seccionalesDisponibles, setSeccionalesDisponibles] = useState<Seccional[]>([]);
 
     // Estados para espacios permitidos (roles con supervisión de espacios)
     const [espacioSeleccionado, setEspacioSeleccionado] = useState('');
@@ -138,7 +98,6 @@ export function useGestionUsuarios() {
 
     // Estados agregados para asignacion por tipo de espacio.
     // Se declaran despues de los hooks originales para mantener orden estable en Fast Refresh.
-    const [tiposEspacioDisponibles, setTiposEspacioDisponibles] = useState<TipoEspacio[]>([]);
     const [modoAsignacionSupervisor, setModoAsignacionSupervisor] = useState<'individual' | 'tipo'>('individual');
     const [modoAsignacionSupervisorEdit, setModoAsignacionSupervisorEdit] = useState<'individual' | 'tipo'>('individual');
     const [tipoEspacioSeleccionado, setTipoEspacioSeleccionado] = useState('');
@@ -189,188 +148,6 @@ export function useGestionUsuarios() {
         }
     };
 
-    // Cargar roles desde backend
-    const loadRoles = async ({ force = false }: { force?: boolean } = {}) => {
-        try {
-            const activeToken = localStorage.getItem('auth_token');
-            const cachedRoles = force ? null : getSessionCacheData<Rol[]>(GESTION_ROLES_CACHE_KEY, activeToken);
-
-            if (cachedRoles) {
-                setRolesDisponibles(cachedRoles);
-            }
-
-            const response = await rolService.listarRoles();
-            setRolesDisponibles(response.roles || []);
-            setSessionCacheData(GESTION_ROLES_CACHE_KEY, activeToken, response.roles || []);
-        } catch (error) {
-            console.error('Error cargando roles:', error);
-        }
-    };
-
-    // Cargar facultades desde backend
-    const loadFacultades = async ({ force = false }: { force?: boolean } = {}) => {
-        try {
-            const activeToken = localStorage.getItem('auth_token');
-            const cachedFacultades = force
-                ? null
-                : getSessionCacheData<Array<{ id: number, nombre: string }>>(GESTION_FACULTADES_CACHE_KEY, activeToken);
-
-            if (cachedFacultades) {
-                setFacultadesDisponibles(cachedFacultades);
-            }
-
-            const response = await facultadService.list();
-            const facultades = (response.facultades || []).map((f) => ({
-                id: f.id as number,
-                nombre: f.nombre,
-            }));
-            setFacultadesDisponibles(facultades);
-            setSessionCacheData(GESTION_FACULTADES_CACHE_KEY, activeToken, facultades);
-        } catch (error) {
-            console.error('Error cargando facultades:', error);
-        }
-    };
-
-    // Cargar espacios desde backend
-    const loadEspacios = async ({ force = false }: { force?: boolean } = {}) => {
-        try {
-            const activeToken = localStorage.getItem('auth_token');
-            const cachedEspacios = force
-                ? null
-                : getSessionCacheData<EspacioAsignable[]>(GESTION_ESPACIOS_CACHE_KEY, activeToken);
-
-            if (cachedEspacios) {
-                setEspaciosDisponibles(cachedEspacios);
-            }
-
-            const response = await espacioService.list();
-            const espacios = (response.espacios || [])
-                .map(normalizeEspacioAsignable)
-                .filter((espacio): espacio is EspacioAsignable => espacio !== null);
-            setEspaciosDisponibles(espacios);
-            setSessionCacheData(GESTION_ESPACIOS_CACHE_KEY, activeToken, espacios);
-        } catch (error) {
-            console.error('Error cargando espacios:', error);
-        }
-    };
-
-    // Cargar tipos de espacio desde backend
-    const loadTiposEspacio = async ({ force = false }: { force?: boolean } = {}) => {
-        try {
-            const activeToken = localStorage.getItem('auth_token');
-            const cachedTiposEspacio = force
-                ? null
-                : getSessionCacheData<TipoEspacio[]>(GESTION_TIPOS_ESPACIO_CACHE_KEY, activeToken);
-
-            if (cachedTiposEspacio) {
-                setTiposEspacioDisponibles(cachedTiposEspacio);
-            }
-
-            const response = await espacioService.listTipos();
-            setTiposEspacioDisponibles(response.tipos_espacio || []);
-            setSessionCacheData(GESTION_TIPOS_ESPACIO_CACHE_KEY, activeToken, response.tipos_espacio || []);
-        } catch (error) {
-            console.error('Error cargando tipos de espacio:', error);
-        }
-    };
-
-    // Cargar sedes desde backend
-    const loadSedes = async ({ force = false }: { force?: boolean } = {}) => {
-        try {
-            const activeToken = localStorage.getItem('auth_token');
-            const cachedSedes = force
-                ? null
-                : getSessionCacheData<SedeAsignable[]>(GESTION_SEDES_CACHE_KEY, activeToken);
-
-            if (cachedSedes) {
-                setSedesDisponibles(cachedSedes);
-            }
-
-            const response = await sedeService.listarSedes();
-            const sedes = (response.sedes || []).map((sede) => ({
-                id: sede.id as number,
-                nombre: sede.nombre,
-                seccional_id: sede.seccional_id ?? null,
-            }));
-            setSedesDisponibles(sedes);
-            setSessionCacheData(GESTION_SEDES_CACHE_KEY, activeToken, sedes);
-        } catch (error) {
-            console.error('Error cargando sedes:', error);
-        }
-    };
-
-    // Seccionales que se pueden asignar: el administrador global ve todas; quien administra una seccional, solo la suya
-    const loadSeccionales = async () => {
-        try {
-            setSeccionalesDisponibles(await seccionalService.listar());
-        } catch (error) {
-            console.error('Error cargando seccionales:', error);
-        }
-    };
-
-    useEffect(() => {
-        const reloadRolesParaUsuarios = () => {
-            clearSessionCache(GESTION_ROLES_CACHE_KEY);
-            void loadRoles({ force: true });
-        };
-
-        window.addEventListener(ROLES_UPDATED_EVENT, reloadRolesParaUsuarios);
-        window.addEventListener('focus', reloadRolesParaUsuarios);
-
-        return () => {
-            window.removeEventListener(ROLES_UPDATED_EVENT, reloadRolesParaUsuarios);
-            window.removeEventListener('focus', reloadRolesParaUsuarios);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    useEffect(() => {
-        const reloadEspaciosParaAsignacion = () => {
-            clearSessionCache(GESTION_ESPACIOS_CACHE_KEY);
-            clearSessionCache(GESTION_TIPOS_ESPACIO_CACHE_KEY);
-            void Promise.all([
-                loadEspacios({ force: true }),
-                loadTiposEspacio({ force: true }),
-            ]);
-        };
-
-        window.addEventListener(ESPACIOS_UPDATED_EVENT, reloadEspaciosParaAsignacion);
-        window.addEventListener('focus', reloadEspaciosParaAsignacion);
-
-        return () => {
-            window.removeEventListener(ESPACIOS_UPDATED_EVENT, reloadEspaciosParaAsignacion);
-            window.removeEventListener('focus', reloadEspaciosParaAsignacion);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    useEffect(() => {
-        const reloadSedesParaUsuarios = () => {
-            clearSessionCache(GESTION_SEDES_CACHE_KEY);
-            void loadSedes({ force: true });
-        };
-
-        window.addEventListener(SEDES_UPDATED_EVENT, reloadSedesParaUsuarios);
-
-        return () => {
-            window.removeEventListener(SEDES_UPDATED_EVENT, reloadSedesParaUsuarios);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    useEffect(() => {
-        const reloadFacultadesParaUsuarios = () => {
-            clearSessionCache(GESTION_FACULTADES_CACHE_KEY);
-            void loadFacultades({ force: true });
-        };
-
-        window.addEventListener(ACADEMIC_CATALOG_UPDATED_EVENT, reloadFacultadesParaUsuarios);
-
-        return () => {
-            window.removeEventListener(ACADEMIC_CATALOG_UPDATED_EVENT, reloadFacultadesParaUsuarios);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     // Funciones para manejar espacios permitidos (Creación)
     const agregarEspacioPermitido = useCallback(() => {
@@ -479,26 +256,6 @@ export function useGestionUsuarios() {
         return tiposIds;
     }, [tiposEspacioDisponibles]);
 
-    // Lo elegido en un selector pero sin pulsar «+» también se asigna al guardar: antes se perdía en
-    // silencio y parecía que la asignación no se guardaba.
-    const resolverSeleccionPendiente = (
-        tipos: number[], todos: boolean, tipoPendiente: string, espacios: number[], espacioPendiente: string,
-    ) => {
-        let tiposFinal = tipos;
-        let todosFinal = todos;
-        if (tipoPendiente === 'todos') {
-            todosFinal = true;
-        } else if (tipoPendiente) {
-            const tipoId = parseInt(tipoPendiente, 10);
-            if (!Number.isNaN(tipoId) && !tiposFinal.includes(tipoId)) tiposFinal = [...tiposFinal, tipoId];
-        }
-        let espaciosFinal = espacios;
-        if (espacioPendiente) {
-            const espacioId = parseInt(espacioPendiente, 10);
-            if (!Number.isNaN(espacioId) && !espaciosFinal.includes(espacioId)) espaciosFinal = [...espaciosFinal, espacioId];
-        }
-        return { tiposFinal, todosFinal, espaciosFinal };
-    };
 
     // Crear usuario
     const crearUsuario = async () => {
