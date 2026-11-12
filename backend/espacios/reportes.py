@@ -18,7 +18,7 @@ from horario.models import Horario
 from prestamos.models import PrestamoEspacio
 
 from . import ocupacion
-from .api_views import _calcular_duracion_horas, _distribuir_horas_en_jornadas
+from .api.ocupacion import _calcular_duracion_horas, _distribuir_horas_en_jornadas
 
 
 # Nombre en español de cada día, por su nombre en inglés (strftime('%A'))

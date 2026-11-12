@@ -7,7 +7,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from datetime import time
 
-from .api_views import _filtrar_espacios_por_sede_usuario
+from .api.filtros import _filtrar_espacios_por_sede_usuario
 
 
 def _descarga_pdf(contenido, nombre):

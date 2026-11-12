@@ -20,7 +20,7 @@ from notificaciones.signals import crear_notificacion
 
 from mysite.seccional_auth import SeccionalMixin
 
-from horario import api_views
+from horario import api
 from horario import views
 
 
@@ -133,32 +133,32 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='list/extendidos')
     def list_extendidos(self, request):
-        return api_views.list_horarios_extendidos(request._request)
+        return api.list_horarios_extendidos(request._request)
 
     @action(detail=False, methods=['get'], url_path='sin-espacio')
     def sin_espacio(self, request):
-        return api_views.list_horarios_asignacion_espacios(request._request)
+        return api.list_horarios_asignacion_espacios(request._request)
 
     @action(detail=False, methods=['post'], url_path='asignar-espacio')
     def asignar_espacio(self, request):
-        return api_views.asignar_espacio_horario(request._request)
+        return api.asignar_espacio_horario(request._request)
 
 
     @action(detail=False, methods=['get'], url_path='mi-horario')
     def mi_horario(self, request):
-        return api_views.mi_horario_docente(request._request)
+        return api.mi_horario_docente(request._request)
 
     @action(detail=False, methods=['get'], url_path='mi-horario-estudiante')
     def mi_horario_estudiante(self, request):
-        return api_views.mi_horario_estudiante(request._request)
+        return api.mi_horario_estudiante(request._request)
 
     @action(detail=False, methods=['get'], url_path='por-periodo')
     def por_periodo(self, request):
-        return api_views.horarios_por_periodo(request._request)
+        return api.horarios_por_periodo(request._request)
 
     @action(detail=False, methods=['post'], url_path='inscribir-estudiante')
     def inscribir_estudiante(self, request):
-        return api_views.inscribir_estudiante(request._request)
+        return api.inscribir_estudiante(request._request)
 
     @action(detail=False, methods=['post'], url_path='exportar-pdf')
     def exportar_pdf(self, request):
@@ -178,11 +178,11 @@ class HorarioViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='exportar-pdf-usuario')
     def exportar_pdf_usuario(self, request):
-        return api_views.exportar_mi_horario(request._request, 'pdf')
+        return api.exportar_mi_horario(request._request, 'pdf')
 
     @action(detail=False, methods=['get'], url_path='exportar-excel-usuario')
     def exportar_excel_usuario(self, request):
-        return api_views.exportar_mi_horario(request._request, 'excel')
+        return api.exportar_mi_horario(request._request, 'excel')
 
 
 class HorarioFusionadoViewSet(SeccionalMixin, viewsets.ModelViewSet):
@@ -207,8 +207,8 @@ class SolicitudEspacioViewSet(SeccionalMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='aprobar')
     def aprobar(self, request):
-        return api_views.aprobar_solicitud_espacio(request._request)
+        return api.aprobar_solicitud_espacio(request._request)
 
     @action(detail=False, methods=['post'], url_path='rechazar')
     def rechazar(self, request):
-        return api_views.rechazar_solicitud_espacio(request._request)
+        return api.rechazar_solicitud_espacio(request._request)
