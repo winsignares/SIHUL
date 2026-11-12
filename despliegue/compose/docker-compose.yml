@@ -66,6 +66,14 @@ x-backend-env: &backend-env
   CHATBOT_PUBLICO_PREGUNTAS_POR_IP_DIA: ${CHATBOT_PUBLICO_PREGUNTAS_POR_IP_DIA:-15000}
   CHATBOT_PUBLICO_DIFICULTAD_BITS: ${CHATBOT_PUBLICO_DIFICULTAD_BITS:-17}
   CHATBOT_ANEXO_URL_MAX_AGE: ${CHATBOT_ANEXO_URL_MAX_AGE:-604800}
+  # Conexiones persistentes a PostgreSQL (backend/mysite/settings.py): 0 = una conexión por petición, como siempre.
+  # Con 60 y comprobación activa se reutilizan; revisar que max_connections cubra GUNICORN_WORKERS x GUNICORN_THREADS.
+  DB_CONN_MAX_AGE: ${DB_CONN_MAX_AGE:-0}
+  DB_CONN_HEALTH_CHECKS: ${DB_CONN_HEALTH_CHECKS:-false}
+  # Acceso directo del navegador al chatbot (backend/chatbot/acceso_directo.py): misma clave en backend y chatbot.
+  # Vacía = desactivado y el chat sigue pasando por Django.
+  CHATBOT_TOKEN_SECRET: ${CHATBOT_TOKEN_SECRET:-}
+  CHATBOT_TOKEN_VIGENCIA: ${CHATBOT_TOKEN_VIGENCIA:-600}
   FINANCIERO_DOCUMENT_ROOT: /app/media
   FINANCIERO_DOCUMENT_NETWORK_ROOT: ${FINANCIERO_DOCUMENT_NETWORK_ROOT:-}
   FINANCIERO_DOCUMENT_NETWORK_USER: ${FINANCIERO_DOCUMENT_NETWORK_USER:-}
@@ -196,6 +204,8 @@ services:
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
       CHAT_MODEL: ${CHAT_MODEL:-gpt-4o-mini}
       UVICORN_WORKERS: ${UVICORN_WORKERS:-1}
+      CHATBOT_TOKEN_SECRET: ${CHATBOT_TOKEN_SECRET:-}
+      DIRECTO_PREGUNTAS_POR_MINUTO: ${DIRECTO_PREGUNTAS_POR_MINUTO:-10}
       PYTHONUNBUFFERED: "1"
     ports:
       - "127.0.0.1:${CHATBOT_PORT:-8001}:8001"
