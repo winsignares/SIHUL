@@ -17,7 +17,7 @@ Ver también `hooks/horarios/useVisualizacionHorarios.ts` y `hooks/espacios/useS
 
 ### `useCrearHorarios.ts` (817 líneas) — el hook más complejo del dominio académico
 
-Usado en `pages/gestionAcademica/CrearHorarios.tsx`.
+Usado en `features/gestionAcademica/pages/CrearHorarios.tsx`, que arma la pantalla con los componentes de `features/gestionAcademica/components/crearHorarios/` (filtros, tabla de grupos, grilla semanal, lista de asignaturas y modal de asignación).
 
 - Estado: catálogos (`facultades`, `programas`, `grupos`, `espacios`, `asignaturas`, `asignaturasPrograma`, `docentes`, `periodos`, `todosLosHorarios`), 9 filtros independientes, vista (`lista|asignar`), modal de asignación con `diasSeleccionados`/`horasPorDia`.
 - Servicios: `facultadService`, `programaService`, `espacioService`, `asignaturaService`, `asignaturaProgramaService`, `userService.listarDocentes`, `periodoService`, `grupoService`, `horarioService.listExtendidos`, `solicitudEspacioService`.
