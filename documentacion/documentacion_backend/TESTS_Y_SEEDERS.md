@@ -4,7 +4,7 @@ Ver también [APPS_DJANGO.md](APPS_DJANGO.md).
 
 ## Tests
 
-Cada app tiene `tests.py`; la mayoría son el placeholder por defecto de Django. Con contenido real: `financiero/tests.py` (159 líneas), `prestamos/tests.py` (62 líneas), `periodos/tests.py` (47 líneas). No hay pytest configurado; se ejecutan con `manage.py test` (ver `../ENTORNO_PRUEBAS.md`).
+Las apps con pruebas tienen su `tests.py` (o varios `tests_*.py`, como en `financiero/`); las vacías se eliminaron. La CI corre además `ruff` (reglas F) y `mysite/tests_dependencias.py`, que vigila qué app puede importar a cuál. No hay pytest configurado; se ejecutan con `manage.py test` (ver `../general/ENTORNO_PRUEBAS.md`).
 
 ## Seeders
 

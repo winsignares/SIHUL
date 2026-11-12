@@ -23,6 +23,6 @@ SIHUL **no usa JWT**: usa sesiones de Django sobre un modelo `Usuario` custom (`
 - **Helpers y permisos DRF**: `mysite/auth_helpers.py` (funciones puras: `is_admin_global`, `is_admin_sistema`, `has_any_role`, etc.) usadas por las clases de permiso en `mysite/permissions.py` (`IsAdminGlobal`, `IsAdminSistema`, `IsCoordinador`, `IsDocente`, `IsEstudiante`, `IsSupervisorGeneral`, `IsAuthenticatedReadOnlyOrAdminWrite`...).
 - **Microsoft OAuth** (opcional, solo si `MICROSOFT_CLIENT_ID`/`SECRET` están configurados): vía `django-allauth` + adaptador custom `mysite/social_adapter.py`.
 
-> Nota: los documentos `../ARQUITECTURA_COMPLETA_ANALISIS.md` y `../REFERENCIA_RAPIDA.md` explican este mismo flujo con más diagramas y ejemplos de queries; este documento es el resumen técnico ligado directamente al código fuente actual.
+> Nota: los documentos `../general/ARQUITECTURA_COMPLETA_ANALISIS.md` y `../general/REFERENCIA_RAPIDA.md` explican este mismo flujo con más diagramas y ejemplos de queries; este documento es el resumen técnico ligado directamente al código fuente actual.
 
 Ver también [../documentacion_frontend/ENRUTAMIENTO_DINAMICO.md](../documentacion_frontend/ENRUTAMIENTO_DINAMICO.md) para cómo el frontend consume este sistema de componentes/permisos.

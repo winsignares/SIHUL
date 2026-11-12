@@ -2,7 +2,7 @@
 
 Ver también [ESTRUCTURA_Y_STACK.md](ESTRUCTURA_Y_STACK.md) y [../documentacion_backend/AUTENTICACION_Y_PERMISOS.md](../documentacion_backend/AUTENTICACION_Y_PERMISOS.md) (contraparte backend de este sistema).
 
-Este es el patrón arquitectónico central del frontend (documentado también, con más diagramas, en `../ARQUITECTURA_COMPLETA_ANALISIS.md` y `../REFERENCIA_RAPIDA.md`).
+Este es el patrón arquitectónico central del frontend (documentado también, con más diagramas, en `../general/ARQUITECTURA_COMPLETA_ANALISIS.md` y `../general/REFERENCIA_RAPIDA.md`).
 
 ## `context/AuthContext.tsx`
 

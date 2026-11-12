@@ -20,7 +20,9 @@ La base de datos operativa de SIHUL **no es Oracle, es PostgreSQL** (`pgvector/p
 - **`documentacion_frontend/`**: dividida en [ESTRUCTURA_Y_STACK.md](documentacion_frontend/ESTRUCTURA_Y_STACK.md), [ENRUTAMIENTO_DINAMICO.md](documentacion_frontend/ENRUTAMIENTO_DINAMICO.md) (`AuthContext`, `componentRoutes.ts`, `AppRouter.tsx`), [PAGINAS_INDICE.md](documentacion_frontend/PAGINAS_INDICE.md) (un archivo por dominio de páginas), [HOOKS_INDICE.md](documentacion_frontend/HOOKS_INDICE.md) (hooks por dominio + patrón de cache) y [SERVICES_INDICE.md](documentacion_frontend/SERVICES_INDICE.md) (clientes API por dominio + `core/` base). También conserva changelogs previos ([RESPONSIVE_UPDATES.md](documentacion_frontend/RESPONSIVE_UPDATES.md), [RESUMEN_NOTIFICACIONES.md](documentacion_frontend/RESUMEN_NOTIFICACIONES.md)).
 - **`documentacion_oracle/INTEGRACION_ETL_ORACLE.md`**: patrón ETL (staging → promoción a tablas reales), comandos disponibles, variables de entorno necesarias.
 - **`documentacion_chatbot/ARQUITECTURA_RAG_CHATBOT.md`**: arquitectura RAG del servicio FastAPI y su integración como proxy a través del backend Django.
-- **Documentos raíz existentes** (`ARQUITECTURA_COMPLETA_ANALISIS.md`, `REFERENCIA_RAPIDA.md`, `GUIA_INTEGRACION_MODULO_FINANCIERO.md`, `CAMBIOS_SIHUL_FINANCIERO.md`, `ENTORNO_PRUEBAS.md`): documentan bien el patrón de autenticación y componentes dinámicos, y el histórico del entorno de pruebas. **Ojo:** los modelos financieros de ejemplo en `ARQUITECTURA_COMPLETA_ANALISIS.md` y `GUIA_INTEGRACION_MODULO_FINANCIERO.md` (`Presupuesto`, `Transaccion`, `CentroFinanciero`) corresponden al **diseño original propuesto**, no al modelo realmente implementado (`Factura`, `Proveedor`, `CuentaContable`, ver [documentacion_backend/MODULO_FINANCIERO.md](documentacion_backend/MODULO_FINANCIERO.md)).
+- **`general/`**: [ARQUITECTURA_COMPLETA_ANALISIS.md](general/ARQUITECTURA_COMPLETA_ANALISIS.md), [REFERENCIA_RAPIDA.md](general/REFERENCIA_RAPIDA.md), [ENTORNO_PRUEBAS.md](general/ENTORNO_PRUEBAS.md) y [metodologia-trabajo-github.md](general/metodologia-trabajo-github.md): autenticación y componentes dinámicos, entorno de pruebas y forma de trabajo en GitHub.
+- **`historico/`**: [GUIA_INTEGRACION_MODULO_FINANCIERO.md](historico/GUIA_INTEGRACION_MODULO_FINANCIERO.md) y [CAMBIOS_SIHUL_FINANCIERO.md](historico/CAMBIOS_SIHUL_FINANCIERO.md). **Ojo:** los modelos financieros de ejemplo de la guía y de `general/ARQUITECTURA_COMPLETA_ANALISIS.md` (`Presupuesto`, `Transaccion`, `CentroFinanciero`) corresponden al **diseño original propuesto**, no al modelo realmente implementado (`Factura`, `Proveedor`, `CuentaContable`, ver [documentacion_backend/MODULO_FINANCIERO.md](documentacion_backend/MODULO_FINANCIERO.md)).
+- **`documentacion_chatbot/`** incluye también [chatbot-publico-enlaces.md](documentacion_chatbot/chatbot-publico-enlaces.md) y el informe [informe-chatbot-publico-seguro.pdf](documentacion_chatbot/informe-chatbot-publico-seguro.pdf).
 
 ## Infraestructura general (Docker)
 
@@ -33,7 +35,7 @@ El stack de desarrollo se levanta con `docker-compose.yml` (proyecto `sihul`) y 
 | `chatbot` | `chatbot.Dockerfile` | `8001` | FastAPI (`uvicorn --reload`), recibe `OPENAI_API_KEY` desde el `.env` de la raíz. |
 | `frontend` | `frontend.Dockerfile` | `5173` | Vite dev server con hot-reload (polling), `VITE_API_URL` apunta al backend. |
 
-Los entornos desplegados (pruebas y producción) usan otro compose, en `despliegue/` (ver [ENTORNO_PRUEBAS.md](ENTORNO_PRUEBAS.md) y `despliegue/README.md`).
+Los entornos desplegados (pruebas y producción) usan otro compose, en `despliegue/` (ver [ENTORNO_PRUEBAS.md](general/ENTORNO_PRUEBAS.md) y `despliegue/README.md`).
 
 ### Variables de entorno (dónde vive cada una)
 
