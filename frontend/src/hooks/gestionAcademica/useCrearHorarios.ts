@@ -24,12 +24,6 @@ export interface GrupoConInfo extends Grupo {
     facultad_id?: number;
 }
 
-export interface HorarioDia {
-    dia: string;
-    horaInicio: string;
-    horaFin: string;
-}
-
 export interface CrearHorariosHookProps {
     onHorarioCreado?: () => void;
 }

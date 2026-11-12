@@ -39,13 +39,3 @@ export interface PrestamoEspacioUI {
     periodo_id?: number | null;
     periodo_nombre?: string | null;
 }
-
-export interface StatsData {
-    title: string;
-    value: number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    icon: any;
-    color: string;
-    bgColor: string;
-    textColor: string;
-}

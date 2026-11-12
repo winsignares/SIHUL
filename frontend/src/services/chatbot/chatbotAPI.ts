@@ -49,16 +49,6 @@ export interface EnviarPreguntaRequest {
     nombre_usuario: string;        // OBLIGATORIO
 }
 
-export interface MensajeAPI {
-    id: number;
-    tipo: 'user' | 'bot';
-    texto: string;
-    timestamp: string;
-    leido: boolean;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    metadata?: any;
-}
-
 export interface EnviarPreguntaResponse {
     id: number;
     chat_id: string;

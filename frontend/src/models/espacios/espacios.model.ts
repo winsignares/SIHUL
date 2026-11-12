@@ -8,12 +8,3 @@ export interface Espacio {
     estado: 'disponible' | 'ocupado' | 'mantenimiento';
     proximaClase?: string;
 }
-
-export interface HorarioOcupacion {
-    espacioId: string;
-    dia: string;
-    horaInicio: number;
-    horaFin: number;
-    materia?: string;
-    estado: 'ocupado' | 'mantenimiento' | 'disponible';
-}

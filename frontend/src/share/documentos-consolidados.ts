@@ -31,13 +31,6 @@ export function openDocumentosConsolidados(facturaId: number, scope?: string, do
   );
 }
 
-// Descargar ZIP con todos los documentos — abre explorador de archivos
-export function downloadExpedienteZip(facturaId: number, numeroFactura: string, scope?: string) {
-  facturasService.getDocumentosHistorialZip(facturaId, { scope })
-    .then((blob) => triggerBlobDownload(blob, `Expediente_${numeroFactura}.zip`))
-    .catch(() => {});
-}
-
 // Descargar documento individual por URL — abre explorador de archivos
 export function downloadDocumentoIndividual(url: string, nombre: string) {
   const backendBase = resolveBackendBaseUrl(import.meta.env.VITE_API_URL);
