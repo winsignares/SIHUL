@@ -31,7 +31,7 @@ core/       → apiClient.ts, backendUrl.ts, errorHandler.ts, sessionCache.ts,
 hooks/      → hooks transversales (useIsMobile, useSondeoVisible…)
 layouts/    → AdminDashboard.tsx (layout compartido con sidebar)
 models/     → index.ts (reexporta los tipos) y los modelos transversales
-router/     → AppRouter.tsx (única fuente de rutas)
+router/     → AppRouter.tsx + rutas/ por área (ver ENRUTAMIENTO_DINAMICO.md)
 services/   → clientes transversales (auth, seccionales, sedes, componentes,
               notificaciones, recursos)
 utils/

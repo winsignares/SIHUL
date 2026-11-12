@@ -18,9 +18,16 @@ Este es el patrón arquitectónico central del frontend (documentado también, c
 - `COMPONENT_ICONS`: mismo mapeo pero a íconos Lucide.
 - `getRouteForComponent()`: resuelve ruta exacta; si no hay coincidencia, aplica heurísticas de texto normalizado para inferir a qué dashboard financiero pertenece un componente nuevo no registrado explícitamente; como último recurso genera una ruta dinámica `/componentes/{slug}` resuelta por `pages/shared/DynamicComponentPage.tsx`.
 
-## `router/AppRouter.tsx`
+## `router/`
 
-- `ProtectedRoute`: bloquea acceso si el usuario no está autenticado o si `!hasPermission(requiredComponent)`, mostrando "Acceso Denegado".
-- Calcula `homeRoute` según rol + componentes existentes, con precedencia especial para roles financieros (`admin_financiero` > `rectoria` > `direccion_financiera` > `tesoreria` > `auditoria` > `contabilidad` > `proveedor` > `funcionario`).
+`AppRouter.tsx` solo decide qué conjunto de rutas mostrar (con o sin sesión) y monta el layout. El resto está repartido:
+
+| Archivo | Contenido |
+|---|---|
+| `paginas.ts` | Todas las páginas con `lazy()` (code-splitting), agrupadas por área |
+| `ProtectedRoute.tsx` | Bloquea acceso si el usuario no está autenticado o si `!hasPermission(requiredComponent)`, mostrando "Acceso Denegado" |
+| `accesos.ts` | `calcularAccesos()`: `homeRoute` según rol + componentes (precedencia financiera `admin_financiero` > `rectoria` > `direccion_financiera` > `tesoreria` > `auditoria` > `contabilidad` > `proveedor` > `funcionario`) y a qué módulos financieros restringidos entra el usuario |
+| `AppLayout.tsx`, `PublicLayout.tsx`, `PageLoader.tsx` | Layout con sesión, layout público (reCAPTCHA y selección de seccional) y pantalla de carga |
+| `rutas/` | Rutas por área: `admin`, `supervisor`, `consultores` (docente y estudiante), `financiero`, `compartidas`, `publicas`. Para agregar una pantalla se edita solo el archivo de su área |
+
 - Usa `context/financialRoleUtils.ts` (`normalizeFinancialRole`/`resolveCanonicalFinancialRole`) para mapear el rol crudo del backend a un rol canónico financiero y proteger rutas sensibles (`/financiero/rectoria/*`, `/financiero/direccion-financiera/*`, `/financiero/admin-financiero/*`) con una verificación adicional además de `ProtectedRoute`.
-- Todas las páginas se cargan con `lazy()` + `Suspense` (code-splitting).
