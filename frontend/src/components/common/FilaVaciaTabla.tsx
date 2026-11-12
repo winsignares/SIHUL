@@ -1,4 +1,4 @@
-import { TableCell, TableRow } from '../../share/table';
+import { TableCell, TableRow } from '../ui/table';
 import { Loading } from './Loading';
 
 interface FilaVaciaTablaProps {

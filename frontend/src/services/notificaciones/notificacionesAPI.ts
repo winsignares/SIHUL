@@ -1,5 +1,5 @@
 import { apiClient } from '../../core/apiClient';
-import type { NotificacionBackend, NotificacionesPaginadas } from '../../models/users/notification.model';
+import type { NotificacionBackend, NotificacionesPaginadas } from '../../features/users/models/notification.model';
 
 const API_URL = '/notificaciones';
 

@@ -1,0 +1,344 @@
+import { useState, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
+import { asignaturaService } from '../services/asignaturas/asignaturaAPI';
+import type { Asignatura } from '../services/asignaturas/asignaturaAPI';
+import { programaService } from '../services/programas/programaAPI';
+import type { Programa } from '../services/programas/programaAPI';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from './paginacion';
+import { clearSessionCache, clearSessionCacheByPrefix, getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+
+const ASIGNATURAS_CACHE_KEY = 'gestion-academica-asignaturas';
+const ASIGNATURAS_LIST_CACHE_KEY = 'gestion-academica-asignaturas-list';
+const ACADEMIC_CATALOG_UPDATED_EVENT = 'academic-catalog-updated';
+
+export const tiposAsignatura = [
+    { value: 'teórica', label: 'Teórica' },
+    { value: 'práctica', label: 'Práctica' },
+    { value: 'mixta', label: 'Mixta' }
+];
+
+export function useAsignaturas() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
+    const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    // Estados de datos
+    const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
+    const [programas, setProgramas] = useState<Programa[]>([]);
+
+    // Modales
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [showEditDialog, setShowEditDialog] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+    // Formulario
+    const [asignaturaForm, setAsignaturaForm] = useState({
+        codigo: '',
+        nombre: '',
+        creditos: '',
+        tipo: 'teórica' as 'teórica' | 'práctica' | 'mixta',
+        horas: ''
+    });
+
+    const [selectedAsignatura, setSelectedAsignatura] = useState<Asignatura | null>(null);
+
+    // Cargar datos
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
+        try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{ asignaturas: Asignatura[]; programas: Programa[] }>(ASIGNATURAS_CACHE_KEY, activeToken);
+
+            if (cachedData) {
+                setAsignaturas(cachedData.asignaturas);
+                setProgramas(cachedData.programas);
+            } else {
+                setLoading(true);
+            }
+
+            const [asignaturasRes, programasRes] = await Promise.all([
+                asignaturaService.list(),
+                programaService.listarProgramas()
+            ]);
+            setAsignaturas(asignaturasRes.asignaturas);
+            setProgramas(programasRes.programas);
+            if (asignaturasRes.asignaturas.length > 0) {
+                setSessionCacheData(ASIGNATURAS_CACHE_KEY, activeToken, {
+                    asignaturas: asignaturasRes.asignaturas,
+                    programas: programasRes.programas
+                });
+            }
+        } catch (error) {
+            toast.error(`Error al cargar datos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadAsignaturas = async () => {
+        await loadData({ force: true });
+    };
+
+    const notifyAcademicCatalogUpdated = () => {
+        clearSessionCache(ASIGNATURAS_CACHE_KEY);
+        clearSessionCache(ASIGNATURAS_LIST_CACHE_KEY);
+        clearSessionCacheByPrefix('gestion-academica-asignaturas-programa');
+        clearSessionCacheByPrefix('gestion-academica-crear-horarios');
+        clearSessionCacheByPrefix('gestion-academica-centro-horarios-v2');
+        window.dispatchEvent(new Event(ACADEMIC_CATALOG_UPDATED_EVENT));
+    };
+
+    // ==================== CREAR ASIGNATURA ====================
+
+    const handleCreateAsignatura = async () => {
+        console.log('handleCreateAsignatura called', asignaturaForm);
+        
+        // Validaciones
+        if (!asignaturaForm.codigo.trim()) {
+            console.warn('Código vacío');
+            toast.error('El código es obligatorio');
+            return;
+        }
+
+        if (!asignaturaForm.nombre.trim()) {
+            console.warn('Nombre vacío');
+            toast.error('El nombre es obligatorio');
+            return;
+        }
+
+        if (!asignaturaForm.creditos || Number(asignaturaForm.creditos) < 1) {
+            console.warn('Créditos inválidos');
+            toast.error('Los créditos deben ser mayor a 0');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            console.log('Enviando datos al servidor:', {
+                codigo: asignaturaForm.codigo.trim(),
+                nombre: asignaturaForm.nombre.trim(),
+                creditos: Number(asignaturaForm.creditos),
+                tipo: asignaturaForm.tipo,
+                horas: Number(asignaturaForm.horas) || 0
+            });
+            
+            await asignaturaService.create({
+                codigo: asignaturaForm.codigo.trim(),
+                nombre: asignaturaForm.nombre.trim(),
+                creditos: Number(asignaturaForm.creditos),
+                tipo: asignaturaForm.tipo,
+                horas: Number(asignaturaForm.horas) || 0
+            });
+
+            console.log('Asignatura creada exitosamente');
+            await loadAsignaturas();
+            notifyAcademicCatalogUpdated();
+            resetForm();
+            setShowCreateDialog(false);
+
+            toast.success('Asignatura registrada exitosamente');
+        } catch (error) {
+            console.error('Error al crear asignatura:', error);
+            toast.error(`Error al crear asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ==================== EDITAR ASIGNATURA ====================
+
+    const openEditDialog = (asignatura: Asignatura) => {
+        setSelectedAsignatura(asignatura);
+        setAsignaturaForm({
+            codigo: asignatura.codigo,
+            nombre: asignatura.nombre,
+            creditos: asignatura.creditos.toString(),
+            tipo: asignatura.tipo || 'teórica',
+            horas: asignatura.horas ? asignatura.horas.toString() : '0'
+        });
+
+        setShowEditDialog(true);
+    };
+
+    const handleEditAsignatura = async () => {
+        if (!selectedAsignatura || !selectedAsignatura.id) return;
+
+        // Validaciones
+        if (!asignaturaForm.codigo.trim()) {
+            toast.error('El código es obligatorio');
+            return;
+        }
+
+        if (!asignaturaForm.nombre.trim()) {
+            toast.error('El nombre es obligatorio');
+            return;
+        }
+
+        if (!asignaturaForm.creditos || Number(asignaturaForm.creditos) < 1) {
+            toast.error('Los créditos deben ser mayor a 0');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await asignaturaService.update({
+                id: selectedAsignatura.id,
+                codigo: asignaturaForm.codigo.trim(),
+                nombre: asignaturaForm.nombre.trim(),
+                creditos: Number(asignaturaForm.creditos),
+                tipo: asignaturaForm.tipo,
+                horas: Number(asignaturaForm.horas) || 0
+            });
+
+            await loadAsignaturas();
+            notifyAcademicCatalogUpdated();
+            setShowEditDialog(false);
+            setSelectedAsignatura(null);
+            resetForm();
+
+            toast.info('Asignatura actualizada correctamente');
+        } catch (error) {
+            toast.error(`Error al actualizar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ==================== ELIMINAR ASIGNATURA ====================
+
+    const openDeleteDialog = (asignatura: Asignatura) => {
+        setSelectedAsignatura(asignatura);
+        setShowDeleteDialog(true);
+    };
+
+    const handleDeleteAsignatura = async () => {
+        if (!selectedAsignatura || !selectedAsignatura.id) return;
+
+        try {
+            setLoading(true);
+            await asignaturaService.delete({ id: selectedAsignatura.id });
+
+            await loadAsignaturas();
+            notifyAcademicCatalogUpdated();
+            setShowDeleteDialog(false);
+            setSelectedAsignatura(null);
+
+            toast.error('Asignatura eliminada correctamente');
+        } catch (error) {
+            toast.error(`Error al eliminar asignatura: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ==================== UTILIDADES ====================
+
+    const resetForm = () => {
+        setAsignaturaForm({
+            codigo: '',
+            nombre: '',
+            creditos: '',
+            tipo: 'teórica',
+            horas: ''
+        });
+    };
+
+    // ==================== FILTROS ====================
+
+    const filteredAsignaturas = useMemo(() => {
+        return asignaturas.filter(asignatura => {
+            // Búsqueda por texto
+            const matchSearch =
+                (asignatura.codigo ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (asignatura.nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase());
+
+            return matchSearch;
+        });
+    }, [asignaturas, searchTerm]);
+
+    const totalFilteredAsignaturas = filteredAsignaturas.length;
+    const totalPages = getTotalPages(totalFilteredAsignaturas, PAGE_SIZE);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
+
+    const paginatedAsignaturas = useMemo(() => {
+        return getPageSlice(filteredAsignaturas, currentPage, PAGE_SIZE);
+    }, [filteredAsignaturas, currentPage, PAGE_SIZE]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => normalizePage(prev, totalPages));
+    }, [totalPages]);
+
+    const goToPage = (page: number) => {
+        setCurrentPage(normalizePage(page, totalPages));
+    };
+
+    const goToNextPage = () => {
+        goToPage(currentPage + 1);
+    };
+
+    const goToPrevPage = () => {
+        goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    return {
+        searchTerm, setSearchTerm,
+        loading,
+        asignaturas,
+        programas,
+        showCreateDialog, setShowCreateDialog,
+        showEditDialog, setShowEditDialog,
+        showDeleteDialog, setShowDeleteDialog,
+        asignaturaForm, setAsignaturaForm,
+        selectedAsignatura, setSelectedAsignatura,
+        handleCreateAsignatura,
+        openEditDialog,
+        handleEditAsignatura,
+        openDeleteDialog,
+        handleDeleteAsignatura,
+        resetForm,
+        filteredAsignaturas,
+        paginatedAsignaturas,
+        totalFilteredAsignaturas,
+        currentPage,
+        totalPages,
+        pageNumbers,
+        pageSize: PAGE_SIZE,
+        goToPage,
+        goToNextPage,
+        goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow
+    };
+}

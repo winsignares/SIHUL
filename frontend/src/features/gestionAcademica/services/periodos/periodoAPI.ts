@@ -1,0 +1,102 @@
+import { apiClient } from '../../../../core/apiClient';
+
+export interface PeriodoAcademico {
+  id?: number;
+  nombre: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  activo: boolean;
+  programas_activos?: number;
+  horarios_registrados?: number;
+  fecha_servidor?: string;
+}
+
+/**
+ * Servicio para la gestión de períodos académicos
+ */
+export const periodoService = {
+  /**
+   * Obtiene la lista de todos los períodos académicos
+   */
+  listarPeriodos: async (): Promise<{ periodos: PeriodoAcademico[] }> => {
+    const periodos = await apiClient.get<PeriodoAcademico[]>('/periodos/');
+    return { periodos };
+  },
+
+  /**
+   * Obtiene un período académico por su ID
+   * @param id ID del período académico
+   */
+  obtenerPeriodo: async (id: number): Promise<PeriodoAcademico> => {
+    return apiClient.get(`/periodos/${id}/`);
+  },
+
+  /**
+   * Crea un nuevo período académico
+   * @param periodo Datos del período académico a crear
+   */
+  crearPeriodo: async (periodo: Omit<PeriodoAcademico, 'id'>): Promise<{ message: string; id: number }> => {
+    return apiClient.post('/periodos/', periodo);
+  },
+
+  /**
+   * Actualiza un período académico existente
+   * @param periodo Datos del período académico a actualizar
+   */
+  actualizarPeriodo: async (periodo: PeriodoAcademico): Promise<{ message: string; id: number }> => {
+    if (!periodo.id) {
+      throw new Error('Se requiere el ID del período para actualizar');
+    }
+
+    const actualizado = await apiClient.put<PeriodoAcademico>(`/periodos/${periodo.id}/`, {
+      nombre: periodo.nombre,
+      fecha_inicio: periodo.fecha_inicio,
+      fecha_fin: periodo.fecha_fin,
+      activo: periodo.activo
+    });
+    return { message: 'Período actualizado', id: actualizado.id ?? periodo.id };
+  },
+
+  /**
+   * Elimina un período académico
+   * @param id ID del período académico a eliminar
+   */
+  eliminarPeriodo: async (id: number): Promise<{ message: string }> => {
+    await apiClient.delete(`/periodos/${id}/`);
+    return { message: 'Período eliminado' };
+  },
+
+  /**
+   * Copia un período académico y mueve todos sus grupos al nuevo periodo
+   * @param periodoOrigenId ID del período a copiar
+   * @param nuevoPeriodo Datos del nuevo período
+   */
+  copiarPeriodo: async (
+    periodoOrigenId: number,
+    nuevoPeriodo: Omit<PeriodoAcademico, 'id' | 'programas_activos' | 'horarios_registrados'>
+  ): Promise<{ message: string; id: number; grupos_actualizados: number }> => {
+    return apiClient.post('/periodos/copy/', {
+      periodo_origen_id: periodoOrigenId,
+      nombre: nuevoPeriodo.nombre,
+      fecha_inicio: nuevoPeriodo.fecha_inicio,
+      fecha_fin: nuevoPeriodo.fecha_fin,
+      activo: nuevoPeriodo.activo
+    });
+  },
+
+  /**
+   * Busca un período académico que se encuentre dentro de un rango de fechas específico
+   * @param fechaInicio Fecha inicio del rango a buscar (YYYY-MM-DD)
+   * @param fechaFin Fecha fin del rango a buscar (YYYY-MM-DD)
+   * @returns Período(s) que intersecten con el rango especificado
+   */
+  periodoPorRangoFechas: async (
+    fechaInicio: string,
+    fechaFin: string
+  ): Promise<{ mensaje: string; fecha_inicio_busqueda: string; fecha_fin_busqueda: string; periodos: PeriodoAcademico[] }> => {
+    return apiClient.get(
+      `/periodos/rango-fechas/?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`,
+      { suppressErrorLog: true }
+    );
+  }
+};

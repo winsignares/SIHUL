@@ -3,7 +3,7 @@
 // ============================================
 
 import { db } from './database';
-import type { Usuario } from '../models/users/user.model';
+import type { Usuario } from '../features/users/models/user.model';
 
 export interface LoginResult {
   success: boolean;

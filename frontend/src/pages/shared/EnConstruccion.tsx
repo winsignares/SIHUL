@@ -1,5 +1,5 @@
 import { AlertCircle, Hammer, Calendar } from 'lucide-react';
-import { Button } from '../../share/button';
+import { Button } from '../../components/ui/button';
 import { useNavigate } from 'react-router-dom';
 export default function EnConstruccion() {
   const navigate = useNavigate();

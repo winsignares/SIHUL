@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
-import { authService, type LoginPayload, type LoginResponse, type SessionUserResponse } from '../services/users/authService';
+import { authService, type LoginPayload, type LoginResponse, type SessionUserResponse } from '../features/users/services/authService';
 import type { AuthState, EspaciosScope } from '../models/auth/auth.model';
 import { clearAuthClientState } from '../core/clearStaleState';
 
