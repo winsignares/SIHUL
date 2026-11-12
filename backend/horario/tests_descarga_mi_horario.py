@@ -1,7 +1,7 @@
 """Descarga de «Mi horario» en PDF y Excel (GET /api/horarios/exportar-{pdf,excel}-usuario/?usuario_id=…).
 
 - Exporta lo mismo que muestra la pantalla Mi horario: al docente, sus clases aprobadas; al estudiante, las clases
-  en que está inscrito. Se decide por el rol, como lo hace el frontend.
+  aprobadas en que está inscrito. Se decide por el rol, como lo hace el frontend.
 - Cada persona descarga su propio horario; un administrador, el de cualquiera.
 - El docente recibe una página/hoja con todas sus clases («Asignatura / GRUPO»); el estudiante, una por grupo
   («Asignatura / DOCENTE»).
@@ -122,6 +122,17 @@ class DescargaMiHorarioTests(TestCase):
         libro = load_workbook(io.BytesIO(r.content))
         self.assertEqual(libro.sheetnames, ['I SISTEMAS GA - Ingeniería de S', 'II SISTEMAS GA - Ingeniería de '])
         self.assertEqual(libro.worksheets[0]['B3'].value, 'Calculo I / ANA PÉREZ\nSALON 101')
+
+    def test_el_estudiante_no_descarga_clases_no_aprobadas(self):
+        def contenido():
+            texto = _texto(self.descargar(PDF, self.estudiante).content)
+            libro = load_workbook(io.BytesIO(self.descargar(EXCEL, self.estudiante).content))
+            return texto, [c.value for hoja in libro.worksheets for fila in hoja.iter_rows() for c in fila]
+
+        self.entrar(self.estudiante)
+        antes = contenido()
+        HorarioEstudiante.objects.create(horario=Horario.objects.get(estado='pendiente'), estudiante=self.estudiante)
+        self.assertEqual(contenido(), antes)  # la clase pendiente inscrita no cambia la descarga
 
     # ------------------------------------------------ permisos y errores
     def test_no_se_descarga_el_horario_de_otra_persona(self):

@@ -38,9 +38,12 @@ def _clases_docente(docente):
     return [_clase_de_mi_horario(h) for h in horarios]
 
 
-def _clases_estudiante(estudiante):
-    """Clases en las que está inscrito el estudiante."""
-    inscripciones = HorarioEstudiante.objects.filter(estudiante=estudiante).select_related(
+def _clases_estudiante(estudiante, solo_aprobadas=False):
+    """Clases en las que está inscrito el estudiante (solo las aprobadas si se pide)."""
+    inscripciones = HorarioEstudiante.objects.filter(estudiante=estudiante)
+    if solo_aprobadas:
+        inscripciones = inscripciones.filter(horario__estado='aprobado')
+    inscripciones = inscripciones.select_related(
         'horario',
         'horario__grupo',
         'horario__asignatura',
@@ -119,10 +122,10 @@ _FORMATOS_MI_HORARIO = {
 
 
 def exportar_mi_horario(request, formato):
-    """Descarga de Mi horario: exporta lo mismo que muestra la pantalla.
+    """Descarga de Mi horario: solo clases aprobadas.
 
-    Al estudiante (rol «estudiante», como decide el frontend), las clases en que está inscrito, una página u hoja
-    por grupo; a los demás, sus clases aprobadas como docente, en una página u hoja.
+    Al estudiante (rol «estudiante», como decide el frontend), las clases aprobadas en que está inscrito, una página
+    u hoja por grupo; a los demás, sus clases aprobadas como docente, en una página u hoja.
     """
     if request.method != 'GET':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
@@ -134,7 +137,7 @@ def exportar_mi_horario(request, formato):
 
         para_estudiante, para_docente, content_type, nombre = _FORMATOS_MI_HORARIO[formato]
         if usuario.rol and usuario.rol.nombre == 'estudiante':
-            clases, generar = _clases_estudiante(usuario), para_estudiante
+            clases, generar = _clases_estudiante(usuario, solo_aprobadas=True), para_estudiante
         else:
             clases, generar = _clases_docente(usuario), para_docente
         if not clases:
