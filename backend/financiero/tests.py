@@ -5,7 +5,9 @@ from rest_framework.test import APIClient, APIRequestFactory, force_authenticate
 from datetime import date
 from unittest.mock import patch
 from . import models
-from . import views, serializers
+from . import serializers
+from .api.documentos import DocumentoAdjuntoViewSet
+from .api.proveedores import ProveedorViewSet
 from .services.shared_storage_service import StorageResult
 from usuarios.models import Usuario, Rol
 
@@ -79,7 +81,7 @@ class FacturaTestCase(TestCase):
         self.assertEqual(factura.estado, 'Radicada')
         self.assertIsNotNone(factura.fecha_radicacion)
 
-    @patch('financiero.views._regenerar_pdf_unificado_nas')
+    @patch('financiero.api.documentos._regenerar_pdf_unificado_nas')
     @patch('financiero.services.shared_storage_service.shared_storage')
     def test_documento_adjunto_se_guarda_solo_en_carpeta_compartida(self, storage_mock, _regenerar_mock):
         storage_mock.enabled = True
@@ -117,7 +119,7 @@ class FacturaTestCase(TestCase):
         )
         force_authenticate(request, user=self.usuario)
 
-        response = views.DocumentoAdjuntoViewSet.as_view({'post': 'create'})(request)
+        response = DocumentoAdjuntoViewSet.as_view({'post': 'create'})(request)
         self.assertEqual(response.status_code, 201)
 
         documento = models.DocumentoAdjunto.objects.get(id=response.data['id'])
@@ -254,7 +256,7 @@ class ProveedorLifecycleTestCase(TestCase):
         self._con_sesion(request)
         force_authenticate(request, user=self.admin)
 
-        response = views.ProveedorViewSet.as_view({'patch': 'partial_update'})(request, pk=proveedor.id)
+        response = ProveedorViewSet.as_view({'patch': 'partial_update'})(request, pk=proveedor.id)
 
         self.assertEqual(response.status_code, 200)
         proveedor.refresh_from_db()
@@ -273,7 +275,7 @@ class ProveedorLifecycleTestCase(TestCase):
         self._con_sesion(request)
         force_authenticate(request, user=self.admin)
 
-        response = views.ProveedorViewSet.as_view({'delete': 'destroy'})(request, pk=proveedor.id)
+        response = ProveedorViewSet.as_view({'delete': 'destroy'})(request, pk=proveedor.id)
 
         self.assertEqual(response.status_code, 204)
         self.assertFalse(models.Proveedor.objects.filter(pk=proveedor.id).exists())
@@ -296,7 +298,7 @@ class ProveedorLifecycleTestCase(TestCase):
         self._con_sesion(request)
         force_authenticate(request, user=self.admin)
 
-        response = views.ProveedorViewSet.as_view({'delete': 'destroy'})(request, pk=proveedor.id)
+        response = ProveedorViewSet.as_view({'delete': 'destroy'})(request, pk=proveedor.id)
 
         self.assertEqual(response.status_code, 400)
         self.assertTrue(models.Proveedor.objects.filter(pk=proveedor.id).exists())
