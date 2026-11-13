@@ -14,7 +14,6 @@ import {
 } from './asistentes/asistentesUI';
 import {
     cargarChatIdsDesdeStorage as leerChatIds,
-    cargarHistorialPublico,
     cargarMensajesDesdeStorage as leerMensajes,
     construirConversacionPublica,
     guardarChatIdsEnStorage as escribirChatIds,
@@ -25,6 +24,8 @@ import {
 } from './asistentes/almacenamientoChat';
 import { mensajeBienvenida, mensajesDesdeHistorial } from './asistentes/mensajesChat';
 import { useRotacionPreguntas } from './asistentes/useRotacionPreguntas';
+import { crearEnvioMensaje } from './envioMensajeChat';
+import { useHistorialConversaciones } from './useHistorialConversaciones';
 
 export interface OpcionesAsistentesVirtuales {
     /** Ignora cualquier sesión abierta y funciona siempre como chat público (página embebible). */
@@ -47,10 +48,6 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
     const [seccionalesPublico, setSeccionalesPublico] = useState<string[]>([]);
     const [seccionalPublica, setSeccionalPublica] = useState('');
     const [cargandoSeccionales, setCargandoSeccionales] = useState(false);
-    const [mostrarHistorial, setMostrarHistorial] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [conversacionesHistorial, setConversacionesHistorial] = useState<any[]>([]);
-    const [cargandoHistorial, setCargandoHistorial] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Funciones para persistir chat_ids y mensajes en localStorage POR USUARIO
@@ -291,196 +288,16 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
         }
     };
 
-    const enviarMensaje = async () => {
-        if (!inputMensaje.trim() || !asistenteActivo) return;
+    const {
+        mostrarHistorial, setMostrarHistorial, conversacionesHistorial, cargandoHistorial,
+        cargarHistorialConversaciones, cargarConversacionAnterior,
+    } = useHistorialConversaciones({ user, asistenteActivo, setMensajes, setChatIds, guardarChatIdsEnStorage });
 
-        const preguntaEnviada = inputMensaje;
-        setInputMensaje('');
-        setIsTyping(true);
+    const enviarMensaje = crearEnvioMensaje({
+        user, asistenteActivo, mensajes, inputMensaje, chatIds, seccionalPublica, guardarChatIdsEnStorage,
+        cargarHistorialConversaciones, setMensajes, setInputMensaje, setIsTyping, setChatIds,
+    });
 
-        // Mostrar mensaje del usuario inmediatamente (optimistic UI)
-        const mensajeUsuarioTemporal: Mensaje = {
-            id: `temp-${Date.now()}`,
-            tipo: 'user',
-            texto: preguntaEnviada,
-            timestamp: new Date(),
-            leido: true
-        };
-
-        setMensajes(prev => ({
-            ...prev,
-            [asistenteActivo.id]: [...(prev[asistenteActivo.id] || []), mensajeUsuarioTemporal]
-        }));
-
-        try {
-            const currentChatId = chatIds[asistenteActivo.id];
-
-            // Usar endpoint público o autenticado según el usuario
-            if (!user?.id) {
-                if (!seccionalPublica) {
-                    const mensajeErrorSeccional: Mensaje = {
-                        id: `error-${Date.now()}`,
-                        tipo: 'bot',
-                        texto: 'Selecciona una seccional para continuar con el chat público.',
-                        timestamp: new Date(),
-                        leido: true
-                    };
-
-                    setMensajes(prev => ({
-                        ...prev,
-                        [asistenteActivo.id]: [...(prev[asistenteActivo.id] || []), mensajeErrorSeccional]
-                    }));
-                    setIsTyping(false);
-                    return;
-                }
-
-                // Usuario público - Enviar a endpoint público
-                const response = await chatbotAPI.enviarPreguntaPublico({
-                    agente_id: Number(asistenteActivo.id),
-                    pregunta: preguntaEnviada,
-                    seccional: seccionalPublica
-                });
-
-                // Mantener un chat_id único y consistente para la sesión activa hasta pulsar "Nueva"
-                let activeChatId = chatIds[asistenteActivo.id];
-                if (!activeChatId) {
-                    activeChatId = response.chat_id || `guest-chat-${asistenteActivo.id}-${Date.now()}`;
-                    setChatIds(prev => {
-                        const updated = { ...prev, [asistenteActivo.id]: activeChatId! };
-                        guardarChatIdsEnStorage(updated);
-                        return updated;
-                    });
-                }
-
-                // Mensaje del usuario
-                const mensajeUsuarioReal: Mensaje = {
-                    id: `user-${Date.now()}`,
-                    tipo: 'user',
-                    texto: preguntaEnviada,
-                    timestamp: new Date(response.timestamp || Date.now()),
-                    leido: true
-                };
-
-                // Mensaje del bot
-                const mensajeAgente: Mensaje = {
-                    id: `bot-${Date.now()}`,
-                    tipo: 'bot',
-                    texto: response.respuesta,
-                    timestamp: new Date(response.timestamp || Date.now()),
-                    leido: false,
-                    anexos: response.anexos ?? []
-                };
-
-                const mensajesActuales = mensajes[asistenteActivo.id] || [];
-                const mensajesSinTemporal = mensajesActuales.filter(
-                    m => m.id !== mensajeUsuarioTemporal.id
-                );
-                const nuevosMensajes = [...mensajesSinTemporal, mensajeUsuarioReal, mensajeAgente];
-
-                // Guardar historial síncronamente antes de actualizar estado
-                const item = construirConversacionPublica(activeChatId, asistenteActivo.id, nuevosMensajes);
-                if (item) registrarConversacionPublica(item);
-
-                setMensajes(prev => ({
-                    ...prev,
-                    [asistenteActivo.id]: nuevosMensajes
-                }));
-
-                // Marcar como leído después de un momento
-                setTimeout(() => {
-                    setMensajes(prev => ({
-                        ...prev,
-                        [asistenteActivo.id]: prev[asistenteActivo.id].map(m =>
-                            m.id === mensajeAgente.id ? { ...m, leido: true } : m
-                        )
-                    }));
-                }, 1000);
-
-                // Refrescar lista del historial en tiempo real
-                void cargarHistorialConversaciones();
-
-            } else {
-                // Usuario autenticado - Se guarda historial
-                const response = await chatbotAPI.enviarPregunta({
-                    agente_id: Number(asistenteActivo.id),
-                    pregunta: preguntaEnviada,
-                    chat_id: currentChatId,
-                    id_usuario: user.id,
-                    nombre_usuario: user.nombre
-                });
-
-                // Guardar el chat_id para futuras conversaciones y persistir
-                if (response.chat_id) {
-                    setChatIds(prev => {
-                        const updated = { ...prev, [asistenteActivo.id]: response.chat_id };
-                        guardarChatIdsEnStorage(updated);
-                        return updated;
-                    });
-                }
-
-                // Reemplazar mensaje temporal con el mensaje real del backend
-                const mensajeUsuarioReal: Mensaje = {
-                    id: `${response.id}-user`,
-                    tipo: 'user',
-                    texto: response.mensaje,
-                    timestamp: new Date(response.fecha),
-                    leido: true
-                };
-
-                const mensajeAgente: Mensaje = {
-                    id: `${response.id}-bot`,
-                    tipo: 'bot',
-                    texto: response.respuesta,
-                    timestamp: new Date(response.fecha),
-                    leido: false,
-                    anexos: response.anexos ?? []
-                };
-
-                // Actualizar mensajes con los datos reales del backend
-                setMensajes(prev => {
-                    const mensajesActuales = prev[asistenteActivo.id] || [];
-                    const mensajesSinTemporal = mensajesActuales.filter(
-                        m => m.id !== mensajeUsuarioTemporal.id
-                    );
-                    return {
-                        ...prev,
-                        [asistenteActivo.id]: [...mensajesSinTemporal, mensajeUsuarioReal, mensajeAgente]
-                    };
-                });
-
-                // Marcar como leído después de un momento
-                setTimeout(() => {
-                    setMensajes(prev => ({
-                        ...prev,
-                        [asistenteActivo.id]: prev[asistenteActivo.id].map(m =>
-                            m.id === mensajeAgente.id ? { ...m, leido: true } : m
-                        )
-                    }));
-                }, 1000);
-
-                // Sincronizar inmediatamente la lista de historial
-                void cargarHistorialConversaciones();
-            }
-
-        } catch (error) {
-            console.error('Error al enviar pregunta:', error);
-
-            const mensajeError: Mensaje = {
-                id: `error-${Date.now()}`,
-                tipo: 'bot',
-                texto: 'Lo siento, hubo un error al procesar tu pregunta. Por favor, intenta nuevamente.',
-                timestamp: new Date(),
-                leido: true
-            };
-
-            setMensajes(prev => ({
-                ...prev,
-                [asistenteActivo.id]: [...(prev[asistenteActivo.id] || []), mensajeError]
-            }));
-        } finally {
-            setIsTyping(false);
-        }
-    };
 
     const enviarPreguntaRapida = (pregunta: string) => {
         setInputMensaje(pregunta);
@@ -494,97 +311,6 @@ export function useAsistentesVirtuales(opciones: OpcionesAsistentesVirtuales = {
         }
     };
 
-    const cargarHistorialConversaciones = async () => {
-        if (!asistenteActivo) return;
-
-        try {
-            setCargandoHistorial(true);
-            if (user?.id) {
-                // Usuario autenticado: consultar base de datos
-                const response = await chatbotAPI.listarConversaciones({
-                    agente_id: asistenteActivo.id,
-                    id_usuario: user.id
-                });
-                setConversacionesHistorial(response.conversaciones || []);
-            } else {
-                // Público: leer historial guardado en caché de almacenamiento local
-                const historial = cargarHistorialPublico();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const filtrados = historial.filter((c: any) => String(c.agente_id) === String(asistenteActivo.id));
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                filtrados.sort((a: any, b: any) => new Date(b.fecha_actualizacion).getTime() - new Date(a.fecha_actualizacion).getTime());
-                setConversacionesHistorial(filtrados);
-            }
-        } catch (error) {
-            console.error('Error al cargar historial de conversaciones:', error);
-        } finally {
-            setCargandoHistorial(false);
-        }
-    };
-
-    const cargarConversacionAnterior = async (chat_id: string) => {
-        if (!asistenteActivo) return;
-
-        try {
-            // Vaciar lienzo previo del chat antes de cargar la conversación seleccionada
-            setMensajes(prev => ({
-                ...prev,
-                [asistenteActivo.id]: []
-            }));
-
-            if (user?.id) {
-                // Usuario autenticado: consultar base de datos
-                const response = await chatbotAPI.obtenerHistorial({
-                    chat_id: chat_id,
-                    id_usuario: user.id
-                });
-
-                if (response.mensajes && response.mensajes.length > 0) {
-                    const mensajesHistorial = mensajesDesdeHistorial(response.mensajes);
-
-                    setMensajes(prev => ({
-                        ...prev,
-                        [asistenteActivo.id]: mensajesHistorial
-                    }));
-
-                    setChatIds(prev => {
-                        const updated = { ...prev, [asistenteActivo.id]: chat_id };
-                        guardarChatIdsEnStorage(updated);
-                        return updated;
-                    });
-
-                    setMostrarHistorial(false);
-                }
-            } else {
-                // Modo público: restaurar desde el almacenamiento de caché
-                const historial = cargarHistorialPublico();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const encontrado = historial.find((c: any) => c.chat_id === chat_id);
-                if (encontrado && encontrado.mensajes) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const mensajesHistorial = encontrado.mensajes.map((msg: any) => ({
-                        ...msg,
-                        timestamp: new Date(msg.timestamp)
-                    }));
-
-                    setMensajes(prev => ({
-                        ...prev,
-                        [asistenteActivo.id]: mensajesHistorial
-                    }));
-
-                    setChatIds(prev => {
-                        const updated = { ...prev, [asistenteActivo.id]: chat_id };
-                        guardarChatIdsEnStorage(updated);
-                        return updated;
-                    });
-
-                    setMostrarHistorial(false);
-                }
-            }
-        } catch (error) {
-            console.error('Error al cargar conversación anterior:', error);
-        }
-    };
 
     const limpiarConversacion = (asistenteId: string) => {
         // En modo público (!user?.id), archivar la conversación actual en caché antes de resetear la pantalla
