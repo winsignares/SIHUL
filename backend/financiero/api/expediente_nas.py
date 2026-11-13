@@ -1,7 +1,7 @@
 from django.db import transaction, close_old_connections
 import hashlib
 import logging
-import threading
+from mysite import tareas
 from .. import archivos, models
 from .archivos_documentos import _documento_bytes, _factura_ciclo_documental_actual
 
@@ -75,11 +75,8 @@ def _sincronizar_documento_y_pdf_nas(documento_id):
 
 
 def _programar_sincronizacion_nas_documento(documento_id):
-    def _runner():
-        _sincronizar_documento_y_pdf_nas(documento_id)
-
     try:
-        transaction.on_commit(lambda: threading.Thread(target=_runner, daemon=True).start())
+        transaction.on_commit(lambda: tareas.encolar(_sincronizar_documento_y_pdf_nas, documento_id))
     except Exception:
         logger.exception('[SHARED_STORAGE] No se pudo programar sincronización NAS. documento_id=%s', documento_id)
 
