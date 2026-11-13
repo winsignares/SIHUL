@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vite-rama",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "dev", "--", "--port", "5179", "--strictPort"],
+      "env": { "VITE_PROXY_TARGET": "http://localhost:28000", "VITE_PORT": "5179", "VITE_RECAPTCHA_SITE_KEY": "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" },
+      "port": 5179
+    }
+  ]
+}
