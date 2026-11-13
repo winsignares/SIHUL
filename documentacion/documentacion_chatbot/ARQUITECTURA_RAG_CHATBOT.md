@@ -104,9 +104,9 @@ Los errores de ingesta usan `IngestionError` con su código HTTP: 409 duplicado,
 
 - `views.py`: `enviar_pregunta` (usuario autenticado: resuelve la sede por su seccional, guarda `Conversacion`) y `enviar_pregunta_publico` (sede indicada por el cliente, sin historial). Si el RAG no responde, se muestra al usuario un mensaje genérico y **el intercambio no se guarda** en el historial.
 - `api_urls.py` (`/api/chatbot/…`): rutas que usa el frontend (los agentes se pueden listar estando autenticado; modificarlos exige poder gestionar chatbots). `urls.py` (`/chatbot/…`) son rutas **heredadas** que ya no usa el frontend.
-- `admin_views.py`: proxy autenticado hacia el RAG para subir, listar y borrar documentos (permiso "Gestión de Chatbots"). El borrado es idempotente (un 404 del RAG se devuelve como 204).
+- `admin_views/`: proxy autenticado hacia el RAG para subir, listar y borrar documentos (permiso "Gestión de Chatbots"). El borrado es idempotente (un 404 del RAG se devuelve como 204).
 - `signals.py`: al **borrar un agente** se eliminan sus documentos (los chunks caen por `ON DELETE CASCADE`) y sus mensajes en el RAG, que no tienen clave foránea. Al borrar un anexo se borra su archivo del disco.
-- `preguntas_respuestas_views.py` y `anexos.py`: gestión de preguntas-respuestas con anexos y descarga con enlace firmado (ver «Preguntas-respuestas con anexos»).
+- `preguntas_respuestas_views/` y `anexos.py`: gestión de preguntas-respuestas con anexos y descarga con enlace firmado (ver «Preguntas-respuestas con anexos»).
 
 ## Preguntas-respuestas con anexos
 

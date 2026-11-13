@@ -127,8 +127,8 @@ Los archivos van a `MEDIA_ROOT` (volumen del backend): debe incluirse en las cop
 | Django | `backend/chatbot/models.py` | `PreguntaRespuesta`, `AnexoRespuesta`, `Conversacion.anexos` |
 | | `backend/chatbot/migrations/0014_preguntas_respuestas_anexos.py` | Migración |
 | | `backend/chatbot/anexos.py` | Validación de archivos, tokens y URL de descarga, JSON, aviso al RAG |
-| | `backend/chatbot/preguntas_respuestas_views.py` | CRUD de gestión y descarga |
-| | `backend/chatbot/views.py` | Anexos en el chat autenticado, público e historial |
+| | `backend/chatbot/preguntas_respuestas_views/` | CRUD de gestión y descarga |
+| | `backend/chatbot/views/` | Anexos en el chat autenticado, público e historial |
 | | `backend/chatbot/signals.py` | Borrado del archivo al borrar el anexo |
 | | `backend/chatbot/admin.py` | Admin de Django (solo lectura de anexos) |
 | | `backend/chatbot/tests.py` | Pruebas unitarias (27) |

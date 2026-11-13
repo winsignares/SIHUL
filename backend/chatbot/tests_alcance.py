@@ -88,7 +88,7 @@ class AlcancePorSeccionalTests(_BaseAnexos):
 
     def test_preguntar_a_un_chatbot_no_disponible_es_403_en_el_chat_publico(self):
         cuerpo = {'agente_id': self.solo_bq.id, 'pregunta': 'Hola', 'seccional': 'cali'}
-        with mock.patch('chatbot.views._consultar_rag', return_value=('ok', None, [])) as rag:
+        with mock.patch('chatbot.views.publico._consultar_rag', return_value=('ok', None, [])) as rag:
             self.assertEqual(_json(self.client, reverse('api-public-pregunta'), cuerpo).status_code, 403)
             rag.assert_not_called()
             cuerpo['seccional'] = 'barranquilla'
@@ -96,7 +96,7 @@ class AlcancePorSeccionalTests(_BaseAnexos):
 
     def test_preguntar_a_un_chatbot_no_disponible_es_403_con_sesion(self):
         cuerpo = {'agente_id': self.solo_bq.id, 'pregunta': 'Hola', 'id_usuario': self.est_cali.id, 'nombre_usuario': 'x'}
-        with mock.patch('chatbot.views._consultar_rag', return_value=('ok', None, [])) as rag:
+        with mock.patch('chatbot.views.chat._consultar_rag', return_value=('ok', None, [])) as rag:
             self.assertEqual(_json(self.client, reverse('api-legacy-pregunta'), cuerpo).status_code, 403)
             rag.assert_not_called()
             cuerpo['id_usuario'] = self.estudiante.id
@@ -105,11 +105,11 @@ class AlcancePorSeccionalTests(_BaseAnexos):
     def test_no_se_sube_documentacion_a_una_seccional_donde_el_chatbot_no_esta(self):
         self.entrar(self.admin)
         pdf = lambda: SimpleUploadedFile('a.pdf', b'%PDF-1.4 x')
-        with mock.patch('chatbot.admin_views.requests.post') as post:
+        with mock.patch('chatbot.admin_views.documentos.requests.post') as post:
             malo = self.client.post(reverse('api-admin-documentos'), {'chatbot_id': self.solo_bq.id, 'sede': 'cali', 'file': pdf()})
             self.assertEqual(malo.status_code, 400)
             post.assert_not_called()
-        with mock.patch('chatbot.admin_views.requests.post', return_value=mock.Mock(status_code=200, content=b'{}', json=lambda: {})):
+        with mock.patch('chatbot.admin_views.documentos.requests.post', return_value=mock.Mock(status_code=200, content=b'{}', json=lambda: {})):
             bueno = self.client.post(reverse('api-admin-documentos'), {'chatbot_id': self.solo_bq.id, 'sede': 'barranquilla', 'file': pdf()})
             self.assertEqual(bueno.status_code, 200)
 

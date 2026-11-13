@@ -1,84 +1,26 @@
+"""Documentos de los chatbots: listado, carga, prioridad, descarga y borrado."""
 import requests
-from django.db.models import Q
 from django.http import HttpResponse
+from mysite.auth_helpers import is_authenticated_user
 from rest_framework import permissions
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from ..models import Agente
+from ..models import ChatbotDocument
+from ..views import _normalize_sede_value
+from ..views import _resolve_user_sede_value
+from ..views import fastapi_base_url
+from .permisos import PuedeGestionarDocumentosChatbots
+from .permisos import _chatbot_permitido
+from .permisos import ids_chatbots_permitidos
+from .permisos import puede_todas_las_sedes
+from .proxy import _forward_response
+from .proxy import _proxy_error_response
 
-from mysite.auth_helpers import (
-    get_user_seccional_id, is_admin_global, is_admin_sistema, is_authenticated_user, q_usuarios_de_seccional,
-    user_can_edit_componente,
-)
-from identidad.usuarios.models import Usuario
 
-from .models import Agente, AgenteResponsable, ChatbotDocument
-from .views import _normalize_sede_value, _resolve_user_sede_value, fastapi_base_url
-
-COMPONENTE_GESTION_CHATBOTS = 'Gestión de Chatbots'
-COMPONENTE_DOCUMENTACION_CHATBOTS = 'Gestión de Documentación de Chatbots'
 MAX_UPLOAD_MB = 25  # mismo tope que MAX_UPLOAD_MB del servicio RAG
-
-
-class PuedeGestionarChatbots(permissions.BasePermission):
-    """Administrar los chatbots (crear, editar, activar/inactivar y eliminar).
-
-    Admins globales/de sistema siempre pueden; otros roles requieren permiso
-    EDITAR sobre el componente 'Gestión de Chatbots' (asignable desde Gestión de Roles).
-    Quien tiene este permiso también puede gestionar la documentación (ver
-    PuedeGestionarDocumentosChatbots)."""
-
-    def has_permission(self, request, view):
-        user = request.user
-        if not is_authenticated_user(user):
-            return False
-        if is_admin_global(user) or is_admin_sistema(user):
-            return True
-        return user_can_edit_componente(user, COMPONENTE_GESTION_CHATBOTS)
-
-
-class PuedeGestionarDocumentosChatbots(permissions.BasePermission):
-    """Gestionar la documentación de los chatbots: subir, reemplazar, priorizar y eliminar
-    documentos, y registrar preguntas-respuestas con sus anexos. NO permite crear, editar ni
-    eliminar los chatbots.
-
-    Pueden: quienes administran chatbots (PuedeGestionarChatbots) y quienes tienen permiso
-    EDITAR sobre el componente 'Gestión de Documentación de Chatbots'. Este último es el
-    permiso que se asigna a las personas que solo deben cargar documentación."""
-
-    def has_permission(self, request, view):
-        if PuedeGestionarChatbots().has_permission(request, view):
-            return True
-        user = request.user
-        if not is_authenticated_user(user):
-            return False
-        return user_can_edit_componente(user, COMPONENTE_DOCUMENTACION_CHATBOTS)
-
-
-def puede_todas_las_sedes(user):
-    """Solo el administrador general trabaja con cualquier seccional; el resto, con la suya."""
-    return is_admin_global(user)
-
-
-def ids_chatbots_permitidos(request):
-    """Chatbots cuya documentación puede gestionar quien hace la petición.
-
-    None  -> todos (administra chatbots).
-    set() -> solo los que tiene asignados como responsable (vacío si no tiene ninguno).
-    """
-    user = request.user
-    if not is_authenticated_user(user):
-        return set()
-    if PuedeGestionarChatbots().has_permission(request, None):
-        return None
-    return set(AgenteResponsable.objects.filter(usuario_id=user.id).values_list('agente_id', flat=True))
-
-
-def _chatbot_permitido(permitidos, chatbot_id):
-    """True si `chatbot_id` (cualquier tipo) está dentro de lo permitido."""
-    if permitidos is None:
-        return True
-    return str(chatbot_id).isdigit() and int(chatbot_id) in permitidos
 
 
 def _sede_para_documentos(request, solicitada):
@@ -122,19 +64,6 @@ def _autorizar_documento(request, pk):
     if not _chatbot_permitido(ids_chatbots_permitidos(request), datos['chatbot_id']):
         return True, Response({'error': 'No tienes asignado el chatbot de este documento'}, status=403)
     return True, None
-
-
-def _proxy_error_response(exc: requests.exceptions.RequestException) -> Response:
-    return Response({'error': f'No se pudo contactar el servicio de chatbots: {exc}'}, status=502)
-
-
-def _forward_response(resp: requests.Response) -> Response:
-    if resp.status_code == 204 or not resp.content:
-        return Response(status=resp.status_code)
-    try:
-        return Response(resp.json(), status=resp.status_code)
-    except ValueError:
-        return Response({'error': resp.text[:500]}, status=resp.status_code)
 
 
 class ChatbotDocumentosProxyView(APIView):
@@ -290,54 +219,3 @@ class ChatbotDocumentoArchivoView(APIView):
         out = HttpResponse(resp.content, content_type='application/pdf')
         out['Content-Disposition'] = 'inline'
         return out
-
-
-class ChatbotSedesProxyView(APIView):
-    """Lista las sedes válidas para asociar documentos, según el servicio RAG."""
-
-    permission_classes = [PuedeGestionarDocumentosChatbots]
-
-    def get(self, request):
-        try:
-            resp = requests.get(f'{fastapi_base_url()}/sedes', timeout=15)
-        except requests.exceptions.RequestException as exc:
-            return _proxy_error_response(exc)
-        return _forward_response(resp)
-
-
-class ResponsablesCandidatosView(APIView):
-    """Personas a las que se puede asignar la carga de documentación de un chatbot.
-
-    Búsqueda por nombre o correo (mínimo 2 letras, máximo 20 resultados). Solo usuarios activos con
-    seccional (de ahí sale la seccional con la que subirán); se excluyen los estudiantes.
-    """
-
-    permission_classes = [PuedeGestionarChatbots]
-
-    def get(self, request):
-        texto = (request.query_params.get('q') or '').strip()
-        if len(texto) < 2:
-            return Response([])
-        usuarios = (
-            Usuario.objects.filter(activo=True)
-            .filter(Q(nombre__icontains=texto) | Q(correo__icontains=texto))
-            .filter(Q(seccional__isnull=False) | Q(sede__seccional__isnull=False))
-            .exclude(rol__nombre__iexact='estudiante')
-            .select_related('seccional', 'sede__seccional')
-        )
-        if not is_admin_global(request.user):
-            # Quien no es administrador general solo ofrece personas de su propia seccional
-            propia = get_user_seccional_id(request.user)
-            if propia is None:
-                return Response([])
-            usuarios = usuarios.filter(q_usuarios_de_seccional(propia))
-        usuarios = usuarios.order_by('nombre')[:20]
-        return Response([
-            {
-                'id': u.id,
-                'nombre': u.nombre,
-                'correo': u.correo,
-                'seccional': (u.seccional.ciudad if u.seccional else (u.sede.seccional.ciudad if u.sede and u.sede.seccional else None)),
-            }
-            for u in usuarios
-        ])
