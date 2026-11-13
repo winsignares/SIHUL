@@ -2,7 +2,8 @@ from django.db import transaction, close_old_connections
 import hashlib
 import logging
 from mysite import tareas
-from .. import archivos, models
+from .. import archivos
+from .. import models
 from .archivos_documentos import _documento_bytes, _factura_ciclo_documental_actual
 
 
