@@ -7,4 +7,4 @@ class EspaciosConfig(AppConfig):
     label = 'espacios'
 
     def ready(self):
-        from . import signals
+        from . import signals  # noqa: F401

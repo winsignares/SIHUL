@@ -7,4 +7,4 @@ class PrestamosConfig(AppConfig):
     label = 'prestamos'
 
     def ready(self):
-        from . import signals
+        from . import signals  # noqa: F401
