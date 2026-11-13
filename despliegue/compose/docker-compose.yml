@@ -66,7 +66,7 @@ x-backend-env: &backend-env
   CHATBOT_PUBLICO_PREGUNTAS_POR_IP_DIA: ${CHATBOT_PUBLICO_PREGUNTAS_POR_IP_DIA:-15000}
   CHATBOT_PUBLICO_DIFICULTAD_BITS: ${CHATBOT_PUBLICO_DIFICULTAD_BITS:-17}
   CHATBOT_ANEXO_URL_MAX_AGE: ${CHATBOT_ANEXO_URL_MAX_AGE:-604800}
-  # Conexiones persistentes a PostgreSQL (backend/mysite/settings.py): 0 = una conexión por petición, como siempre.
+  # Conexiones persistentes a PostgreSQL (backend/config/settings.py): 0 = una conexión por petición, como siempre.
   # Con 60 y comprobación activa se reutilizan; revisar que max_connections cubra GUNICORN_WORKERS x GUNICORN_THREADS.
   DB_CONN_MAX_AGE: ${DB_CONN_MAX_AGE:-0}
   DB_CONN_HEALTH_CHECKS: ${DB_CONN_HEALTH_CHECKS:-false}
@@ -166,7 +166,7 @@ services:
       GUNICORN_THREADS: ${GUNICORN_THREADS:-4}
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-60}
       GUNICORN_MAX_REQUESTS: ${GUNICORN_MAX_REQUESTS:-800}
-      DJANGO_WSGI: ${DJANGO_WSGI:-mysite.wsgi:application}
+      DJANGO_WSGI: ${DJANGO_WSGI:-config.wsgi:application}
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     volumes:

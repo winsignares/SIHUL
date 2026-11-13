@@ -1,9 +1,9 @@
 from django.apps import AppConfig
 
 
-class MysiteConfig(AppConfig):
+class NucleoConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'mysite'
+    name = 'nucleo'
     verbose_name = 'Configuración del Sistema'
 
     def ready(self):

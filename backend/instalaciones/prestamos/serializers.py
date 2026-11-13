@@ -1,7 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from mysite.auth_helpers import is_authenticated_user
+from nucleo.auth_helpers import is_authenticated_user
 from . import privacidad, reglas
 from .availability import validar_disponibilidad_prestamo
 from .models import (

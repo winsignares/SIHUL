@@ -4,12 +4,12 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from mysite.auth_helpers import (
+from nucleo.auth_helpers import (
     get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema, is_authenticated_user,
     q_usuarios_de_seccional,
 )
-from mysite.roles_financieros import es_componente_financiero, es_rol_financiero
-from mysite.permissions import IsAdminOnly
+from nucleo.roles_financieros import es_componente_financiero, es_rol_financiero
+from nucleo.permissions import IsAdminOnly
 from academico.sedes.models import Seccional
 
 from .models import Componente, ComponenteRol, ComponenteUsuario

@@ -4,7 +4,7 @@ from unittest import mock
 
 from django.test import SimpleTestCase
 
-from mysite import tareas
+from nucleo import tareas
 
 
 def _tarea_de_prueba(valor):
@@ -13,7 +13,7 @@ def _tarea_de_prueba(valor):
 
 class EncolarTests(SimpleTestCase):
     def test_por_defecto_corre_en_un_hilo(self):
-        with mock.patch.dict('os.environ', {}, clear=False), mock.patch('mysite.tareas.threading.Thread') as hilo:
+        with mock.patch.dict('os.environ', {}, clear=False), mock.patch('nucleo.tareas.threading.Thread') as hilo:
             with mock.patch.dict('os.environ', {'TAREAS_COLA': ''}):
                 modo = tareas.encolar(_tarea_de_prueba, 5)
         self.assertEqual(modo, 'hilo')
@@ -22,15 +22,15 @@ class EncolarTests(SimpleTestCase):
 
     def test_modo_rq_encola_en_redis(self):
         cola = mock.Mock()
-        with mock.patch.dict('os.environ', {'TAREAS_COLA': 'rq'}), mock.patch('mysite.tareas.obtener_cola', return_value=cola):
+        with mock.patch.dict('os.environ', {'TAREAS_COLA': 'rq'}), mock.patch('nucleo.tareas.obtener_cola', return_value=cola):
             modo = tareas.encolar(_tarea_de_prueba, 7)
         self.assertEqual(modo, 'rq')
         cola.enqueue.assert_called_once_with(_tarea_de_prueba, 7)
 
     def test_si_la_cola_falla_se_usa_un_hilo(self):
         with mock.patch.dict('os.environ', {'TAREAS_COLA': 'rq'}), \
-                mock.patch('mysite.tareas.obtener_cola', side_effect=ConnectionError), \
-                mock.patch('mysite.tareas.threading.Thread') as hilo:
+                mock.patch('nucleo.tareas.obtener_cola', side_effect=ConnectionError), \
+                mock.patch('nucleo.tareas.threading.Thread') as hilo:
             modo = tareas.encolar(_tarea_de_prueba, 1)
         self.assertEqual(modo, 'hilo')
         hilo.return_value.start.assert_called_once_with()

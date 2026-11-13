@@ -79,7 +79,7 @@ CHATBOT_PUBLICO_TOPE_DIARIO = int(os.getenv('CHATBOT_PUBLICO_TOPE_DIARIO', '1500
 # Application definition
 
 INSTALLED_APPS = [
-    'mysite.apps.MysiteConfig',  # App principal del proyecto
+    'nucleo.apps.NucleoConfig',  # App principal del proyecto
     'academico.horario',
     'identidad.usuarios',
     'identidad.componentes',
@@ -118,20 +118,20 @@ if MICROSOFT_OAUTH_ENABLED:
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'mysite.compresion.GZipJSONMiddleware',  # gzip para JSON; antes de lo que lee o cambia el cuerpo
+    'nucleo.compresion.GZipJSONMiddleware',  # gzip para JSON; antes de lo que lee o cambia el cuerpo
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'mysite.middleware.SedeFilterMiddleware',  # Middleware para filtrado por sede
+    'nucleo.middleware.SedeFilterMiddleware',  # Middleware para filtrado por sede
 ]
 
 if MICROSOFT_OAUTH_ENABLED:
     MIDDLEWARE.insert(MIDDLEWARE.index('django.contrib.messages.middleware.MessageMiddleware'), 'allauth.account.middleware.AccountMiddleware')
 
-ROOT_URLCONF = 'mysite.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -148,7 +148,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'mysite.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
@@ -279,7 +279,7 @@ if MICROSOFT_OAUTH_ENABLED:
 
     SOCIALACCOUNT_AUTO_SIGNUP = True
     SOCIALACCOUNT_LOGIN_ON_GET = True
-    SOCIALACCOUNT_ADAPTER = 'mysite.social_adapter.SocialAccountAdapter'
+    SOCIALACCOUNT_ADAPTER = 'nucleo.social_adapter.SocialAccountAdapter'
     ACCOUNT_DEFAULT_HTTP_PROTOCOL = os.getenv('ACCOUNT_DEFAULT_HTTP_PROTOCOL', 'https' if not DEBUG else 'http')
 
     SOCIALACCOUNT_PROVIDERS = {
@@ -336,7 +336,7 @@ CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', not DEBUG)
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'mysite.seccional_auth.SessionUsuarioAuthentication',
+        'nucleo.seccional_auth.SessionUsuarioAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [

@@ -13,7 +13,7 @@ import unicodedata
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
-from mysite.auth_helpers import get_componente_permiso, is_superuser_effective
+from nucleo.auth_helpers import get_componente_permiso, is_superuser_effective
 
 COMPONENTE = 'Gestión de Usuarios'
 ROLES_DE_ADMINISTRACION = frozenset({'admin', 'admin global', 'admin financiero'})

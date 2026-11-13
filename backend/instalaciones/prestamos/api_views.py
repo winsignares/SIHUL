@@ -3,10 +3,10 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from mysite.cache_utils import CachedCatalogMixin
-from mysite.seccional_auth import SeccionalMixin
-from mysite.auth_helpers import is_authenticated_user, seccional_publica, user_supervisa_espacios
-from mysite.permissions import CanManagePrestamosEspacios
+from nucleo.cache_utils import CachedCatalogMixin
+from nucleo.seccional_auth import SeccionalMixin
+from nucleo.auth_helpers import is_authenticated_user, seccional_publica, user_supervisa_espacios
+from nucleo.permissions import CanManagePrestamosEspacios
 from instalaciones.espacios import alcance
 from instalaciones.espacios.models import EspacioPermitido
 

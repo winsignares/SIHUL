@@ -1,7 +1,7 @@
 from datetime import datetime
 from django.db.models import Q
 from ..models import EspacioFisico
-from mysite.auth_helpers import (
+from nucleo.auth_helpers import (
     get_user_seccional_id, ve_todas_las_seccionales,
 )
 

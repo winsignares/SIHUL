@@ -3,9 +3,9 @@ from rest_framework import viewsets
 from academico.facultades.models import Facultad
 from academico.facultades.serializers import FacultadSerializer
 
-from mysite.cache_utils import CachedCatalogMixin
-from mysite.seccional_auth import SeccionalMixin
-from mysite.permissions import (
+from nucleo.cache_utils import CachedCatalogMixin
+from nucleo.seccional_auth import SeccionalMixin
+from nucleo.permissions import (
     IsAuthenticatedReadOnlyOrAdminWrite,
 )
 

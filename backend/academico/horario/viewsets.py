@@ -18,7 +18,7 @@ from academico.horario.serializers import (
 from identidad.usuarios.models import Usuario
 from notificaciones.signals import crear_notificacion
 
-from mysite.seccional_auth import SeccionalMixin
+from nucleo.seccional_auth import SeccionalMixin
 
 from academico.horario import api
 from academico.horario import views

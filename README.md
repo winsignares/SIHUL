@@ -121,7 +121,8 @@ npm run dev
 ```
 SIHUL/
 ├── 🔧 backend/                 # Django Backend
-│   ├── mysite/                 # Configuración principal
+│   ├── config/                 # Ajustes, rutas raíz, wsgi/asgi
+│   ├── nucleo/                 # Utilidades transversales (autenticación, permisos, caché)
 │   ├── usuarios/               # Gestión de usuarios
 │   ├── horario/                # Sistema de horarios
 │   ├── espacios/               # Gestión de espacios

@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .. import ocupacion
 from ..models import EspacioFisico
-from mysite.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
+from nucleo.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
 from .filtros import _filtrar_espacios_por_sede_usuario, _usuario_sin_seccional
 
 

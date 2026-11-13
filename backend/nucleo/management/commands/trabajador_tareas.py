@@ -1,7 +1,7 @@
-"""Proceso que ejecuta las tareas encoladas con `mysite.tareas.encolar` (TAREAS_COLA=rq)."""
+"""Proceso que ejecuta las tareas encoladas con `nucleo.tareas.encolar` (TAREAS_COLA=rq)."""
 from django.core.management.base import BaseCommand, CommandError
 
-from mysite import tareas
+from nucleo import tareas
 
 
 class Command(BaseCommand):

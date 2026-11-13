@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .. import models
 from identidad.usuarios.serializers import UsuarioSerializer
 from django.core.exceptions import ValidationError
-from mysite.xss_protection import sanitize_dict, PROVEEDOR_SCHEMA, DEPARTAMENTO_SCHEMA, CUENTA_CONTABLE_SCHEMA, CENTRO_COSTO_SCHEMA
+from nucleo.xss_protection import sanitize_dict, PROVEEDOR_SCHEMA, DEPARTAMENTO_SCHEMA, CUENTA_CONTABLE_SCHEMA, CENTRO_COSTO_SCHEMA
 
 
 class ProveedorSerializer(serializers.ModelSerializer):

@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 
-from mysite.auth_helpers import CUENTA_DESACTIVADA
+from nucleo.auth_helpers import CUENTA_DESACTIVADA
 from academico.sedes.models import Seccional, Sede
 from identidad.usuarios.models import Rol, Usuario
 

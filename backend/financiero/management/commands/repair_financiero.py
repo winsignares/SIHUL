@@ -10,7 +10,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from financiero.models import Ciudad, DepartamentoGeografico, Pais, Proveedor
-from mysite.management.commands.seeders import financiero_seeder
+from nucleo.management.commands.seeders import financiero_seeder
 from identidad.usuarios.models import Usuario
 
 

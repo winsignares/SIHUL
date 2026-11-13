@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from mysite.auth_helpers import is_authenticated_user
+from nucleo.auth_helpers import is_authenticated_user
 
 from ..models import AsignacionPractica, RegistroAsistencia
 from ..servicios import registro

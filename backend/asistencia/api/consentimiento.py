@@ -1,7 +1,7 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from mysite.auth_helpers import is_authenticated_user
+from nucleo.auth_helpers import is_authenticated_user
 
 from ..servicios import consentimiento
 

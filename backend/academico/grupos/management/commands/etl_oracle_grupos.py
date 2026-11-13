@@ -8,7 +8,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from academico.grupos.models import StgOracleGrupoAcademico
-from mysite.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
+from nucleo.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
 
 
 class Command(BaseCommand):

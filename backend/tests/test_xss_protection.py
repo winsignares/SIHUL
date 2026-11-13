@@ -4,7 +4,7 @@ Tests para validar protecciones contra XSS en SIHUL
 
 from django.test import TestCase, Client
 from django.core.exceptions import ValidationError
-from mysite.xss_protection import (
+from nucleo.xss_protection import (
     sanitize_string,
     sanitize_integer,
     sanitize_boolean,

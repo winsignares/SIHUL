@@ -506,11 +506,11 @@ urlpatterns = [
     path('', include(router.urls)),
 ]
 
-# En mysite/urls.py agregar:
+# En config/urls.py agregar:
 # path('api/financiero/', include('financiero.api_urls')),
 ```
 
-#### 1.6 Registrar en apps (mysite/settings.py)
+#### 1.6 Registrar en apps (config/settings.py)
 
 ```python
 INSTALLED_APPS = [
@@ -976,7 +976,7 @@ curl -X POST http://localhost:8000/usuarios/login/ \
 - [ ] Modelos definidos (Presupuesto, Transaccion, etc)
 - [ ] Serializers creados
 - [ ] ViewSets creados
-- [ ] URLs registradas en `mysite/urls.py`
+- [ ] URLs registradas en `config/urls.py`
 - [ ] App agregada a `INSTALLED_APPS`
 - [ ] Migrations ejecutadas
 - [ ] Componentes creados en DB

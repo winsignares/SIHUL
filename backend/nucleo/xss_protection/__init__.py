@@ -1,6 +1,6 @@
 """Protección XSS de SIHUL: sanitización y validación de entradas para evitar ataques XSS.
 
-Todo lo público sigue importándose desde `mysite.xss_protection`.
+Todo lo público sigue importándose desde `nucleo.xss_protection`.
 """
 from .patrones import ALLOWED_CHARS_PATTERNS, DANGEROUS_CHARS, XSS_PATTERNS  # noqa: F401
 from .valores import sanitize_string, sanitize_integer, sanitize_boolean  # noqa: F401

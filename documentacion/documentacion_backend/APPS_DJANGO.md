@@ -12,9 +12,9 @@ Django 5.2.7 + Django REST Framework, sirviendo tanto la API académica como el 
 - `reportlab`, `pypdf`, `openpyxl`, `Pillow` → generación de PDF/Excel/imágenes (reportes, facturas).
 - `gunicorn` (producción), `werkzeug`, `cryptography`, `requests`.
 
-Proyecto Django raíz: `backend/mysite/` (contiene `settings.py`, `urls.py`, y no es una app de dominio sino el núcleo transversal: autenticación de sesión, permisos, middleware, seeders).
+Proyecto Django raíz: `backend/nucleo/` (contiene `settings.py`, `urls.py`, y no es una app de dominio sino el núcleo transversal: autenticación de sesión, permisos, middleware, seeders).
 
-Los ViewSets DRF de cada app están en `<app>/viewsets.py` (sedes, facultades, programas, grupos, asignaturas, espacios, horario, usuarios y recursos) y se registran en el router de `mysite/urls.py`.
+Los ViewSets DRF de cada app están en `<app>/viewsets.py` (sedes, facultades, programas, grupos, asignaturas, espacios, horario, usuarios y recursos) y se registran en el router de `config/urls.py`.
 
 ## Apps Django
 
@@ -25,11 +25,12 @@ Las apps se agrupan por dominio en `backend/<dominio>/<app>/`, cada una con su `
 | `identidad/` | `usuarios`, `componentes` |
 | `academico/` | `sedes`, `facultades`, `programas`, `asignaturas`, `grupos`, `periodos`, `horario` |
 | `instalaciones/` | `espacios`, `recursos`, `prestamos` |
-| (en la raíz de `backend/`) | `mysite`, `chatbot`, `notificaciones`, `financiero` |
+| (en la raíz de `backend/`) | `config`, `nucleo`, `chatbot`, `notificaciones`, `financiero` |
 
 | App | Responsabilidad |
 |---|---|
-| `mysite` | Núcleo transversal: settings, urls raíz, autenticación de sesión custom (`seccional_auth.py`), helpers de roles (`auth_helpers.py`), permisos DRF (`permissions.py`), middleware de sede (`middleware.py`), vistas de auth (`auth_views.py`), adaptador OAuth (`social_adapter.py`), filtro Oracle por seccional (`oracle_seccional_filter.py`), seeders (`management/commands/seed_initial_data.py` + `seeders/*`). |
+| `config` | Proyecto Django: `settings.py`, `urls.py`, `wsgi.py` y `asgi.py`. |
+| `nucleo` | Núcleo transversal: autenticación de sesión custom (`seccional_auth.py`), helpers de roles (`auth_helpers.py`), permisos DRF (`permissions.py`), middleware de sede (`middleware.py`), vistas de auth (`auth_views.py`), adaptador OAuth (`social_adapter.py`), filtro Oracle por seccional (`oracle_seccional_filter.py`), seeders (`management/commands/seed_initial_data.py` + `seeders/*`). |
 | `usuarios` | Modelo `Usuario` (custom, login por `correo`), `Rol`, staging Oracle de docentes/estudiantes, comandos ETL relacionados. `sesion.py`: inicio de sesión con bloqueo por intentos, estado de la sesión y cambio de contraseña, sin depender de la petición HTTP. |
 | `componentes` | Sistema de permisos dinámico: `Componente`, `ComponenteRol`, `ComponenteUsuario`. Ver [AUTENTICACION_Y_PERMISOS.md](AUTENTICACION_Y_PERMISOS.md). |
 | `sedes` | `Sede`, `Seccional` (Bogotá, Cali, Barranquilla, Cúcuta, Cartagena, Pereira, El Socorro, Virtual, Nacional) + ETL. |

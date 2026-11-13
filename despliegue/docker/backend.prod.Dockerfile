@@ -23,7 +23,7 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     # Módulo WSGI configurable: cambia a config.wsgi:application tras la reorganización del backend
-    DJANGO_WSGI=mysite.wsgi:application \
+    DJANGO_WSGI=config.wsgi:application \
     GUNICORN_WORKERS=2 \
     GUNICORN_THREADS=4 \
     GUNICORN_TIMEOUT=60 \

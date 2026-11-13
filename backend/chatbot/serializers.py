@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Count
 from rest_framework import serializers
 
-from mysite.auth_helpers import is_admin_global
+from nucleo.auth_helpers import is_admin_global
 from identidad.usuarios.models import Usuario
 
 from .admin_views import PuedeGestionarChatbots, ids_chatbots_permitidos

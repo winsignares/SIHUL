@@ -5,11 +5,11 @@ from ..models import EspacioFisico, EspacioPermitido
 from academico.horario.models import Horario
 from instalaciones.prestamos.models import PrestamoEspacio
 from identidad.usuarios.models import Usuario
-from mysite.auth_helpers import (
+from nucleo.auth_helpers import (
     get_user_seccional_id, ve_todas_las_seccionales,
     user_supervisa_espacios,
 )
-from mysite.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
+from nucleo.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
 from .filtros import _filtrar_espacios_por_sede_usuario, get_dia_semana_actual
 
 

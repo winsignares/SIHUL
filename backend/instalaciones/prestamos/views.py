@@ -3,7 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import PrestamoEspacio, PrestamoEspacioPublico
 from instalaciones.espacios.models import EspacioFisico
 from academico.horario.models import Horario
-from mysite.auth_helpers import (
+from nucleo.auth_helpers import (
     SECCIONAL_PUBLICA_REQUERIDA, get_user_seccional_id, ve_todas_las_seccionales,
     seccional_publica,
 )

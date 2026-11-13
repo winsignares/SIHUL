@@ -11,7 +11,7 @@ from django.contrib.auth.hashers import make_password
 from django.core.cache import cache
 
 from instalaciones.espacios import alcance as alcance_espacios
-from mysite.auth_helpers import CUENTA_DESACTIVADA, construir_componentes, seccional_para_sesion, user_supervisa_espacios
+from nucleo.auth_helpers import CUENTA_DESACTIVADA, construir_componentes, seccional_para_sesion, user_supervisa_espacios
 from identidad.usuarios.contrasenas import password_valida
 from identidad.usuarios.models import Usuario
 

@@ -6,7 +6,7 @@ from django.db import transaction
 
 from academico.asignaturas.models import Asignatura, AsignaturaPrograma
 from academico.facultades.models import Facultad
-from mysite.oracle_seccional_filter import (
+from nucleo.oracle_seccional_filter import (
     execute_oracle_query_with_optional_seccional,
     normalize_seccional_name,
 )

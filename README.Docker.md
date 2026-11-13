@@ -172,7 +172,8 @@ SIHUL/
 ├── backend/                   ← Código Django
 │   ├── manage.py
 │   ├── requirements.txt
-│   ├── mysite/
+│   ├── config/
+│   ├── nucleo/
 │   └── ...
 │
 └── frontend/                  ← Código React

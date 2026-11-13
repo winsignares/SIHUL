@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from academico.horario.models import StgOracleHorario
-from mysite.oracle_seccional_filter import (
+from nucleo.oracle_seccional_filter import (
     execute_oracle_query_with_optional_seccional,
     normalize_seccional_name,
 )

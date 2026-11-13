@@ -1,6 +1,6 @@
 """Filtros por rol compartidos por las vistas de notificaciones."""
 from django.db.models import Q
-from mysite.auth_helpers import is_admin_global
+from nucleo.auth_helpers import is_admin_global
 
 
 TIPOS_IRRELEVANTES_NO_ADMIN = [

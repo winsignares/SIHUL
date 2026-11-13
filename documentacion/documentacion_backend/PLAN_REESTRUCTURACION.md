@@ -30,7 +30,7 @@ Las vistas concentran reglas de negocio, consultas y armado de archivos:
 
 | Dónde | Qué hay mezclado |
 |---|---|
-| `mysite/api_views.py` | 18 ViewSets de 9 apps; `UsuarioViewSet` incluye inicio de sesión, bloqueo por intentos y cambio de contraseña |
+| `nucleo/api_views.py` | 18 ViewSets de 9 apps; `UsuarioViewSet` incluye inicio de sesión, bloqueo por intentos y cambio de contraseña |
 | `espacios/views/` (un módulo por informe), `espacios/api/` | cálculo de ocupación, disponibilidad y capacidad, y generación de PDF |
 | `horario/views.py` | generación de PDF y Excel de horarios |
 | `prestamos/serializers.py`, `privacidad.py`, `availability.py` | aprobación, recurrencia y privacidad repartidas entre serializer y módulos |
@@ -96,7 +96,7 @@ armado de contexto y llamada al modelo. No tiene pruebas automatizadas.
 | 1 | Retirar rutas y vistas sin `/api`; unificar duplicados idénticos; prueba que exige que toda ruta esté bajo un prefijo publicado | Muy bajo |
 | 2 | N+1 de bajo riesgo en espacios, sedes, conversaciones y préstamos, con pruebas que exigen que las consultas no crezcan con las filas | Bajo |
 | 3 | Ocupación semanal y reportes de espacios: cargar la semana en pocas consultas y agrupar en memoria; extraer el cálculo a un módulo propio con pruebas de caracterización de la respuesta actual | Medio |
-| 4 | Casos de uso de préstamos y de inicio de sesión; ViewSets de `mysite/api_views.py` a cada app; retirar `api_adapters.py` | Medio |
+| 4 | Casos de uso de préstamos y de inicio de sesión; ViewSets de `nucleo/api_views.py` a cada app; retirar `api_adapters.py` | Medio |
 | 5 | Exportaciones PDF/Excel de horarios y reportes a módulos propios | Medio-bajo |
 | 6 | Financiero: el flujo de estados de la factura en un servicio | Medio-alto |
 | 7 | Configuración: conexiones persistentes, sesión en caché, ajuste del pool del chatbot | Bajo, requiere revisar el servidor |
@@ -125,6 +125,6 @@ Estos puntos cambiarían un comportamiento visible y por eso no forman parte de 
   seccional; con VER consulta la lista de su seccional (`usuarios/gestion.py`).
 - ~~Paginación de los listados grandes (cambia la respuesta y el frontend).~~ Decidido: las pantallas que los usan
   necesitan la lista completa, así que en lugar de paginar se comprimen las respuestas JSON con gzip
-  (`mysite/compresion.py`): de 610 KB a 34 KB en los horarios extendidos.
+  (`nucleo/compresion.py`): de 610 KB a 34 KB en los horarios extendidos.
 - Ajustes de configuración del servidor (fase 7).
 - Separar el chat del asistente del resto del backend para que no comparta hilos.
