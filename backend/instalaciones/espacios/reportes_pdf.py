@@ -1,6 +1,6 @@
 """Reportes PDF de espacios (Estado de Recursos y Reportes).
 
-Cada función recibe los datos que ya calculó espacios/views.py y devuelve el PDF en bytes:
+Cada función recibe los datos que ya calculó espacios/views/ y devuelve el PDF en bytes:
 - ocupacion_semanal: resumen, detalle por espacio y, en otra página, el top 10 por ocupación;
 - ocupacion: ocupación por jornada y espacios más utilizados;
 - disponibilidad: totales y horas disponibles/ocupadas por espacio;
