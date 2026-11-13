@@ -4,7 +4,7 @@ Ver también [APPS_DJANGO.md](APPS_DJANGO.md).
 
 ## Tests
 
-Las apps con pruebas tienen su `tests.py` (o varios `tests_*.py`, como en `financiero/`); las vacías se eliminaron. La CI corre además `ruff` (reglas F) y `mysite/tests_dependencias.py`, que vigila qué app puede importar a cuál. No hay pytest configurado; se ejecutan con `manage.py test` (ver `../general/ENTORNO_PRUEBAS.md`).
+Las pruebas de cada app están en su carpeta `tests/` (`tests_general.py` y un `tests_<tema>.py` por tema); las apps sin pruebas no la tienen. La CI corre además `ruff` (reglas F) y `mysite/tests/tests_dependencias.py`, que vigila qué app puede importar a cuál. No hay pytest configurado; se ejecutan con `manage.py test` (ver `../general/ENTORNO_PRUEBAS.md`).
 
 ## Seeders
 
