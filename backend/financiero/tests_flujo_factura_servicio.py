@@ -14,6 +14,7 @@ from rest_framework.test import APIClient
 from usuarios.models import Rol, Usuario
 
 from . import flujo_factura, models
+from .tests_reloj import fijar_hoy
 
 AHORA = timezone.make_aware(datetime.datetime(2026, 11, 11, 15, 30))
 HOY = date(2026, 11, 11)
@@ -63,6 +64,7 @@ class GenerarComprobanteTests(TestCase):
         reloj = mock.patch('django.utils.timezone.now', return_value=AHORA)
         reloj.start()
         self.addCleanup(reloj.stop)
+        fijar_hoy(self, HOY)
 
     def factura(self, estado, **extra):
         return models.Factura.objects.create(

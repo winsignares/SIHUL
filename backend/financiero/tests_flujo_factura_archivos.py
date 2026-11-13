@@ -20,6 +20,7 @@ from notificaciones.models import Notificacion
 from usuarios.models import Rol, Usuario
 
 from . import models
+from .tests_reloj import fijar_hoy
 from .services.shared_storage_service import StorageResult
 
 AHORA = timezone.make_aware(datetime.datetime(2026, 11, 11, 15, 30))
@@ -45,6 +46,7 @@ class FlujoFacturaArchivosTests(TestCase):
         reloj = mock.patch('django.utils.timezone.now', return_value=AHORA)
         reloj.start()
         self.addCleanup(reloj.stop)
+        fijar_hoy(self, HOY)
         self.nas = mock.MagicMock()
         self.nas.enabled = True
         self.nas.copy_document.side_effect = lambda factura, index, original_filename, content_bytes: StorageResult(
