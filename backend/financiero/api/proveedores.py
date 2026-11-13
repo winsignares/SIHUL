@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from ..permissions import EsUsuarioFinanciero
 from django.db import IntegrityError, transaction
 from django_filters.rest_framework import DjangoFilterBackend
-from .. import models, serializers
+from .. import models
+from .. import serializers
 from identidad.usuarios.models import Usuario
 
 

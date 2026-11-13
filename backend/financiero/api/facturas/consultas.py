@@ -2,7 +2,8 @@
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
-from ... import models, serializers
+from ... import models
+from ... import serializers
 from ...sla import build_parametros_sla_map, sincronizar_sla_facturas
 
 

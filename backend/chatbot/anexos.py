@@ -159,7 +159,7 @@ def sincronizar_rag(agente_id, sede):
     el RAG igualmente se pone al día con la siguiente pregunta, así que el error solo se
     registra en el log.
     """
-    from .views import fastapi_base_url
+    from .api.chat import fastapi_base_url
 
     try:
         resp = requests.post(

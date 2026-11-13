@@ -6,7 +6,8 @@ documentos siguen disponibles y que cada serializador apunta a su modelo.
 """
 from django.test import SimpleTestCase
 
-from .. import models, serializers
+from .. import models
+from .. import serializers
 
 
 class InterfazPublicaTests(SimpleTestCase):

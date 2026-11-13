@@ -7,4 +7,4 @@ class FinancieroConfig(AppConfig):
     verbose_name = 'Gestión Financiera'
 
     def ready(self):
-        from . import signals  # noqa: F401
+        from . import signals

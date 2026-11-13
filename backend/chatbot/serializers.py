@@ -5,10 +5,10 @@ from rest_framework import serializers
 from mysite.auth_helpers import is_admin_global
 from identidad.usuarios.models import Usuario
 
-from .admin_views import PuedeGestionarChatbots, ids_chatbots_permitidos
+from .api.administracion import PuedeGestionarChatbots, ids_chatbots_permitidos
 from .models import Agente, AgenteResponsable, Conversacion, PreguntaSugerida
 from .sedes import normalizar_sede
-from .views import _resolve_user_sede_value
+from .api.chat import _resolve_user_sede_value
 
 
 class AgenteSerializer(serializers.ModelSerializer):

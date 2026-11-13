@@ -52,3 +52,17 @@ Las apps se agrupan por dominio en `backend/<dominio>/<app>/`, cada una con su `
 - [CONFIGURACION_SETTINGS.md](CONFIGURACION_SETTINGS.md) — `settings.py`: base de datos, apps instaladas, middleware, variables de entorno.
 - [MODULO_FINANCIERO.md](MODULO_FINANCIERO.md) — modelo de facturación institucional.
 - [TESTS_Y_SEEDERS.md](TESTS_Y_SEEDERS.md) — tests existentes y seeders de datos.
+
+## Convención de la capa HTTP
+
+Cada app tiene la misma forma:
+
+| Carpeta o archivo | Contenido |
+|---|---|
+| `api/viewsets.py` | `ModelViewSet` de CRUD estándar; el router de `mysite/urls.py` genera sus rutas. |
+| `api/endpoints.py` (o un archivo por tema) | Vistas de un solo endpoint (`APIView`, genéricas o funciones) con su lógica HTTP. |
+| `api/urls.py` | Rutas escritas a mano de esos endpoints. |
+| `servicios/` | Lógica de negocio sin HTTP (sesión, reglas de gestión, contraseñas). |
+| `tests/` | Todas las pruebas de la app. |
+
+Un ViewSet se usa cuando el recurso es un CRUD y una vista suelta cuando el endpoint hace otra cosa (exportar, marcar, consultar un proxy).
