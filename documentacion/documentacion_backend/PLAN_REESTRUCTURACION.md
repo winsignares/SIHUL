@@ -62,8 +62,9 @@ suma una o más consultas.
 
 ### 1.6 Frontend
 
-- `services/` → `hooks/` → `pages/` ya separa capas, pero hay páginas de más de 1 000 líneas (`ConsultaEspacios.tsx`,
-  `RegistrarFactura.tsx`, `EnviarFactura.tsx`, `PrestamosEspacios.tsx`, `CentroHorarios.tsx`).
+- `services/` → `hooks/` → `pages/` ya separa capas. Había páginas de más de 1 000 líneas (`ConsultaEspacios.tsx`,
+  `RegistrarFactura.tsx`, `EnviarFactura.tsx`, `PrestamosEspacios.tsx`, `CentroHorarios.tsx`); ya se dividieron en un hook
+  y componentes por tema.
 - Algunas llamadas usan `trackedFetch` con la ruta escrita a mano en vez de `apiClient`.
 - `tsc` reporta errores previos que no bloquean `vite build`.
 
