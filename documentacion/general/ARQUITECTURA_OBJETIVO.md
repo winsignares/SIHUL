@@ -39,7 +39,7 @@ código a una carpeta de dominio y se declara el `label` en su `AppConfig`.
 | `chatbot` | `chatbot` | Gestión de asistentes, documentos y conversaciones |
 | `notificaciones` | `notificaciones` | Avisos a los usuarios |
 | `integraciones/oracle` | (nuevo) | Lectura de las vistas de Oracle (ver documento de Oracle) |
-| `asistencia` | (nuevo, futuro) | Asistencia con ubicación en prácticas |
+| `asistencia` | `backend/asistencia/` (API lista; sin pantallas todavía) | Asistencia con ubicación en prácticas |
 
 `mysite` queda como proyecto de configuración (ajustes, rutas raíz, utilidades transversales) y se le sacan las piezas que
 son de un dominio.

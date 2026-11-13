@@ -50,6 +50,7 @@ urlpatterns = [
     path('api/prestamos/', include('instalaciones.prestamos.api_urls')),
     path('api/chatbot/', include('chatbot.api_urls')),
     path('api/notificaciones/', include('notificaciones.api_urls')),
+    path('api/asistencia/', include('asistencia.api_urls')),
     path('api/financiero/', include('financiero.urls')),  # Rutas API Financiero
     # Solo login, logout, estado de sesión y cambio de contraseña: nginx reescribe
     # /api/usuarios/<ruta>/ a /usuarios/<ruta>/. Son las mismas vistas de /api/usuarios/; todo lo demás se sirve bajo /api/.
