@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models import Index
-from usuarios.models import Usuario
+from identidad.usuarios.models import Usuario
 from .catalogos import CentroCosto, CuentaContable, Departamento
 from .proveedores import Proveedor
 

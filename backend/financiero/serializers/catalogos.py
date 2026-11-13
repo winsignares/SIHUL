@@ -1,7 +1,7 @@
 """Serializadores de proveedores, catálogos geográficos y contables, parámetros, reportes generados y bancos."""
 from rest_framework import serializers
 from .. import models
-from usuarios.serializers import UsuarioSerializer
+from identidad.usuarios.serializers import UsuarioSerializer
 from django.core.exceptions import ValidationError
 from mysite.xss_protection import sanitize_dict, PROVEEDOR_SCHEMA, DEPARTAMENTO_SCHEMA, CUENTA_CONTABLE_SCHEMA, CENTRO_COSTO_SCHEMA
 

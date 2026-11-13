@@ -5,8 +5,8 @@ Carga: roles, componentes, permisos, departamentos, catálogos contables,
 """
 
 import re
-from usuarios.models import Rol, Usuario
-from componentes.models import Componente, ComponenteRol
+from identidad.usuarios.models import Rol, Usuario
+from identidad.componentes.models import Componente, ComponenteRol
 from financiero.models import (
     Departamento,
     DepartamentoGeografico,

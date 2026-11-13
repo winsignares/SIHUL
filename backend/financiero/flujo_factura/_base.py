@@ -4,7 +4,7 @@ import unicodedata
 from django.utils import timezone
 
 from notificaciones.signals import crear_notificacion
-from usuarios.models import Usuario
+from identidad.usuarios.models import Usuario
 
 from .. import models
 from ..sla import actualizar_sla_factura

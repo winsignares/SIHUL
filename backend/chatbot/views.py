@@ -7,7 +7,7 @@ from . import acceso_publico
 from .anexos import anexos_json
 from .sedes import agentes_visibles, ids_seccionales
 from .models import Agente, AnexoRespuesta, PreguntaSugerida, Conversacion
-from usuarios.models import Usuario
+from identidad.usuarios.models import Usuario
 import json
 import logging
 import requests

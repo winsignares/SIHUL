@@ -8,7 +8,7 @@ from datetime import datetime
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from .. import archivos, models, serializers
-from usuarios.models import Usuario
+from identidad.usuarios.models import Usuario
 
 
 

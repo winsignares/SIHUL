@@ -3,8 +3,8 @@ Seeder de relaciones Asignatura-Programa.
 Generado a partir de asignaturas_con_codigos.csv
 """
 
-from asignaturas.models import Asignatura, AsignaturaPrograma
-from programas.models import Programa
+from academico.asignaturas.models import Asignatura, AsignaturaPrograma
+from academico.programas.models import Programa
 
 
 def create_asignaturas_programa(stdout, style):

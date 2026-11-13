@@ -2,7 +2,7 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from componentes.models import Componente, ComponenteRol
+from identidad.componentes.models import Componente, ComponenteRol
 
 from .base import crear_notificacion, obtener_id_usuario
 

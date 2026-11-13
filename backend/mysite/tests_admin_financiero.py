@@ -3,9 +3,9 @@ pero no los usuarios académicos, ni los roles, ni el catálogo de componentes."
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from componentes.models import Componente, ComponenteUsuario
-from sedes.models import Seccional, Sede
-from usuarios.models import Rol, Usuario
+from identidad.componentes.models import Componente, ComponenteUsuario
+from academico.sedes.models import Seccional, Sede
+from identidad.usuarios.models import Rol, Usuario
 
 
 def _cliente(usuario):

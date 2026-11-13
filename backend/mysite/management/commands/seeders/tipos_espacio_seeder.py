@@ -2,7 +2,7 @@
 Seeder de tipos de espacio físico.
 """
 
-from espacios.models import TipoEspacio
+from instalaciones.espacios.models import TipoEspacio
 
 
 def create_tipos_espacio(stdout, style):

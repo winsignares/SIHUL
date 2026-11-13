@@ -14,12 +14,12 @@ from django.test import Client, TestCase
 from django.test.utils import CaptureQueriesContext
 
 from chatbot.models import Agente, AnexoRespuesta, Conversacion, PreguntaRespuesta
-from espacios.models import EspacioFisico, TipoEspacio
-from periodos.models import PeriodoAcademico
-from prestamos.models import PrestamoEspacio, TipoActividad
-from recursos.models import EspacioRecurso, Recurso
-from sedes.models import Seccional, Sede
-from usuarios.models import Usuario
+from instalaciones.espacios.models import EspacioFisico, TipoEspacio
+from academico.periodos.models import PeriodoAcademico
+from instalaciones.prestamos.models import PrestamoEspacio, TipoActividad
+from instalaciones.recursos.models import EspacioRecurso, Recurso
+from academico.sedes.models import Seccional, Sede
+from identidad.usuarios.models import Usuario
 
 
 class ConsultasDeListadosTests(TestCase):

@@ -2,9 +2,9 @@
 Seeder de grupos académicos.
 """
 
-from programas.models import Programa
-from periodos.models import PeriodoAcademico
-from grupos.models import Grupo
+from academico.programas.models import Programa
+from academico.periodos.models import PeriodoAcademico
+from academico.grupos.models import Grupo
 
 
 def create_grupos(stdout, style):

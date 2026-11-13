@@ -2,7 +2,7 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from prestamos.models import PrestamoEspacio, TipoActividad, PrestamoRecurso
+from instalaciones.prestamos.models import PrestamoEspacio, TipoActividad, PrestamoRecurso
 
 from .base import crear_notificacion, obtener_id_usuario
 

@@ -7,8 +7,8 @@ from datetime import date
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from componentes.models import Componente, ComponenteRol
-from usuarios.models import Rol, Usuario
+from identidad.componentes.models import Componente, ComponenteRol
+from identidad.usuarios.models import Rol, Usuario
 
 from . import models
 

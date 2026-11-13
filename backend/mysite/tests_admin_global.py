@@ -9,9 +9,9 @@ from django.core.cache import cache
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from espacios.models import EspacioFisico, TipoEspacio
-from sedes.models import Seccional, Sede
-from usuarios.models import Rol, Usuario
+from instalaciones.espacios.models import EspacioFisico, TipoEspacio
+from academico.sedes.models import Seccional, Sede
+from identidad.usuarios.models import Rol, Usuario
 
 
 def _ids(respuesta):

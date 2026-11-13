@@ -2,9 +2,9 @@
 from django.conf import settings
 from django.test import Client, TestCase
 
-from componentes.models import Componente, ComponenteUsuario
-from sedes.models import Seccional, Sede
-from usuarios.models import Rol, Usuario
+from identidad.componentes.models import Componente, ComponenteUsuario
+from academico.sedes.models import Seccional, Sede
+from identidad.usuarios.models import Rol, Usuario
 
 
 class UsuariosPorSeccionalTests(TestCase):

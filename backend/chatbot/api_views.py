@@ -11,7 +11,7 @@ from .admin_views import (
     PuedeGestionarChatbots, PuedeGestionarDocumentosChatbots, _chatbot_permitido, ids_chatbots_permitidos,
     puede_todas_las_sedes,
 )
-from sedes.models import Seccional
+from academico.sedes.models import Seccional
 
 from .sedes import agentes_visibles, ids_seccionales, normalizar_sede
 from .views import _resolve_user_sede_value

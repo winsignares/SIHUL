@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models import Index
-from usuarios.models import Usuario
-from facultades.models import Facultad
+from identidad.usuarios.models import Usuario
+from academico.facultades.models import Facultad
 
 
 

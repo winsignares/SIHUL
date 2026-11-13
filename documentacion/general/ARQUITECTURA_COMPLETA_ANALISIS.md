@@ -359,7 +359,7 @@ function toComponentSlug(name: string): string {
 
 ## 5️⃣ MODELO DE USUARIO
 
-### 5.1 Backend (backend/usuarios/models.py)
+### 5.1 Backend (backend/identidad/usuarios/models.py)
 
 ```python
 class Usuario(AbstractUser):
