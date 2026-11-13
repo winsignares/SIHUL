@@ -2,12 +2,12 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from sedes.models import Sede
-from facultades.models import Facultad
-from programas.models import Programa
-from asignaturas.models import Asignatura, AsignaturaPrograma
-from periodos.models import PeriodoAcademico
-from grupos.models import Grupo
+from academico.sedes.models import Sede
+from academico.facultades.models import Facultad
+from academico.programas.models import Programa
+from academico.asignaturas.models import Asignatura, AsignaturaPrograma
+from academico.periodos.models import PeriodoAcademico
+from academico.grupos.models import Grupo
 
 from .base import crear_notificacion, es_origen_siul, obtener_id_usuario
 

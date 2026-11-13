@@ -1,7 +1,7 @@
 """Serializadores del historial, los comentarios y los rechazos o devoluciones de la factura."""
 from rest_framework import serializers
 from .. import models
-from usuarios.serializers import UsuarioSerializer
+from identidad.usuarios.serializers import UsuarioSerializer
 
 
 class HistorialFacturaSerializer(serializers.ModelSerializer):

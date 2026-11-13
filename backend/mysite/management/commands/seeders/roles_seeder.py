@@ -2,7 +2,7 @@
 Seeder de roles del sistema.
 """
 
-from usuarios.models import Rol
+from identidad.usuarios.models import Rol
 
 
 def create_roles(stdout, style):

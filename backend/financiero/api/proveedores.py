@@ -6,7 +6,7 @@ from ..permissions import EsUsuarioFinanciero
 from django.db import IntegrityError, transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from .. import models, serializers
-from usuarios.models import Usuario
+from identidad.usuarios.models import Usuario
 
 
 
@@ -137,7 +137,7 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     def crear_con_usuario(self, request):
         """Crea un usuario con rol Proveedor y vincula su perfil en una transacción atómica."""
         from django.contrib.auth.hashers import make_password
-        from usuarios.models import Rol
+        from identidad.usuarios.models import Rol
 
         nombre = (request.data.get('nombre') or '').strip()
         correo = (request.data.get('correo') or '').strip()

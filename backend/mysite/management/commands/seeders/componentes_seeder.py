@@ -2,7 +2,7 @@
 Seeder de componentes del sistema de permisos.
 """
 
-from componentes.models import Componente
+from identidad.componentes.models import Componente
 
 
 def create_componentes(stdout, style):

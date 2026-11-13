@@ -2,7 +2,7 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from espacios.models import EspacioFisico, TipoEspacio, EspacioPermitido
+from instalaciones.espacios.models import EspacioFisico, TipoEspacio, EspacioPermitido
 
 from .base import crear_notificacion, es_origen_siul, obtener_id_usuario
 

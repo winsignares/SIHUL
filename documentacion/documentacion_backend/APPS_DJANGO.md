@@ -18,7 +18,14 @@ Los ViewSets DRF de cada app están en `<app>/viewsets.py` (sedes, facultades, p
 
 ## Apps Django
 
-Cada app vive en `backend/<app>/` con su `models.py`/`views.py`/`urls.py` estándar.
+Las apps se agrupan por dominio en `backend/<dominio>/<app>/`, cada una con su `models.py`/`views.py`/`urls.py` estándar. El nombre interno de cada app (`label`) no cambió, por lo que las migraciones, las tablas y las referencias de modelo (`'usuarios.Usuario'`) siguen igual; solo cambia la ruta de importación (por ejemplo `from identidad.usuarios.models import Usuario`). Ver [../general/ARQUITECTURA_OBJETIVO.md](../general/ARQUITECTURA_OBJETIVO.md).
+
+| Dominio (carpeta) | Apps |
+|---|---|
+| `identidad/` | `usuarios`, `componentes` |
+| `academico/` | `sedes`, `facultades`, `programas`, `asignaturas`, `grupos`, `periodos`, `horario` |
+| `instalaciones/` | `espacios`, `recursos`, `prestamos` |
+| (en la raíz de `backend/`) | `mysite`, `chatbot`, `notificaciones`, `financiero` |
 
 | App | Responsabilidad |
 |---|---|

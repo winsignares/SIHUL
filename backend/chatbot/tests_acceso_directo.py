@@ -8,8 +8,8 @@ from types import SimpleNamespace
 from django.test import override_settings
 from django.urls import reverse
 
-from sedes.models import Sede
-from usuarios.models import Rol, Usuario
+from academico.sedes.models import Sede
+from identidad.usuarios.models import Rol, Usuario
 
 from . import acceso_directo
 from .models import AnexoRespuesta, PreguntaRespuesta

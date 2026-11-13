@@ -10,7 +10,7 @@ from mysite.auth_helpers import (
     get_user_seccional_id, is_admin_global, is_admin_sistema, is_authenticated_user, q_usuarios_de_seccional,
     user_can_edit_componente,
 )
-from usuarios.models import Usuario
+from identidad.usuarios.models import Usuario
 
 from .models import Agente, AgenteResponsable, ChatbotDocument
 from .views import _normalize_sede_value, _resolve_user_sede_value, fastapi_base_url

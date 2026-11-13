@@ -5,8 +5,8 @@ from unittest import mock
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from sedes.models import Seccional, Sede
-from usuarios.models import Rol, Usuario
+from academico.sedes.models import Seccional, Sede
+from identidad.usuarios.models import Rol, Usuario
 
 from .models import Agente, AgenteResponsable, PreguntaSugerida
 from .tests import _BaseAnexos

@@ -13,7 +13,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from notificaciones.models import Notificacion
-from usuarios.models import Rol, Usuario
+from identidad.usuarios.models import Rol, Usuario
 
 from . import models
 from .tests_reloj import fijar_hoy

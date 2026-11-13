@@ -9,7 +9,7 @@ from . import serializers
 from .api.documentos import DocumentoAdjuntoViewSet
 from .api.proveedores import ProveedorViewSet
 from .services.shared_storage_service import StorageResult
-from usuarios.models import Usuario, Rol
+from identidad.usuarios.models import Usuario, Rol
 
 # Create your tests here.
 

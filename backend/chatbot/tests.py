@@ -19,9 +19,9 @@ from django.test import TestCase, override_settings
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.urls import reverse
 
-from componentes.models import Componente, ComponenteRol, ComponenteUsuario
-from sedes.models import Seccional, Sede
-from usuarios.models import Rol, Usuario
+from identidad.componentes.models import Componente, ComponenteRol, ComponenteUsuario
+from academico.sedes.models import Seccional, Sede
+from identidad.usuarios.models import Rol, Usuario
 
 from . import acceso_publico
 from .anexos import AnexoInvalido, generar_token, leer_token, validar_anexo

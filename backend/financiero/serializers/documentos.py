@@ -1,7 +1,7 @@
 """Serializador de los documentos adjuntos de la factura y sus límites de tipo y tamaño."""
 from rest_framework import serializers
 from .. import models
-from usuarios.serializers import UsuarioSerializer
+from identidad.usuarios.serializers import UsuarioSerializer
 import os
 import re
 import uuid

@@ -1,14 +1,14 @@
 from django.db.models.signals import post_delete, post_save
 
-from asignaturas.models import Asignatura, AsignaturaPrograma
-from espacios.models import TipoEspacio
-from facultades.models import Facultad
-from grupos.models import Grupo
-from prestamos.models import TipoActividad
-from programas.models import Programa
-from recursos.models import Recurso
-from sedes.models import Sede
-from usuarios.models import Rol
+from academico.asignaturas.models import Asignatura, AsignaturaPrograma
+from instalaciones.espacios.models import TipoEspacio
+from academico.facultades.models import Facultad
+from academico.grupos.models import Grupo
+from instalaciones.prestamos.models import TipoActividad
+from academico.programas.models import Programa
+from instalaciones.recursos.models import Recurso
+from academico.sedes.models import Sede
+from identidad.usuarios.models import Rol
 
 from .cache_utils import invalidate_catalog_cache
 

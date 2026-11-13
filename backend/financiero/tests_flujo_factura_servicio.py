@@ -11,7 +11,7 @@ from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from usuarios.models import Rol, Usuario
+from identidad.usuarios.models import Rol, Usuario
 
 from . import flujo_factura, models
 from .tests_reloj import fijar_hoy

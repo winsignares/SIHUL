@@ -13,12 +13,12 @@ from django.contrib.auth.models import AnonymousUser
 from django.db.models.signals import post_delete, post_save
 from django.test import RequestFactory, SimpleTestCase, TestCase
 
-from componentes.models import Componente
-from facultades.models import Facultad
+from identidad.componentes.models import Componente
+from academico.facultades.models import Facultad
 from notificaciones import signals
 from notificaciones.models import Notificacion
-from sedes.models import Sede
-from usuarios.models import Rol, Usuario
+from academico.sedes.models import Sede
+from identidad.usuarios.models import Rol, Usuario
 
 RECEPTORES = [
         ('post_save', 'Usuario', 'usuario_post_save'),

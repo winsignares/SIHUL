@@ -2,7 +2,7 @@ import re
 import unicodedata
 from django.db import models
 from django.db.models import Index
-from usuarios.models import Usuario
+from identidad.usuarios.models import Usuario
 from django.utils import timezone
 from .facturas import Factura
 

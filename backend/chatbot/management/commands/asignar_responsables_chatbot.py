@@ -17,7 +17,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from chatbot.models import Agente, AgenteResponsable
-from usuarios.models import Usuario
+from identidad.usuarios.models import Usuario
 
 
 class Command(BaseCommand):

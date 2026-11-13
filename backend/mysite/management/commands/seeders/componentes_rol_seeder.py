@@ -2,8 +2,8 @@
 Seeder de asignación de componentes a roles.
 """
 
-from componentes.models import Componente, ComponenteRol
-from usuarios.models import Rol
+from identidad.componentes.models import Componente, ComponenteRol
+from identidad.usuarios.models import Rol
 
 def create_componentes_rol(stdout, style):
     """Asignar componentes a roles con sus permisos"""

@@ -21,7 +21,7 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 from rest_framework.test import APIClient
 
-from usuarios.models import Rol, Usuario
+from identidad.usuarios.models import Rol, Usuario
 
 from . import models
 from .services.shared_storage_service import StorageResult

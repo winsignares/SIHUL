@@ -2,8 +2,8 @@
 Seeder de programas académicos.
 """
 
-from facultades.models import Facultad
-from programas.models import Programa
+from academico.facultades.models import Facultad
+from academico.programas.models import Programa
 
 
 def create_programas(stdout, style):

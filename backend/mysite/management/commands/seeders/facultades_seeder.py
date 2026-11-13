@@ -2,8 +2,8 @@
 Seeder de facultades.
 """
 
-from sedes.models import Sede
-from facultades.models import Facultad
+from academico.sedes.models import Sede
+from academico.facultades.models import Facultad
 
 
 def create_facultades(stdout, style):

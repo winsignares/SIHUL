@@ -4,13 +4,13 @@ Este archivo se llenará gradualmente con los datos específicos de la sede nort
 """
 
 from django.db.models import Q
-from sedes.models import Sede
-from espacios.models import EspacioFisico
-from usuarios.models import Rol, Usuario
-from asignaturas.models import Asignatura
-from periodos.models import PeriodoAcademico
-from grupos.models import Grupo
-from horario.models import Horario
+from academico.sedes.models import Sede
+from instalaciones.espacios.models import EspacioFisico
+from identidad.usuarios.models import Rol, Usuario
+from academico.asignaturas.models import Asignatura
+from academico.periodos.models import PeriodoAcademico
+from academico.grupos.models import Grupo
+from academico.horario.models import Horario
 
 
 def create_horarios_sede_centro(stdout, style):
@@ -26,7 +26,7 @@ def create_horarios_sede_principal(stdout, style):
     
     # Desconectar temporalmente la validación de horarios durante el seed
     from django.db.models.signals import pre_save
-    from horario.signals import validar_horario
+    from academico.horario.signals import validar_horario
     pre_save.disconnect(validar_horario, sender=Horario)
     
     # Mapeo de días en español a formato consistente
