@@ -34,7 +34,7 @@ código a una carpeta de dominio y se declara el `label` en su `AppConfig`.
 |---|---|---|
 | `identidad` | `usuarios`, `componentes` | Cuentas, roles, permisos por componente, sesiones |
 | `academico` | `sedes`, `facultades`, `programas`, `asignaturas`, `grupos`, `periodos`, `horario` | Estructura académica y horarios |
-| `espacios` | `espacios`, `recursos`, `prestamos` | Espacios físicos, recursos y préstamos |
+| `instalaciones` | `espacios`, `recursos`, `prestamos` | Espacios físicos, recursos y préstamos (el nombre del dominio evita repetir el de la app `espacios`) |
 | `financiero` | `financiero` (se parte por subdominio) | Facturas, proveedores, flujo de aprobación, catálogos |
 | `chatbot` | `chatbot` | Gestión de asistentes, documentos y conversaciones |
 | `notificaciones` | `notificaciones` | Avisos a los usuarios |
@@ -114,16 +114,15 @@ Dominio nuevo `asistencia`, independiente del resto.
 
 ## 8. Hoja de ruta
 
-Un PR por paso, sin apilar.
+Un PR por paso, sin apilar. **Oracle se deja para el final:** primero se ordena todo lo demás y después se define la lectura de
+las vistas (decisión del 13 de noviembre de 2026).
 
 1. Este documento y el de Oracle (sin código).
-2. Comando de solo lectura que lista las columnas reales de las vistas de Oracle (sin datos personales), para completar el
-   inventario.
-3. Puerto y adaptadores de la fuente académica (local y Oracle) detrás de un interruptor, sin cambiar el comportamiento.
-4. Reagrupar el backend por dominio conservando los `label` y las migraciones.
-5. Partir `financiero` (backend y frontend) por subdominio y capacidad.
-6. Archivos cortos por recurso en `api/` (un dominio por PR).
-7. Lectura de Oracle bajo demanda para docentes y estudiantes; después horarios, grupos y espacios.
-8. Retirar la carga programada y las tablas de *staging*.
-9. Cola de tareas, sesiones en Redis y almacenamiento compartido.
-10. Dominio `asistencia` (backend y frontend).
+2. Reagrupar el backend por dominio conservando los `label` y las migraciones (`identidad`, `academico`, `instalaciones`).
+3. Partir `financiero` (backend y frontend) por subdominio y capacidad.
+4. Archivos cortos por recurso en `api/` (un dominio por PR).
+5. Cola de tareas, sesiones en Redis y almacenamiento compartido.
+6. Dominio `asistencia` (backend y frontend).
+7. **Oracle** (último): comando de solo lectura para confirmar las columnas reales de las vistas, interfaz de la fuente académica
+   (local y Oracle) detrás de un interruptor, lectura bajo demanda de docentes y estudiantes, después horarios, grupos y
+   espacios, y retiro de la carga programada.
