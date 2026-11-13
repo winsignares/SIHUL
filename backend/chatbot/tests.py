@@ -151,7 +151,7 @@ class _BaseAnexos(TestCase):
         )
 
     def setUp(self):
-        patcher = mock.patch('chatbot.preguntas_respuestas_views.sincronizar_rag')
+        patcher = mock.patch('chatbot.preguntas_respuestas_views.comunes.sincronizar_rag')
         self.sincronizar = patcher.start()
         self.addCleanup(patcher.stop)
         # El chat público exige una sesión firmada (ver tests_acceso_publico.py): aquí va ya puesta.
@@ -289,7 +289,7 @@ class GestionPreguntasRespuestasTests(_BaseAnexos):
         self.entrar(self.admin)
         pareja_id = self.crear().json()['id']
         self.entrar(self.coordinador_cali)
-        with mock.patch('chatbot.admin_views.user_can_edit_componente', return_value=True):
+        with mock.patch('chatbot.admin_views.permisos.user_can_edit_componente', return_value=True):
             self.assertEqual(self.client.get(reverse('api-admin-preguntas-respuestas')).json(), [])
             detalle = reverse('api-admin-pregunta-respuesta-detalle', args=[pareja_id])
             self.assertEqual(self.client.get(detalle).status_code, 404)
@@ -346,7 +346,7 @@ class ChatConAnexosTests(_BaseAnexos):
     def _rag(self, anexos):
         respuesta = mock.Mock()
         respuesta.json.return_value = {'answer': 'Radica la solicitud.', 'anexos': [{'id': i} for i in anexos]}
-        return mock.patch('chatbot.views._enviar_pregunta_fastapi', return_value=respuesta)
+        return mock.patch('chatbot.views.rag._enviar_pregunta_fastapi', return_value=respuesta)
 
     def _preguntar(self, anexos, **extra):
         datos = {
@@ -404,7 +404,7 @@ class ChatConAnexosTests(_BaseAnexos):
     def test_error_del_rag_no_entrega_anexos(self):
         import requests
 
-        with mock.patch('chatbot.views._enviar_pregunta_fastapi', side_effect=requests.exceptions.ConnectionError):
+        with mock.patch('chatbot.views.rag._enviar_pregunta_fastapi', side_effect=requests.exceptions.ConnectionError):
             datos = {'agente_id': self.agente.id, 'pregunta': 'x', 'id_usuario': self.estudiante.id, 'nombre_usuario': 'E'}
             cuerpo = self.client.post(reverse('api-legacy-pregunta'), json.dumps(datos), content_type='application/json').json()
         self.assertEqual(cuerpo['anexos'], [])
@@ -480,8 +480,8 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
 
     def test_cargador_sube_y_lista_documentos_de_su_chatbot(self):
         self.entrar(self.cargador)
-        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()) as post, \
-                mock.patch('chatbot.admin_views.requests.get', return_value=self._rag(cuerpo=[])) as get:
+        with mock.patch('chatbot.admin_views.documentos.requests.post', return_value=self._rag()) as post, \
+                mock.patch('chatbot.admin_views.documentos.requests.get', return_value=self._rag(cuerpo=[])) as get:
             self.assertEqual(self._subir().status_code, 200)
             self.assertEqual(self.client.get(reverse('api-admin-documentos'), {'sede': 'barranquilla'}).status_code, 200)
         post.assert_called_once()
@@ -514,7 +514,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
     def test_gestor_de_chatbots_administra_y_carga_documentos_de_cualquiera(self):
         self.entrar(self.gestor)
         self.assertEqual(self._crear_agente().status_code, 201)
-        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
+        with mock.patch('chatbot.admin_views.documentos.requests.post', return_value=self._rag()):
             self.assertEqual(self._subir(self.otro_agente).status_code, 200)  # sin estar asignado
         agentes = self.client.get(reverse('api-agente-list-create')).json()
         self.assertIn('instrucciones_adicionales', agentes[0])
@@ -522,7 +522,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
 
     def test_estudiante_no_carga_documentos_ni_administra(self):
         self.entrar(self.estudiante)
-        with mock.patch('chatbot.admin_views.requests.post') as post:
+        with mock.patch('chatbot.admin_views.documentos.requests.post') as post:
             self.assertEqual(self._subir().status_code, 403)
         post.assert_not_called()
         self.assertEqual(self._crear_agente().status_code, 403)
@@ -533,7 +533,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
     def test_permiso_solo_ver_no_alcanza(self):
         # Con VER y sin ser responsable de ningún chatbot no se puede cargar nada.
         self.entrar(self.solo_ver)
-        with mock.patch('chatbot.admin_views.requests.post') as post:
+        with mock.patch('chatbot.admin_views.documentos.requests.post') as post:
             self.assertEqual(self._subir().status_code, 403)
         post.assert_not_called()
 
@@ -541,13 +541,13 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         # Una persona con un rol cualquiera (sin ningún componente de chatbots) sube documentos
         # solo por estar asignada como responsable de un chatbot, y solo de ese.
         self.entrar(self.sin_rol_util)
-        with mock.patch('chatbot.admin_views.requests.post') as post:
+        with mock.patch('chatbot.admin_views.documentos.requests.post') as post:
             self.assertEqual(self._subir().status_code, 403)  # todavía no es responsable
         post.assert_not_called()
         AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_rol_util)
-        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
+        with mock.patch('chatbot.admin_views.documentos.requests.post', return_value=self._rag()):
             self.assertEqual(self._subir().status_code, 200)
-        with mock.patch('chatbot.admin_views.requests.post') as post:
+        with mock.patch('chatbot.admin_views.documentos.requests.post') as post:
             self.assertEqual(self._subir(self.otro_agente).status_code, 403)  # otro chatbot: no
         post.assert_not_called()
         self.assertEqual(self._crear_agente().status_code, 403)  # y no administra chatbots
@@ -601,7 +601,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
     def test_el_responsable_con_solo_ver_pasa_a_editar(self):
         AgenteResponsable.objects.create(agente=self.agente, usuario=self.solo_ver)
         self.entrar(self.solo_ver)
-        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
+        with mock.patch('chatbot.admin_views.documentos.requests.post', return_value=self._rag()):
             self.assertEqual(self._subir().status_code, 200)
 
     def test_una_revocacion_expresa_gana_a_la_asignacion(self):
@@ -612,7 +612,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
             usuario=self.sin_rol_util, componente=self.documentacion, permiso='EDITAR', activo=False,
         )
         self.entrar(self.sin_rol_util)
-        with mock.patch('chatbot.admin_views.requests.post') as post:
+        with mock.patch('chatbot.admin_views.documentos.requests.post') as post:
             self.assertEqual(self._subir().status_code, 403)
         post.assert_not_called()
         self.assertNotIn(
@@ -627,7 +627,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         )
         AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_rol_util)
         self.entrar(self.sin_rol_util)
-        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
+        with mock.patch('chatbot.admin_views.documentos.requests.post', return_value=self._rag()):
             self.assertEqual(self._subir().status_code, 200)
 
     def test_excepcion_individual_inactiva_revoca_el_permiso_del_rol(self):
@@ -635,7 +635,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
             usuario=self.cargador, componente=self.documentacion, permiso='EDITAR', activo=False,
         )
         self.entrar(self.cargador)
-        with mock.patch('chatbot.admin_views.requests.post') as post:
+        with mock.patch('chatbot.admin_views.documentos.requests.post') as post:
             self.assertEqual(self._subir().status_code, 403)
         post.assert_not_called()
 
@@ -647,7 +647,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
         AgenteResponsable.objects.create(agente=self.agente, usuario=self.gestor)
         self.entrar(self.gestor)
         self.assertEqual(self._crear_agente().status_code, 403)
-        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()):
+        with mock.patch('chatbot.admin_views.documentos.requests.post', return_value=self._rag()):
             self.assertEqual(self._subir().status_code, 200)
 
     # ---- preguntas sugeridas: solo las escribe quien gestiona la documentación de ese chatbot
@@ -692,15 +692,15 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
     def test_sin_asignacion_no_sube_ni_ve_documentos(self):
         AgenteResponsable.objects.all().delete()
         self.entrar(self.cargador)
-        with mock.patch('chatbot.admin_views.requests.post') as post, \
-                mock.patch('chatbot.admin_views.requests.get', return_value=self._rag(cuerpo=[{'id': 1, 'chatbot_id': self.agente.id}])):
+        with mock.patch('chatbot.admin_views.documentos.requests.post') as post, \
+                mock.patch('chatbot.admin_views.documentos.requests.get', return_value=self._rag(cuerpo=[{'id': 1, 'chatbot_id': self.agente.id}])):
             self.assertEqual(self._subir().status_code, 403)
             self.assertEqual(self.client.get(reverse('api-admin-documentos')).json(), [])
         post.assert_not_called()
 
     def test_solo_sube_al_chatbot_asignado(self):
         self.entrar(self.cargador)
-        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()) as post:
+        with mock.patch('chatbot.admin_views.documentos.requests.post', return_value=self._rag()) as post:
             self.assertEqual(self._subir(self.otro_agente).status_code, 403)
             post.assert_not_called()
             self.assertEqual(self._subir(self.agente).status_code, 200)
@@ -713,7 +713,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
             {'id': 2, 'chatbot_id': self.otro_agente.id, 'sede': 'barranquilla'},
             {'id': 3, 'chatbot_id': None, 'sede': 'barranquilla'},
         ]
-        with mock.patch('chatbot.admin_views.requests.get', return_value=self._rag(cuerpo=documentos)) as get:
+        with mock.patch('chatbot.admin_views.documentos.requests.get', return_value=self._rag(cuerpo=documentos)) as get:
             respuesta = self.client.get(reverse('api-admin-documentos'))
             self.assertEqual([d['id'] for d in respuesta.json()], [1])
             # Pedir el chatbot de otro es 403 y ni siquiera consulta al RAG
@@ -725,7 +725,7 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
 
     def test_la_seccional_sale_del_usuario_no_del_navegador(self):
         self.entrar(self.cargador)  # seccional Barranquilla
-        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()) as post:
+        with mock.patch('chatbot.admin_views.documentos.requests.post', return_value=self._rag()) as post:
             self.assertEqual(self._subir(sede='bogota').status_code, 403)
             post.assert_not_called()
             self.assertEqual(self._subir(sede=None).status_code, 200)  # sin sede: usa la suya
@@ -733,20 +733,20 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
 
     def test_listar_con_sede_ajena_es_403(self):
         self.entrar(self.cargador)
-        with mock.patch('chatbot.admin_views.requests.get') as get:
+        with mock.patch('chatbot.admin_views.documentos.requests.get') as get:
             self.assertEqual(self.client.get(reverse('api-admin-documentos'), {'sede': 'bogota'}).status_code, 403)
         get.assert_not_called()
 
     def test_admin_global_puede_elegir_la_seccional(self):
         self.entrar(self.admin)
-        with mock.patch('chatbot.admin_views.requests.post', return_value=self._rag()) as post:
+        with mock.patch('chatbot.admin_views.documentos.requests.post', return_value=self._rag()) as post:
             self.assertEqual(self._subir(sede='bogota').status_code, 200)
         self.assertEqual(post.call_args.kwargs['params']['sede'], 'bogota')
 
     def test_usuario_sin_seccional_no_sube(self):
         AgenteResponsable.objects.create(agente=self.agente, usuario=self.sin_seccional)
         self.entrar(self.sin_seccional)
-        with mock.patch('chatbot.admin_views.requests.post') as post:
+        with mock.patch('chatbot.admin_views.documentos.requests.post') as post:
             self.assertEqual(self._subir(sede=None).status_code, 400)
         post.assert_not_called()
 
@@ -755,24 +755,24 @@ class PermisosDocumentacionChatbotsTests(_BaseAnexos):
     def test_borrar_documento_exige_chatbot_asignado_y_su_seccional(self):
         self.entrar(self.cargador)
         url = reverse('api-admin-documento-detalle', args=[7])
-        with mock.patch('chatbot.admin_views.requests.delete', return_value=self._rag(status=204)) as borrar:
-            with mock.patch('chatbot.admin_views._datos_documento', return_value={'chatbot_id': self.otro_agente.id, 'sede': 'barranquilla'}):
+        with mock.patch('chatbot.admin_views.documentos.requests.delete', return_value=self._rag(status=204)) as borrar:
+            with mock.patch('chatbot.admin_views.documentos._datos_documento', return_value={'chatbot_id': self.otro_agente.id, 'sede': 'barranquilla'}):
                 self.assertEqual(self.client.delete(url).status_code, 403)
-            with mock.patch('chatbot.admin_views._datos_documento', return_value={'chatbot_id': self.agente.id, 'sede': 'bogota'}):
+            with mock.patch('chatbot.admin_views.documentos._datos_documento', return_value={'chatbot_id': self.agente.id, 'sede': 'bogota'}):
                 self.assertEqual(self.client.delete(url).status_code, 404)
             borrar.assert_not_called()
-            with mock.patch('chatbot.admin_views._datos_documento', return_value={'chatbot_id': self.agente.id, 'sede': 'barranquilla'}):
+            with mock.patch('chatbot.admin_views.documentos._datos_documento', return_value={'chatbot_id': self.agente.id, 'sede': 'barranquilla'}):
                 self.assertEqual(self.client.delete(url).status_code, 204)
         borrar.assert_called_once()
 
     def test_cambiar_prioridad_exige_chatbot_asignado(self):
         self.entrar(self.cargador)
         url = reverse('api-admin-documento-prioridad', args=[7])
-        with mock.patch('chatbot.admin_views.requests.patch', return_value=self._rag()) as patch_rag:
-            with mock.patch('chatbot.admin_views._datos_documento', return_value={'chatbot_id': self.otro_agente.id, 'sede': 'barranquilla'}):
+        with mock.patch('chatbot.admin_views.documentos.requests.patch', return_value=self._rag()) as patch_rag:
+            with mock.patch('chatbot.admin_views.documentos._datos_documento', return_value={'chatbot_id': self.otro_agente.id, 'sede': 'barranquilla'}):
                 self.assertEqual(self.client.patch(url, json.dumps({'prioridad': 1}), content_type='application/json').status_code, 403)
             patch_rag.assert_not_called()
-            with mock.patch('chatbot.admin_views._datos_documento', return_value={'chatbot_id': self.agente.id, 'sede': 'barranquilla'}):
+            with mock.patch('chatbot.admin_views.documentos._datos_documento', return_value={'chatbot_id': self.agente.id, 'sede': 'barranquilla'}):
                 self.assertEqual(self.client.patch(url, json.dumps({'prioridad': 1}), content_type='application/json').status_code, 200)
 
     # ---- preguntas y respuestas ------------------------------------------------------------

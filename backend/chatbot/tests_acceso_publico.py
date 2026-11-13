@@ -32,7 +32,7 @@ class AccesoPublicoTests(TestCase):
 
     def setUp(self):
         cache.clear()
-        patcher = mock.patch('chatbot.views._consultar_rag', return_value=('Respuesta de la IA', None, []))
+        patcher = mock.patch('chatbot.views.publico._consultar_rag', return_value=('Respuesta de la IA', None, []))
         self.rag = patcher.start()
         self.addCleanup(patcher.stop)
 
