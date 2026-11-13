@@ -6,7 +6,7 @@ pedido) y los préstamos 'Aprobado' de la fecha:
 - ocupacion_por_jornada y espacios_mas_usados: reporte de ocupación;
 - disponibilidad: horas disponibles y ocupadas por espacio, con su resumen;
 - capacidad: capacidad utilizada por tipo de espacio.
-Las vistas de espacios/views.py leen los parámetros, filtran los espacios visibles y arman la respuesta.
+Las vistas de espacios/views/ leen los parámetros, filtran los espacios visibles y arman la respuesta.
 """
 from ._semana import (  # noqa: F401
     DIAS_NOMBRE, dia_nombre, estados_horario, fechas_de_la_semana, normalizar_dia_semana, preparar_datos, semana,

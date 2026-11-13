@@ -31,7 +31,7 @@ Las vistas concentran reglas de negocio, consultas y armado de archivos:
 | Dónde | Qué hay mezclado |
 |---|---|
 | `mysite/api_views.py` | 18 ViewSets de 9 apps; `UsuarioViewSet` incluye inicio de sesión, bloqueo por intentos y cambio de contraseña |
-| `espacios/views.py`, `espacios/api_views.py` | cálculo de ocupación, disponibilidad y capacidad, y generación de PDF |
+| `espacios/views/` (un módulo por informe), `espacios/api/` | cálculo de ocupación, disponibilidad y capacidad, y generación de PDF |
 | `horario/views.py` | generación de PDF y Excel de horarios |
 | `prestamos/serializers.py`, `privacidad.py`, `availability.py` | aprobación, recurrencia y privacidad repartidas entre serializer y módulos |
 | `financiero/views.py` | flujo de estados de la factura, permisos por rol y manejo de archivos |
