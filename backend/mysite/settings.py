@@ -92,6 +92,7 @@ INSTALLED_APPS = [
     'instalaciones.espacios',
     'instalaciones.recursos',
     'instalaciones.prestamos',
+    'asistencia',
     'chatbot',
     'notificaciones',
     'financiero',  # App nueva para gestión financiera
