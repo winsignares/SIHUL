@@ -50,6 +50,13 @@ DEFAULT_FRONTEND_URL = 'http://localhost:5173' if DEBUG else 'https://sihul.unil
 FRONTEND_URL = os.getenv('FRONTEND_URL', DEFAULT_FRONTEND_URL).rstrip('/')
 MICROSOFT_OAUTH_ENABLED = bool(MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET)
 CHATBOT_FASTAPI_URL = os.getenv('CHATBOT_FASTAPI_URL', 'http://chatbot:8001/api/v1').rstrip('/')
+# Acceso directo del navegador al servicio del chatbot (chatbot/acceso_directo.py). Sin CHATBOT_TOKEN_SECRET (la
+# misma clave que lee el servicio FastAPI) queda desactivado y el chat sigue pasando por Django.
+CHATBOT_TOKEN_SECRET = os.getenv('CHATBOT_TOKEN_SECRET', '')
+CHATBOT_TOKEN_AUDIENCIA = os.getenv('CHATBOT_TOKEN_AUDIENCE', 'sihul-chatbot')
+CHATBOT_TOKEN_VIGENCIA = int(os.getenv('CHATBOT_TOKEN_VIGENCIA', '600'))
+# Ruta pública (la expone nginx) donde el navegador encuentra las rutas directas del servicio
+CHATBOT_DIRECTO_URL = os.getenv('CHATBOT_DIRECTO_URL', '/chatbot-api/v1/directo').rstrip('/')
 # Anexos (documentos de soporte) de las preguntas-respuestas de los chatbots
 CHATBOT_ANEXO_MAX_MB = int(os.getenv('CHATBOT_ANEXO_MAX_MB', '15'))
 CHATBOT_ANEXO_MAX_POR_RESPUESTA = int(os.getenv('CHATBOT_ANEXO_MAX_POR_RESPUESTA', '5'))

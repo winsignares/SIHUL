@@ -39,7 +39,7 @@ core/database.py        → conexión SQLAlchemy async
 core/cache.py           → cliente Redis y borrado de respuestas cacheadas
 core/sedes.py           → enum de sedes válidas
 models/models.py        → Document, Chunk (vector), ChatMessage, QAEmbedding
-routers/                → chat.py, documents.py, chatbots.py, qa.py
+routers/                → chat.py, documents.py, chatbots.py, qa.py, directo.py (pregunta con token, ver ACCESO_DIRECTO.md)
 schemas/schemas.py      → modelos Pydantic de entrada/salida
 services/
   text_extraction/     → extracción de texto (PDF, CSV, texto plano) y troceado estructurado, un módulo por tema

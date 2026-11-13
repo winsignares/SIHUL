@@ -1,5 +1,6 @@
 import { apiClient } from '../../../core/apiClient';
 import { obtenerTokenPublico, olvidarTokenPublico } from './accesoPublico';
+import { enviarPreguntaDirecta } from './accesoDirecto';
 import type { AnexoChatbot } from '../models/chatbot';
 
 const DEFAULT_BG_GRADIENT = 'from-blue-500 via-blue-600 to-indigo-600';
@@ -209,6 +210,14 @@ export const chatbotAPI = {
      * Ahora también guarda la conversación en la base de datos
      */
     enviarPregunta: async (data: EnviarPreguntaRequest): Promise<EnviarPreguntaResponse> => {
+        // Directo al servicio del chatbot si está habilitado; si no, por Django como siempre (ver accesoDirecto.ts)
+        const directa = await enviarPreguntaDirecta({
+            agente_id: data.agente_id,
+            pregunta: data.pregunta,
+            pregunta_sugerida_id: data.pregunta_sugerida_id,
+            chat_id: data.chat_id,
+        });
+        if (directa) return directa;
         return apiClient.post('/chatbot/pregunta/', data);
     },
 

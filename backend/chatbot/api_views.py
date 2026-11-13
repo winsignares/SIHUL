@@ -15,7 +15,11 @@ from sedes.models import Seccional
 
 from .sedes import agentes_visibles, ids_seccionales, normalizar_sede
 from .views import _resolve_user_sede_value
-from .models import Agente, AgenteResponsable, Conversacion, PreguntaSugerida
+from django.conf import settings
+
+from . import acceso_directo
+from .anexos import anexos_json
+from .models import Agente, AgenteResponsable, AnexoRespuesta, Conversacion, PreguntaSugerida
 from .serializers import AgenteSerializer, ConversacionSerializer, PreguntaSugeridaSerializer
 
 
@@ -133,6 +137,53 @@ class SeccionalesChatbotView(APIView):
             'puede_elegir_seccional': puede_todas_las_sedes(request.user),
             'seccional_propia': propias[0] if propias else None,
         })
+
+
+class TokenDirectoView(APIView):
+    """Token firmado para que el navegador hable directo con el servicio del chatbot (ver acceso_directo.py).
+
+    Entrega el token, `expira_en` (segundos de vigencia) y `url` (ruta pública de las rutas directas). Responde 503
+    si el acceso directo no está configurado: el frontend sigue entonces por Django.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        sede_value = _resolve_user_sede_value(request.user)
+        if not sede_value:
+            return Response({'error': 'El usuario no tiene seccional configurada'}, status=400)
+        try:
+            token, vigencia = acceso_directo.emitir_token(request.user, sede_value)
+        except acceso_directo.AccesoDirectoNoConfigurado:
+            return Response({'error': 'El acceso directo al chat no está configurado.'}, status=503)
+        return Response({'token': token, 'expira_en': vigencia, 'url': settings.CHATBOT_DIRECTO_URL})
+
+
+class AnexosEnlacesView(APIView):
+    """Enlaces de descarga firmados de los anexos que el servicio del chatbot entregó en una respuesta.
+
+    El chat directo devuelve solo los datos de cada anexo; los enlaces los firma Django. Solo se entregan los de
+    preguntas-respuestas activas de la seccional del usuario y de chatbots activos disponibles en ella.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    MAXIMO = 20
+
+    def post(self, request):
+        ids = request.data.get('ids') if isinstance(request.data, dict) else None
+        if not isinstance(ids, list) or not all(isinstance(i, int) and not isinstance(i, bool) for i in ids):
+            return Response({'error': 'ids debe ser una lista de números.'}, status=400)
+        sede_value = _resolve_user_sede_value(request.user)
+        if not sede_value or not ids:
+            return Response({'anexos': []})
+        agentes = agentes_visibles(Agente.objects.filter(activo=True), sede_value).values_list('id', flat=True)
+        anexos = AnexoRespuesta.objects.filter(
+            id__in=ids[:self.MAXIMO],
+            pregunta_respuesta__activo=True,
+            pregunta_respuesta__sede=sede_value,
+            pregunta_respuesta__agente_id__in=list(agentes),
+        ).order_by('id')
+        return Response({'anexos': anexos_json(request, anexos)})
 
 
 class LecturaAutenticadaEscrituraDocumentacion(permissions.BasePermission):

@@ -14,7 +14,9 @@ from .preguntas_respuestas_views import (
     PreguntasRespuestasView,
 )
 from .api_views import (
+    AnexosEnlacesView,
     SeccionalesChatbotView,
+    TokenDirectoView,
     AgenteDetailAPIView,
     AgenteListCreateAPIView,
     ConversacionDetailAPIView,
@@ -59,6 +61,10 @@ urlpatterns = [
 
     # PDF original citado en una respuesta (cualquier usuario autenticado, sede propia)
     path('documentos/archivo/', ChatbotDocumentoArchivoView.as_view(), name='api-documento-archivo'),
+
+    # Acceso directo al servicio del chatbot: token firmado y enlaces de los anexos que entrega (ver acceso_directo.py)
+    path('token/', TokenDirectoView.as_view(), name='api-chatbot-token'),
+    path('anexos/enlaces/', AnexosEnlacesView.as_view(), name='api-anexos-enlaces'),
 
     # Endpoints publicos (sin autenticacion)
     path('public/desafio/', desafio_publico, name='api-public-desafio'),
