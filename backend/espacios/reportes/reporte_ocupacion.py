@@ -1,5 +1,4 @@
 """Reporte de ocupación: porcentaje por jornada y espacios más usados."""
-from .. import ocupacion
 from ..api.ocupacion import _calcular_duracion_horas, _distribuir_horas_en_jornadas
 from ._semana import DIAS_NOMBRE, fechas_de_la_semana, normalizar_dia_semana, preparar_datos
 
