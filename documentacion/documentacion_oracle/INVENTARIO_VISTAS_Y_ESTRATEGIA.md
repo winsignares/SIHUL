@@ -8,7 +8,7 @@ se necesitan, de modo que al buscar o registrar un estudiante o un docente se co
 toda la base a PostgreSQL. SIHUL solo **lee** Oracle; nunca escribe en él.
 
 > Los nombres de columna de esta página salen del código de los comandos ETL y de los modelos de *staging*. Las columnas reales
-> de cada vista solo existen en Oracle; el paso 2 de la hoja de ruta agrega un comando de solo lectura para confirmarlas sin
+> de cada vista solo existen en Oracle; el último paso de la hoja de ruta (Oracle) agrega un comando de solo lectura para confirmarlas sin
 > traer datos personales.
 
 ## 1. Hallazgo principal: casi nada es de "solo lectura" dentro de SIHUL
