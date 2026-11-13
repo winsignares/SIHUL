@@ -1,56 +1,23 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { aperturaCierreService, espacioService, type EspacioConHorarios, type HorarioEspacio, type TipoEspacio } from '../services/espaciosAPI';
-import { espacioRecursoService, type EstadoRecurso, type EspacioRecurso } from '../../../services/recursos/recursoAPI';
+import { aperturaCierreService, espacioService, type EspacioConHorarios, type TipoEspacio } from '../services/espaciosAPI';
 import { toast } from 'sonner';
-import {
-  getPageNumbers,
-  getPageSlice,
-  getTargetPageForNextWindow,
-  getTargetPageForPrevWindow,
-  getTotalPages,
-  hasNextPageWindow,
-  hasPrevPageWindow,
-  normalizePage,
-  PAGE_SIZE_DEFAULT
-} from '../../gestionAcademica/hooks/paginacion';
+import { hasNextPageWindow, hasPrevPageWindow, PAGE_SIZE_DEFAULT } from '../../gestionAcademica/hooks/paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
 import { useSondeoVisible } from '../../../hooks/useSondeoVisible';
 
-const APERTURA_CIERRE_CACHE_KEY = 'espacios-apertura-cierre';
-const APERTURA_CIERRE_CATALOGOS_CACHE_KEY = 'espacios-apertura-cierre-catalogos';
+import {
+    APERTURA_CIERRE_CACHE_KEY,
+    APERTURA_CIERRE_CATALOGOS_CACHE_KEY,
+    HORARIO_CIERRE_SIN_USO,
+    type HorarioPendientePaginado,
+    type HorarioNormalizado,
+    type ResultadoAccion,
+} from './aperturaCierreTipos';
+import { useRevisionRecursos } from './useRevisionRecursos';
+import { useAperturaCierrePaginacion } from './useAperturaCierrePaginacion';
 
-export interface HorarioPendientePaginado {
-    key: string;
-    espacio: EspacioConHorarios;
-    horario: HorarioEspacio;
-}
+export type { HorarioPendientePaginado, RecursoCierrePendiente } from './aperturaCierreTipos';
 
-const HORARIO_CIERRE_SIN_USO: HorarioEspacio = {
-    tipoUso: 'Clase',
-    asignatura: 'Sin clase en curso',
-    docente: 'No aplica',
-    horaInicio: '00:00',
-    horaFin: '00:00',
-    proximaAccion: 'cierre',
-    minutosRestantes: 0,
-    segundosRestantes: 0,
-    tiempoRestanteTotal: 0,
-};
-
-interface HorarioNormalizado extends HorarioEspacio {
-    inicioMin: number;
-    finMin: number;
-}
-
-export interface RecursoCierrePendiente extends EstadoRecurso {
-    estadoOriginal: EspacioRecurso['estado'];
-}
-
-interface ResultadoAccion {
-    ok: boolean;
-    message?: string;
-    status?: number;
-}
 
 /**
  * Hook para gestión de apertura y cierre de salones
@@ -78,11 +45,7 @@ export function useAperturaCierre() {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState<number>(1);
-    const [modalRecursosAbierto, setModalRecursosAbierto] = useState<boolean>(false);
-    const [espacioEnRevision, setEspacioEnRevision] = useState<{ id: number; nombre: string } | null>(null);
-    const [recursosPendientes, setRecursosPendientes] = useState<RecursoCierrePendiente[]>([]);
-    const [cargandoRecursos, setCargandoRecursos] = useState<boolean>(false);
-    const [guardandoRecursos, setGuardandoRecursos] = useState<boolean>(false);
+
 
     const horaAMinutos = useCallback((hora: string): number => {
         const [h, m] = hora.split(':').map((part) => parseInt(part, 10));
@@ -486,115 +449,18 @@ export function useAperturaCierre() {
         return `El backend reporta ${totalAccionesBackend} accion(es), pero ninguna cae en la ventana operativa actual (abrir: desde 15 min antes del inicio y durante clase en curso si sigue cerrado; cerrar: desde +10 min despues del fin y hasta 15 min antes de la siguiente clase).`;
     }, [horariosPendientes.length, totalAccionesBackend]);
 
-    const totalHorariosPendientes = horariosPendientes.length;
-    const totalPages = getTotalPages(totalHorariosPendientes, PAGE_SIZE);
-    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
+    const {
+        totalHorariosPendientes, totalPages, pageNumbers, horariosPaginados,
+        goToPage, goToNextPage, goToPrevPage, goToPrevPageWindow, goToNextPageWindow,
+    } = useAperturaCierrePaginacion({
+        horariosPendientes, currentPage, setCurrentPage, PAGE_SIZE, searchTerm, filterTipo, filterEstado, filterSede,
+    });
 
-    const horariosPaginados = useMemo(() => {
-        return getPageSlice(horariosPendientes, currentPage, PAGE_SIZE);
-    }, [horariosPendientes, currentPage, PAGE_SIZE]);
-
-    useEffect(() => {
-        setCurrentPage((prev) => normalizePage(prev, totalPages));
-    }, [totalPages]);
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm, filterTipo, filterEstado, filterSede]);
-
-    const goToPage = (page: number) => {
-        setCurrentPage(normalizePage(page, totalPages));
-    };
-
-    const goToNextPage = () => {
-        goToPage(currentPage + 1);
-    };
-
-    const goToPrevPage = () => {
-        goToPage(currentPage - 1);
-    };
-
-    const goToPrevPageWindow = () => {
-        const target = getTargetPageForPrevWindow(currentPage, totalPages);
-        if (target != null) goToPage(target);
-    };
-
-    const goToNextPageWindow = () => {
-        const target = getTargetPageForNextWindow(currentPage, totalPages);
-        if (target != null) goToPage(target);
-    };
-
-    const abrirPopupRevisionRecursos = useCallback(async (espacioId: number) => {
-        setCargandoRecursos(true);
-        try {
-            const espacio = espacios.find((item) => item.idEspacio === espacioId);
-            const { recursos } = await espacioRecursoService.listarPorEspacio(espacioId);
-
-            setEspacioEnRevision({
-                id: espacioId,
-                nombre: espacio?.nombreEspacio || `Espacio #${espacioId}`
-            });
-            setRecursosPendientes(
-                recursos.map((recurso) => ({
-                    ...recurso,
-                    estadoOriginal: recurso.estado
-                }))
-            );
-            setModalRecursosAbierto(true);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (err: any) {
-            const message = err?.message || 'No fue posible cargar recursos del espacio';
-            toast.error(message);
-            setEspacioEnRevision({ id: espacioId, nombre: `Espacio #${espacioId}` });
-            setRecursosPendientes([]);
-            setModalRecursosAbierto(true);
-        } finally {
-            setCargandoRecursos(false);
-        }
-    }, [espacios]);
-
-    const actualizarEstadoRecurso = useCallback((recursoId: number, estado: EspacioRecurso['estado']) => {
-        setRecursosPendientes((prev) => prev.map((item) => (
-            item.recurso_id === recursoId ? { ...item, estado } : item
-        )));
-    }, []);
-
-    const cerrarPopupRecursos = useCallback(() => {
-        setModalRecursosAbierto(false);
-        setEspacioEnRevision(null);
-        setRecursosPendientes([]);
-    }, []);
-
-    const confirmarRevisionRecursos = useCallback(async (): Promise<ResultadoAccion> => {
-        if (!espacioEnRevision) {
-            cerrarPopupRecursos();
-            return { ok: true as const };
-        }
-
-        setGuardandoRecursos(true);
-        try {
-            const cambios = recursosPendientes.filter((item) => item.estado !== item.estadoOriginal);
-
-            if (cambios.length > 0) {
-                await Promise.all(cambios.map((item) => espacioRecursoService.actualizarEspacioRecurso({
-                    espacio_id: item.espacio_id,
-                    recurso_id: item.recurso_id,
-                    estado: item.estado
-                })));
-            }
-
-            cerrarPopupRecursos();
-            await refrescar();
-            return { ok: true as const };
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (err: any) {
-            const message = err?.message || 'No fue posible guardar cambios de recursos';
-            toast.error(message);
-            return { ok: false as const, message };
-        } finally {
-            setGuardandoRecursos(false);
-        }
-    }, [cerrarPopupRecursos, espacioEnRevision, recursosPendientes, refrescar]);
+    const {
+        modalRecursosAbierto, setModalRecursosAbierto, espacioEnRevision, recursosPendientes,
+        cargandoRecursos, guardandoRecursos, abrirPopupRevisionRecursos, actualizarEstadoRecurso,
+        cerrarPopupRecursos, confirmarRevisionRecursos,
+    } = useRevisionRecursos({ espacios, refrescar });
 
     const abrirSalon = async (espacioId: number): Promise<ResultadoAccion> => {
         try {
