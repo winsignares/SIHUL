@@ -15,6 +15,8 @@ Las piezas que no dependen del estado del hook están en `features/chatbot/hooks
 | `mensajesChat.ts` | Mensaje de bienvenida y conversión de los mensajes del historial |
 | `useRotacionPreguntas.ts` | Preguntas sugeridas que rotan cada 10 segundos |
 
+Además, el envío de un mensaje está en `features/chatbot/hooks/envioMensajeChat.ts` y el historial de conversaciones en `useHistorialConversaciones.ts`.
+
 - Estado: `asistentes`, `asistenteActivo`, `mensajes` (por agente), `inputMensaje`, `isTyping`, `searchTerm`, `loading`, `preguntasRotadas`, `chatIds` (mapeo agente→chat_id), `seccionalesPublico`, `seccionalPublica`, `cargandoSeccionales`, `mostrarHistorial`, `conversacionesHistorial`, `cargandoHistorial`, `messagesEndRef`.
 - Expone: `abrirChat`, `enviarMensaje`, `enviarPreguntaRapida`, `handleKeyPress`, `limpiarConversacion`, `cargarHistorialConversaciones`, `cargarConversacionAnterior`, y getters derivados: `mensajesActuales`, `mostrarPreguntasRapidas`, `filteredAsistentes`, `esPublico`.
 - Servicio: `services/chatbot/chatbotAPI.ts` — `listarAgentes`/`listarAgentesPublico`, `enviarPregunta`/`enviarPreguntaPublico`, `obtenerHistorial`, `listarConversaciones`.
