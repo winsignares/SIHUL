@@ -74,8 +74,10 @@ corrige en un solo archivo.
 ### Frontend
 
 Se refleja la misma división: `features/<dominio>/` con `pages`, `components`, `hooks`, `services` y `models`, y una carpeta
-`shared/` para lo transversal. En `financiero` hoy las páginas se organizan por rol (`admin_financiero`, `auditoria`,
-`tesoreria`…); pasan a organizarse por capacidad (facturas, proveedores, SLA, flujo) y el rol solo decide qué se muestra.
+`shared/` para lo transversal. En `financiero` las páginas se organizan por rol (`admin_financiero`, `auditoria`, `tesoreria`…). Se decidió **mantener** esa
+organización porque cada rol corresponde a una etapa del flujo de la factura y a su propia área de la aplicación (el backend
+usa los mismos nombres en `flujo_factura/`). Lo que se corrige es el tamaño: cada página se divide en un hook y componentes
+por bloque.
 
 ## 5. Un solo origen público
 
