@@ -6,6 +6,7 @@ import type { FuncionarioConsultaRow, FuncionarioEstadoChange } from '../../mode
 import type { SharedFacturaDetail } from '../../components/factura-detail-modal';
 import { buildTimelineFromSeguimiento, type SeguimientoLike } from '../../../../components/ui/timeline-builder';
 import { useSondeoVisible } from '../../../../hooks/useSondeoVisible';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 import { toList, esEstadoFuncionario, mapFactura, mapRiesgo } from './consultarFacturasUtils';
 
 /** Estado y acciones de la consulta de facturas (funcionario). */
@@ -52,8 +53,8 @@ export function useConsultarFacturas() {
     void load();
   }, []);
 
-  // Revisa cambios de estado cada 25 s, solo con la pestaña visible
-  useSondeoVisible(async () => {
+  // Relee las facturas y avisa de los cambios de estado respecto a lo que se estaba viendo.
+  const revisarCambios = async () => {
     try {
       const latest = await loadRows();
       setRows((prev) => {
@@ -79,9 +80,17 @@ export function useConsultarFacturas() {
         return latest;
       });
     } catch {
-      // Polling silencioso para no interrumpir la experiencia si falla temporalmente.
+      // Lectura silenciosa para no interrumpir la experiencia si falla temporalmente.
     }
-  }, 25000);
+  };
+
+  // Respaldo cada 25 s, solo con la pestaña visible
+  useSondeoVisible(revisarCambios, 25000);
+
+  // Alguien más cambió una factura: se revisa al instante, con el mismo aviso de cambios de estado.
+  useActualizacionEnVivo(['facturas'], () => {
+    void revisarCambios();
+  });
 
   const estados = useMemo(() => Array.from(new Set(rows.map((r) => r.estado))), [rows]);
 

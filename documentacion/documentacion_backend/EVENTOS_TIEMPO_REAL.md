@@ -34,7 +34,17 @@ La lista está en `nucleo/eventos/registro.py` (sedes, seccionales, facultades, 
 - `core/eventosTiempoReal.ts`: una sola conexión para toda la aplicación, con reconexión y espera creciente.
 - `hooks/useActualizacionEnVivo.ts`: `useActualizacionEnVivo(['sedes'], recargar)` llama a `recargar` cuando cambia alguno de esos recursos, y también al reconectar o al volver a ver la pestaña (por si se perdió algún evento). Agrupa eventos seguidos en una sola recarga.
 - `hooks/useCacheEnVivo.ts` (montado en `AppLayout`): mantiene la conexión abierta con la sesión y vacía la caché local cuando algo cambia, para que una pantalla que se abra después pida datos frescos.
-- Pantallas con esta actualización: sedes y seccionales; espacios, estado de recursos, recursos, apertura y cierre, y consulta de espacios. El resto se agrega pantalla por pantalla con el mismo hook.
+- `hooks/useActualizacionProtegida.ts` y `components/common/AvisoCambios.tsx`: para las pantallas de edición. Si la persona no tiene cambios sin guardar, los datos se vuelven a leer solos; si los tiene (un modal de edición abierto, un valor modificado, una asignación a medias), no se toca lo que escribe y aparece el aviso «Otra persona cambió estos datos» con el botón Actualizar. Al guardar o cancelar, los cambios pendientes se aplican solos.
+- Pantallas con actualización en vivo: todas las que muestran datos del sistema, entre ellas sedes, espacios, préstamos, horarios, gestión académica, usuarios y roles, panel de inicio, notificaciones, reportes, chatbots (agentes, preguntas, documentos e historial), financiero (facturas, detalle, catálogos, parámetros y proveedores) y los permisos y el menú de cada persona (se sincronizan al instante con los eventos de roles y componentes).
+- Se actualizan con aviso (no solas) las pantallas de edición: crear horarios, centro de horarios, asignación de espacios, configuración financiera y parametrización SLA.
+- Quedan fuera, a propósito: el chat en curso (conversación abierta), el diálogo de revisión de recursos al cerrar un espacio y la página pública de préstamos, que no tiene sesión.
+
+## Capacidad medida
+Prueba local con **un solo proceso** `gunicorn` (clase `gthread`, 400 hilos): 300 conexiones SSE abiertas a la vez, sin errores; un evento llegó a las 300 en menos de 0,6 s; el proceso usó unos 400 MB y PostgreSQL tuvo 4 conexiones en total. Las claves del diseño:
+- Una conexión abierta **no retiene una conexión a la base de datos**: se cierra antes de transmitir y la decisión de qué eventos recibe cada persona se calcula una sola vez al conectar.
+- Cada proceso hace **una sola suscripción a Redis** y reparte los eventos a sus conexiones, así que Redis no crece con el número de personas.
+- Cada conexión ocupa un hilo. Para N personas conectadas a la vez hacen falta N hilos entre todos los procesos (por ejemplo, 2 procesos de 400 hilos para unas 800 pestañas abiertas) y unos 1,3 MB por conexión.
+- Si todas las pestañas se reconectan a la vez (por ejemplo, al reiniciar el servicio), el pico de consultas de sesión puede superar el límite de conexiones de PostgreSQL: conviene un agrupador de conexiones (PgBouncer) o que el reinicio del servicio de eventos se haga fuera de horas de uso.
 
 ## Garantías y límites
 - No hay entrega garantizada: si la conexión se cae, al reconectar el frontend recarga.

@@ -7,3 +7,5 @@ class ChatbotConfig(AppConfig):
 
     def ready(self):
         from . import signals  # noqa: F401
+        from .eventos import registrar_eventos_del_chatbot
+        registrar_eventos_del_chatbot()

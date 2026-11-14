@@ -21,6 +21,7 @@ RECURSOS = {
     ('espacios', 'TipoEspacio'): 'tipos-espacio',
     ('espacios', 'EspacioFisico'): 'espacios',
     ('espacios', 'EspacioPermitido'): 'espacios-permitidos',
+    ('espacios', 'TipoEspacioPermitido'): 'tipos-espacio-permitidos',
     ('recursos', 'Recurso'): 'recursos',
     ('recursos', 'EspacioRecurso'): 'espacios-recursos',
     ('prestamos', 'TipoActividad'): 'tipos-actividad',
@@ -35,6 +36,10 @@ RECURSOS = {
     ('componentes', 'ComponenteUsuario'): 'componentes-usuario',
     ('notificaciones', 'Notificacion'): 'notificaciones',
     ('chatbot', 'Agente'): 'chatbots',
+    ('chatbot', 'AgenteResponsable'): 'chatbots',
+    ('chatbot', 'PreguntaSugerida'): 'preguntas-sugeridas',
+    ('chatbot', 'PreguntaRespuesta'): 'preguntas-respuestas',
+    ('chatbot', 'Conversacion'): 'conversaciones',
 }
 
 # Cómo llegar a la seccional de un registro, en orden: la primera ruta que dé valor gana.
@@ -50,6 +55,7 @@ RUTAS_SECCIONAL = (
 # Recursos que solo le importan a un usuario: el evento se entrega únicamente a él (campo del registro con su id).
 RECURSOS_PERSONALES = {
     'notificaciones': 'id_usuario',
+    'conversaciones': 'id_usuario',
 }
 
 

@@ -15,6 +15,7 @@ import {
     DoorOpen,
     AlertCircle
 } from 'lucide-react';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 export function useSupervisorDashboard() {
     const [metricsCards, setMetricsCards] = useState<DashboardStat[]>(supervisorMetrics);
@@ -27,9 +28,14 @@ export function useSupervisorDashboard() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const loadDashboardMetrics = async () => {
+    // Alguien más cambió espacios, recursos u horarios: las cifras se vuelven a leer sin spinner.
+    useActualizacionEnVivo(['espacios', 'espacios-recursos', 'recursos', 'horarios'], () => {
+        void loadDashboardMetrics({ silent: true });
+    });
+
+    const loadDashboardMetrics = async ({ silent = false }: { silent?: boolean } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             setError(null);
 
             // Obtener métricas de espacios

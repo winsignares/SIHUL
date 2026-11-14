@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   FileText,
   Send,
@@ -12,6 +12,7 @@ import { proveedoresService } from '../../services';
 import type { Proveedor } from '../../models/core.models';
 import type { ProveedorDashboardHomeProps } from '../../models/proveedor';
 import { useProveedorDashboard, useProveedorHome } from '../../hooks/proveedor';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 export default function ProveedorDashboard() {
   const { activeView, goToEnviar, goToMisFacturas } = useProveedorDashboard();
@@ -19,20 +20,26 @@ export default function ProveedorDashboard() {
   const [miProveedor, setMiProveedor] = useState<Proveedor | null>(null);
   const [proveedorLoading, setProveedorLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      setProveedorLoading(true);
-      try {
-        const prov = await proveedoresService.getMiPerfil();
-        setMiProveedor(prov);
-      } catch {
-        setMiProveedor(null);
-      } finally {
-        setProveedorLoading(false);
-      }
-    };
-    void load();
+  const load = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setProveedorLoading(true);
+    try {
+      const prov = await proveedoresService.getMiPerfil();
+      setMiProveedor(prov);
+    } catch {
+      setMiProveedor(null);
+    } finally {
+      setProveedorLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Cambió tu perfil de proveedor: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['proveedores'], () => {
+    void load({ silent: true });
+  });
 
   const renderContent = () => {
     switch (activeView) {

@@ -5,6 +5,7 @@ import type { PeriodoAcademico } from '../../gestionAcademica/services/periodos/
 import type { HorarioExtendido } from '../../horarios/services/horariosAPI';
 import type { OcupacionView } from './types';
 import { getRangoSemanaCompleta } from './semanaUtils';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 type HorarioEstado = 'aprobado' | 'pendiente' | 'rechazado';
 
@@ -94,8 +95,13 @@ export function useConsultaEspaciosPeriodos() {
   const [horariosLoading, setHorariosLoading] = useState(false);
   const [errorBusquedaPeriodo, setErrorBusquedaPeriodo] = useState<string | null>(null);
 
-  const cargarPeriodos = useCallback(async () => {
-    setPerodosLoading(true);
+  // Alguien más cambió los periodos: se vuelven a leer.
+  useActualizacionEnVivo(['periodos'], () => {
+      void cargarPeriodos({ silent: true });
+  });
+
+  const cargarPeriodos = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setPerodosLoading(true);
     try {
       const result = await periodoService.listarPeriodos();
       setPeriodos(result.periodos);

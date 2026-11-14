@@ -4,9 +4,14 @@ import type { EstadoHorarioReporte } from '../services/reporteOcupacionAPI';
 import { capacidadService } from '../services/capacidadAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
 import { REPORTES_CAPACIDAD_CACHE_KEY, capacidadUtilizadaDefault } from './reportesConstantes';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 /** Datos del reporte de capacidad utilizada. */
 export function useCapacidadReporte(estadoReporte: EstadoHorarioReporte) {
+    // Alguien más cambió los datos del reporte: se vuelve a calcular.
+    const [recarga, setRecarga] = useState(0);
+    useActualizacionEnVivo(['horarios', 'horarios-fusionados', 'espacios', 'espacios-permitidos', 'tipos-espacio', 'periodos', 'sedes', 'prestamos-espacio'], () => setRecarga((n) => n + 1));
+
     const [capacidadUtilizada, setCapacidadUtilizada] = useState<CapacidadUtilizada[]>(capacidadUtilizadaDefault);
     const [cargandoCapacidad, setCargandoCapacidad] = useState(false);
     const [errorCapacidad, setErrorCapacidad] = useState<string | null>(null);
@@ -42,7 +47,7 @@ export function useCapacidadReporte(estadoReporte: EstadoHorarioReporte) {
         };
 
         cargarCapacidadReporte();
-    }, [estadoReporte]);
+    }, [estadoReporte, recarga]);
 
     return { capacidadUtilizada, cargandoCapacidad, errorCapacidad };
 }

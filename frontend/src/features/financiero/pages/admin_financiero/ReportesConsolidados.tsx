@@ -9,6 +9,7 @@ import { Badge } from '../../../../components/ui/badge';
 import { Download, FileSpreadsheet, FileText, History, CalendarRange, FileBarChart2, Filter, Sparkles, Clock3, Database, RefreshCw } from 'lucide-react';
 import { reportesFinancieroService, type ExportarReportePayload, type ReporteGenerado } from '../../services';
 import { toast } from 'sonner';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 const downloadBlob = (blob: Blob, fileName: string) => {
   const url = window.URL.createObjectURL(blob);
@@ -31,8 +32,13 @@ export default function ReportesConsolidadosReal() {
   const [historial, setHistorial] = useState<ReporteGenerado[]>([]);
   const [loadingHistorial, setLoadingHistorial] = useState(false);
 
-  const cargarHistorial = async () => {
-    setLoadingHistorial(true);
+  // Se generó un reporte: el historial se actualiza al instante.
+  useActualizacionEnVivo(['reportes-financieros'], () => {
+    void cargarHistorial({ silent: true });
+  });
+
+  const cargarHistorial = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoadingHistorial(true);
     try {
       const data = await reportesFinancieroService.listarGenerados({ ordering: '-fecha_generacion' });
       setHistorial(data.slice(0, 10));

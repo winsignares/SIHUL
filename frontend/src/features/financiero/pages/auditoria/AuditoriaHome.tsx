@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { FileSearch, CheckCircle2, XCircle, Shield, AlertCircle } from 'lucide-react';
@@ -6,6 +6,7 @@ import { facturasService } from '../../services';
 import type { Factura as APIFactura } from '../../models/core.models';
 import { Button } from '../../../../components/ui/button';
 import { useAuth } from '../../../../context/AuthContext';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 interface AuditoriaHomeProps {
   onGoToControl: () => void;
@@ -31,32 +32,37 @@ export default function AuditoriaHome({ onGoToControl }: AuditoriaHomeProps) {
   });
   const [facturasControlPrevio, setFacturasControlPrevio] = useState<APIFactura[]>([]);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [alistadas, aprobadas, rechazadas] = await Promise.all([
-          facturasService.getAll({ estado: 'Alistada', ordering: '-fecha_alistamiento', limit: 200 }),
-          facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 }),
-          facturasService.getAll({ estado: 'Rechazada Auditoría', limit: 200 }),
-        ]);
+  const load = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
+    try {
+      const [alistadas, aprobadas, rechazadas] = await Promise.all([
+        facturasService.getAll({ estado: 'Alistada', ordering: '-fecha_alistamiento', limit: 200 }),
+        facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 }),
+        facturasService.getAll({ estado: 'Rechazada Auditoría', limit: 200 }),
+      ]);
 
-        const alistadasList = toList<APIFactura>(alistadas);
-        setFacturasControlPrevio(alistadasList);
-        setStatsData({
-          porRevisar: alistadasList.length,
-          criticas: alistadasList.filter((factura) => Number(factura.dias_transcurridos || 0) >= 18).length,
-          aprobadas: toList<APIFactura>(aprobadas).length,
-          rechazadas: toList<APIFactura>(rechazadas).length,
-        });
-        setCurrentActivityPage(1);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
+      const alistadasList = toList<APIFactura>(alistadas);
+      setFacturasControlPrevio(alistadasList);
+      setStatsData({
+        porRevisar: alistadasList.length,
+        criticas: alistadasList.filter((factura) => Number(factura.dias_transcurridos || 0) >= 18).length,
+        aprobadas: toList<APIFactura>(aprobadas).length,
+        rechazadas: toList<APIFactura>(rechazadas).length,
+      });
+      setCurrentActivityPage(1);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void load({ silent: true });
+  });
 
   const stats = useMemo(() => [
     {

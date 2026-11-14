@@ -4,6 +4,7 @@ import { MensajesAsignacion } from '../components/asignacionEspacios/MensajesAsi
 import { FiltrosAsignacion } from '../components/asignacionEspacios/FiltrosAsignacion';
 import { HorariosAsignacion } from '../components/asignacionEspacios/HorariosAsignacion';
 import { DialogoAsignarEspacio } from '../components/asignacionEspacios/DialogoAsignarEspacio';
+import { AvisoCambios } from '../../../components/common/AvisoCambios';
 
 
 export default function AsignacionEspaciosSeccionalPage() {
@@ -11,6 +12,8 @@ export default function AsignacionEspaciosSeccionalPage() {
 
   return (
     <div className={`${gestion.isMobile ? 'p-4' : 'p-8'} space-y-6`}>
+      <AvisoCambios {...gestion.avisoCambios} />
+
       <EncabezadoAsignacion />
 
       <MensajesAsignacion {...gestion} />

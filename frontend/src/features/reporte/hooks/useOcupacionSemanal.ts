@@ -4,12 +4,17 @@ import { ocupacionSemanalService } from '../services/ocupacionSemanalAPI';
 import { periodoActivoService } from '../../gestionAcademica/services/periodos/periodoActivoAPI';
 import { toast } from 'sonner';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const OCUPACION_SEMANAL_PERIODO_CACHE_KEY = 'reporte-ocupacion-semanal-periodo';
 const OCUPACION_SEMANAL_TIPOS_CACHE_KEY = 'reporte-ocupacion-semanal-tipos';
 const OCUPACION_SEMANAL_DATA_CACHE_KEY = 'reporte-ocupacion-semanal-data';
 
 export function useOcupacionSemanal() {
+  // Alguien más cambió los datos del reporte: se vuelve a calcular.
+  const [recarga, setRecarga] = useState(0);
+  useActualizacionEnVivo(['horarios', 'horarios-fusionados', 'espacios', 'espacios-permitidos', 'tipos-espacio', 'periodos', 'sedes', 'prestamos-espacio'], () => setRecarga((n) => n + 1));
+
   const [tipoEspacio, setTipoEspacio] = useState<string>('todos');
   const [tiposEspacioOptions, setTiposEspacioOptions] = useState<Array<{ id: number; nombre: string }>>([]);
   const [loading, setLoading] = useState(false);
@@ -47,7 +52,7 @@ export function useOcupacionSemanal() {
       }
     };
     cargarPeriodo();
-  }, []);
+  }, [recarga]);
 
   // Cargar tipos de espacio
   useEffect(() => {
@@ -73,7 +78,7 @@ export function useOcupacionSemanal() {
     };
 
     cargarTipos();
-  }, []);
+  }, [recarga]);
 
   // Validar que los datos corresponden al período actual (no por semana individual)
   const validarDatosPeriodo = (): { valido: boolean; mensaje: string } => {
@@ -158,7 +163,7 @@ export function useOcupacionSemanal() {
 
     cargarOcupacion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipoEspacio, periodoInfo]);
+  }, [tipoEspacio, periodoInfo, recarga]);
 
   const normalizePercentage = (value: number | string | undefined | null) => {
     const parsed = Number(value);

@@ -4,6 +4,7 @@ import { chatbotAPI } from '../services/chatbotAPI';
 import { useAuth } from '../../../context/AuthContext';
 import { cargarHistorialPublico, type MapaChatIds } from './asistentes/almacenamientoChat';
 import { mensajesDesdeHistorial } from './asistentes/mensajesChat';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 type Sesion = ReturnType<typeof useAuth>;
 
@@ -47,6 +48,11 @@ export function useHistorialConversaciones({ user, asistenteActivo, setMensajes,
             setCargandoHistorial(false);
         }
     };
+
+    // Se guardó una conversación tuya (por ejemplo desde otra pestaña): se actualiza el historial.
+    useActualizacionEnVivo(['conversaciones'], () => {
+        void cargarHistorialConversaciones();
+    }, Boolean(user?.id));
 
     const cargarConversacionAnterior = async (chat_id: string) => {
         if (!asistenteActivo) return;

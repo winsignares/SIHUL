@@ -3,9 +3,14 @@ import type { DatoOcupacionJornada, EspacioMasUsado } from '../../../models';
 import { reporteOcupacionService, type EstadoHorarioReporte } from '../services/reporteOcupacionAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
 import { REPORTES_OCUPACION_CACHE_KEY, datosOcupacionDefault, espaciosMasUsadosDefault } from './reportesConstantes';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 /** Datos del reporte de ocupación por jornada y espacios más usados. */
 export function useOcupacionReporte(estadoReporte: EstadoHorarioReporte) {
+    // Alguien más cambió los datos del reporte: se vuelve a calcular.
+    const [recarga, setRecarga] = useState(0);
+    useActualizacionEnVivo(['horarios', 'horarios-fusionados', 'espacios', 'espacios-permitidos', 'tipos-espacio', 'periodos', 'sedes', 'prestamos-espacio'], () => setRecarga((n) => n + 1));
+
     const [datosOcupacion, setDatosOcupacion] = useState<DatoOcupacionJornada[]>(datosOcupacionDefault);
     const [espaciosMasUsados, setEspaciosMasUsados] = useState<EspacioMasUsado[]>(espaciosMasUsadosDefault);
     const [cargandoOcupacion, setCargandoOcupacion] = useState(false);
@@ -53,7 +58,7 @@ export function useOcupacionReporte(estadoReporte: EstadoHorarioReporte) {
         };
 
         cargarOcupacionReporte();
-    }, [estadoReporte]);
+    }, [estadoReporte, recarga]);
 
     return { datosOcupacion, espaciosMasUsados, cargandoOcupacion, errorOcupacion };
 }

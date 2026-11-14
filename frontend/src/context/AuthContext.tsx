@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useMemo, type R
 import { authService, type LoginPayload, type LoginResponse, type SessionUserResponse } from '../features/users/services/authService';
 import type { AuthState, EspaciosScope } from '../models/auth/auth.model';
 import { clearAuthClientState } from '../core/clearStaleState';
+import { suscribirEventos } from '../core/eventosTiempoReal';
 
 type AuthComponent = AuthState['components'][number];
 
@@ -381,8 +382,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.addEventListener('focus', syncIfVisible);
         document.addEventListener('visibilitychange', syncIfVisible);
 
+        // Sync inmediato cuando cambian permisos, componentes, roles o la propia cuenta (eventos en tiempo real)
+        const cancelarEventos = suscribirEventos(
+            ['componentes', 'componentes-rol', 'componentes-usuario', 'roles', 'usuarios'],
+            () => { void syncSessionAuthState(); },
+        );
+
         return () => {
             isCancelled = true;
+            cancelarEventos();
             window.clearInterval(intervalId);
             window.removeEventListener('focus', syncIfVisible);
             document.removeEventListener('visibilitychange', syncIfVisible);

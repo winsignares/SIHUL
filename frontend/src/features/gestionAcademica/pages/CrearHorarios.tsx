@@ -8,6 +8,7 @@ import { TablaGruposSinHorario } from '../components/crearHorarios/TablaGruposSi
 import { GrillaSemanalHorario } from '../components/crearHorarios/GrillaSemanalHorario';
 import { ListaAsignaturasAsignadas } from '../components/crearHorarios/ListaAsignaturasAsignadas';
 import { ModalAsignarAsignatura } from '../components/crearHorarios/ModalAsignarAsignatura';
+import { AvisoCambios } from '../../../components/common/AvisoCambios';
 
 interface CrearHorariosProps {
   onHorarioCreado?: () => void;
@@ -69,7 +70,8 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
     horas,
     obtenerClaseEnHora,
     notification,
-    role
+    role,
+    avisoCambios,
   } = useCrearHorarios({ onHorarioCreado });
 
   // Obtener asignaturas filtradas por programa y semestre del grupo seleccionado
@@ -151,6 +153,7 @@ export default function CrearHorarios({ onHorarioCreado }: CrearHorariosProps = 
   // VISTA DE ASIGNACIÓN DE HORARIOS
   return (
     <div className="h-full flex flex-col">
+      <div className="px-6 pt-4 empty:hidden"><AvisoCambios {...avisoCambios} /></div>
       <NotificationBanner notification={notification} />
       {/* Header fijo - NO scrolleable */}
       <div className="bg-white border-b border-slate-200 shadow-sm p-6 flex-shrink-0">

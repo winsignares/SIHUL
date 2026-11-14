@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { chatbotAdminAPI, type ChatbotAgente, type PreguntaRespuestaChatbot } from '../services/chatbotAdminAPI';
 import { ANEXO_EXTENSIONES, ANEXO_MAX_MB, ANEXO_MAX_POR_RESPUESTA } from '../models/chatbotAdmin.model';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 export type PreguntaRespuestaForm = {
     agente: string;
@@ -56,13 +57,18 @@ export function useGestionPreguntasRespuestas({ seccional, seccionalValida, chat
     const [inputKey, setInputKey] = useState(0);
     const [saving, setSaving] = useState(false);
 
-    const cargar = useCallback(async () => {
+    // Alguien más cambió las preguntas-respuestas: se vuelven a leer sin spinner.
+    useActualizacionEnVivo(['preguntas-respuestas', 'chatbots'], () => {
+        void cargar({ silent: true });
+    });
+
+    const cargar = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
         if (!seccionalValida) {
             setItems([]);
             setLoading(false);
             return;
         }
-        setLoading(true);
+        if (!silent) setLoading(true);
         try {
             setItems(await chatbotAdminAPI.listarPreguntasRespuestas({ sede: seccional }));
         } catch (error) {

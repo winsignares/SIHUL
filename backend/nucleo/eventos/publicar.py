@@ -60,3 +60,19 @@ def publicar(recurso, accion, instancia, audiencia=None, referencia=None):
             logger.warning('No se pudo publicar el evento de %s', recurso, exc_info=True)
 
     transaction.on_commit(_enviar)
+
+
+def publicar_cambio(recurso, accion='actualizado', id=None, seccional=None, usuarios=None, roles=None):
+    """Publica un evento sin pasar por un modelo: sirve para datos que cambia otro servicio (por ejemplo, los
+    documentos del RAG, que guarda FastAPI)."""
+    if not canal.disponible():
+        return
+    evento = {'recurso': recurso, 'accion': accion, 'id': id, 'seccional': seccional, 'usuario': None}
+    if usuarios is not None or roles is not None:
+        evento['usuarios'] = sorted(usuarios or ())
+        evento['roles'] = sorted(roles or ())
+    try:
+        texto = json.dumps(evento)
+        transaction.on_commit(lambda: canal.publicar_mensaje(texto))
+    except Exception:
+        logger.warning('No se pudo publicar el cambio de %s', recurso, exc_info=True)

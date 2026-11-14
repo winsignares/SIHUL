@@ -1,6 +1,6 @@
 import type { useConsultaEspacios } from './useConsultaEspacios';
 import type { useAuth } from '../../../context/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { tipoActividadService, type TipoActividad } from '../../prestamos/services/tipoActividadAPI';
 import { recursoService, type Recurso } from '../../../services/recursos/recursoAPI';
 import { sedeService } from '../../../services/sedes/sedeAPI';
@@ -28,6 +28,7 @@ import {
   type ConflictoForm,
 } from './nuevaSolicitudUtils';
 import { crearCalculosRecurrencia } from './recurrenciaSolicitud';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 type DeConsulta = ReturnType<typeof useConsultaEspacios>;
 
@@ -180,23 +181,35 @@ export function useNuevaSolicitud({ user, dialogSolicitudOpen, nuevaSolicitudDat
   }, [repeatOption, customPeriod, formData.intervalo, formData.dias_semana, formData.fin_repeticion_tipo, formData.fin_repeticion_fecha, formData.fin_repeticion_ocurrencias, nuevaSolicitudData?.fecha]);
 
   // Cargar datos para el formulario
-  useEffect(() => {
-    const loadFormData = async () => {
-      try {
-        const [tiposResp, recursosResp, sedesResp] = await Promise.all([
-          tipoActividadService.listarTiposActividad(),
-          recursoService.listarRecursos(),
-          sedeService.listarSedes()
-        ]);
-        setTiposActividad(tiposResp.tipos_actividad);
-        setRecursosDisponibles(recursosResp.recursos);
-        setSedesList(sedesResp.sedes);
-      } catch (err) {
-        console.error('Error cargando datos del formulario:', err);
-      }
-    };
-    loadFormData();
+  const loadFormData = useCallback(async () => {
+    try {
+      const [tiposResp, recursosResp, sedesResp] = await Promise.all([
+        tipoActividadService.listarTiposActividad(),
+        recursoService.listarRecursos(),
+        sedeService.listarSedes()
+      ]);
+      setTiposActividad(tiposResp.tipos_actividad);
+      setRecursosDisponibles(recursosResp.recursos);
+      setSedesList(sedesResp.sedes);
+    } catch (err) {
+      console.error('Error cargando datos del formulario:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadFormData();
+  }, [loadFormData]);
+
+  // Alguien más cambió tipos de actividad, recursos o sedes: se vuelven a leer sin tocar lo que escribiste.
+  useActualizacionEnVivo(['tipos-actividad', 'recursos', 'sedes'], () => {
+    void loadFormData();
+  });
+
+  // Con el diálogo abierto, si cambian espacios, horarios o préstamos se vuelve a calcular la disponibilidad.
+  const [recargaDisponibles, setRecargaDisponibles] = useState(0);
+  useActualizacionEnVivo(['espacios', 'horarios', 'horarios-fusionados', 'prestamos-espacio'], () => {
+    setRecargaDisponibles((n) => n + 1);
+  }, dialogSolicitudOpen);
 
   // Cargar espacios disponibles cuando cambian sede/fecha/hora
   useEffect(() => {
@@ -238,7 +251,7 @@ export function useNuevaSolicitud({ user, dialogSolicitudOpen, nuevaSolicitudDat
     if (dialogSolicitudOpen) {
       loadEspaciosDisponibles();
     }
-  }, [dialogSolicitudOpen, nuevaSolicitudData, filteredEspacios, sedesList, horaFinEditable]);
+  }, [dialogSolicitudOpen, nuevaSolicitudData, filteredEspacios, sedesList, horaFinEditable, recargaDisponibles]);
 
   // Recalcular conflictos cuando cambia la hora final en el formulario
   useEffect(() => {

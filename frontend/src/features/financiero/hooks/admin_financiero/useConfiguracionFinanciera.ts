@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { parametrosFinancieroService, type ParametroFinanciero } from '../../services';
 import { toast } from 'sonner';
 import { CATEGORY_META, getDuplicateGroup, getPreferredKey, isFieldBlocked, toDisplayValue, toApiValue, getValidationError } from './configuracionFinancieraUtils';
+import { useActualizacionProtegida } from '../../../../hooks/useActualizacionProtegida';
 
 /** Estado y acciones de los parámetros financieros. */
 export function useConfiguracionFinanciera() {
@@ -12,20 +13,30 @@ export function useConfiguracionFinanciera() {
   const [search, setSearch] = useState('');
   const [categoriaActiva, setCategoriaActiva] = useState<'todas' | ParametroFinanciero['categoria']>('todas');
 
-  useEffect(() => {
-    void (async () => {
-      setLoading(true);
-      try {
-        const data = await parametrosFinancieroService.listar();
-        setParams(data.map((p) => ({ ...p, valor: toDisplayValue(p) })));
-        setValoresOriginales(Object.fromEntries(data.map((p) => [p.id, p.valor])));
-      } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : 'No se pudo cargar la configuración financiera.');
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const cargar = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
+    try {
+      const data = await parametrosFinancieroService.listar();
+      setParams(data.map((p) => ({ ...p, valor: toDisplayValue(p) })));
+      setValoresOriginales(Object.fromEntries(data.map((p) => [p.id, p.valor])));
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo cargar la configuración financiera.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void cargar();
+  }, [cargar]);
+
+  // Hay valores editados sin guardar: no se pisan con los de otra persona; se avisa.
+  const haySinGuardar = params.some(
+    (p) => p.editable && !isFieldBlocked(p.clave) && (valoresOriginales[p.id] ?? toApiValue(p)) !== toApiValue(p),
+  );
+  const avisoCambios = useActualizacionProtegida(['parametros-financieros'], () => {
+    void cargar({ silent: true });
+  }, haySinGuardar);
 
   const editable = useMemo(() => params.filter((p) => p.editable), [params]);
 
@@ -128,6 +139,7 @@ export function useConfiguracionFinanciera() {
 
 
   return {
+    avisoCambios,
     params,
     setParams,
     valoresOriginales,
