@@ -10,6 +10,7 @@ despliegue/
 ├─ env/        plantillas (*.env.example). Los .env reales NO se versionan
 ├─ nginx/      configuración del nginx del servidor (producción y pruebas)
 ├─ scripts/    deploy · rollback · backup · inventario · verificar-nas
+├─ TIEMPO_REAL_Y_COLA.md   puesta en marcha del servicio de eventos, nginx y la cola de tareas
 └─ github/     reglas de protección de ramas (las aplica un administrador)
 ```
 
