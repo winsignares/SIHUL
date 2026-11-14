@@ -6,6 +6,7 @@ import { showNotification } from '../../../context/ThemeContext';
 import type { useAuth } from '../../../context/AuthContext';
 import { isSpaceSupervisorRole } from '../../../context/spaceSupervisorRole';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 import {
     PRESTAMOS_CHANGED_EVENT,
     PRESTAMOS_CHANGED_STORAGE_KEY
@@ -66,7 +67,15 @@ export function usePrestamosCarga({ user, areas, setPrestamos, setLoading }: {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
+    // Alguien más creó, aprobó o cambió un préstamo (o el espacio o el horario): se vuelve a leer sin spinner.
+    useActualizacionEnVivo(
+        ['prestamos-espacio', 'prestamos-espacio-publico', 'prestamos-recurso', 'prestamos-recurso-publico', 'espacios', 'horarios'],
+        () => {
+            void loadData({ force: true, silent: true });
+        }
+    );
+
+    const loadData = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         try {
             const activeToken = localStorage.getItem('auth_token');
             const rolNombre = typeof user?.rol === 'string' ? user.rol : String(user?.rol?.nombre ?? 'sin-rol');
@@ -87,7 +96,7 @@ export function usePrestamosCarga({ user, areas, setPrestamos, setLoading }: {
                 return;
             }
 
-            setLoading(true);
+            if (!silent) setLoading(true);
 
             // Detectar si el rol supervisa espacios para usar el endpoint específico.
             const esSupervisor = esSupervisorPorRol || esSupervisorPorEspacios;
