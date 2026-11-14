@@ -8,6 +8,11 @@
 #
 # Ejemplos de URL_BASE: https://sihul.unilibre.edu.co  |  http://<ip>:5273
 #
+# Variables opcionales:
+#   BACKEND_DIRECTO  URL directa del backend para la salud (por ejemplo http://127.0.0.1:8100 en el servidor de pruebas).
+#                    Útil cuando nginx no enruta /health/ al backend (en pruebas lo atiende el frontend).
+#   ENTORNO=pruebas  en pruebas nginx sí publica /chatbot/docs; se acepta 200 o 404.
+#
 # Sin credenciales comprueba lo público y que lo privado pida sesión.
 # Con PRUEBA_CORREO y PRUEBA_CLAVE (el usuario de crear_usuario_pruebas) también inicia sesión y prueba lo privado.
 # No crea ni borra datos. La clave se lee del entorno y nunca se imprime.
@@ -25,17 +30,20 @@ verificar() {  # verificar "descripcion" "esperados (separados por |)" "obtenido
   if [[ "|$2|" == *"|$3|"* ]]; then echo "  OK     $1"; OK=$((OK+1)); else echo "  FALLA  $1  (esperado $2, obtenido $3)"; FALLAS=$((FALLAS+1)); fi
 }
 
+SALUD="${BACKEND_DIRECTO:-$BASE}"; SALUD="${SALUD%/}"
 echo "== Público y protegido, sin sesión ($BASE)"
-verificar "El proceso responde (/health/)" "200" "$(codigo "$BASE/health/")"
-LISTO="$(curl -s -m 15 "$BASE/health/ready/" 2>/dev/null)"
-verificar "Base de datos y caché listas (/health/ready/)" "ok" "$(echo "$LISTO" | grep -o '"status": *"[a-z]*"' | grep -o '[a-z]*"$' | tr -d '"')"
+VIVO="$(curl -s -m 15 "$SALUD/health/" 2>/dev/null)"
+verificar "El backend responde (/health/ devuelve JSON con estado)" "si" "$(echo "$VIVO" | grep -q '"status"' && echo si || echo no)"
+LISTO="$(curl -s -m 15 "$SALUD/health/ready/" 2>/dev/null)"
+verificar "Base de datos y caché listas (/health/ready/)" "ok" "$(echo "$LISTO" | grep -o '"status": *"[a-z]*"' | head -1 | grep -o '[a-z]*"$' | tr -d '"')"
 verificar "El frontend carga" "200" "$(codigo "$BASE/")"
 verificar "La API de usuarios exige sesión" "401|403" "$(codigo "$BASE/api/usuarios/")"
 verificar "La API de horarios exige sesión" "401|403" "$(codigo "$BASE/api/horarios/")"
 verificar "La API de facturas exige sesión" "401|403" "$(codigo "$BASE/api/financiero/facturas/")"
 verificar "Los eventos en tiempo real exigen sesión" "401" "$(codigo "$BASE/api/eventos/")"
 verificar "El chat con sesión la exige" "401" "$(codigo -X POST -H 'Content-Type: application/json' -d '{}' "$BASE/api/chatbot/pregunta/")"
-verificar "El servicio interno del chatbot no se publica" "404" "$(codigo "$BASE/chatbot/docs")"
+if [[ "${ENTORNO:-}" == "pruebas" ]]; then ESPERADO_CHATBOT="200|404"; else ESPERADO_CHATBOT="404"; fi
+verificar "El servicio interno del chatbot no se publica (en pruebas se acepta que sí)" "$ESPERADO_CHATBOT" "$(codigo "$BASE/chatbot/docs")"
 
 if [[ -n "${PRUEBA_CORREO:-}" && -n "${PRUEBA_CLAVE:-}" ]]; then
   echo "== Con el usuario de pruebas"
@@ -51,7 +59,9 @@ if [[ -n "${PRUEBA_CORREO:-}" && -n "${PRUEBA_CLAVE:-}" ]]; then
   CAB="$(curl -s -m 5 -D - -o /dev/null -b "$JAR" "$BASE/api/eventos/" 2>/dev/null | tr -d '\r')"
   verificar "El tiempo real responde 200" "200" "$(echo "$CAB" | head -1 | awk '{print $2}')"
   verificar "El tiempo real es text/event-stream" "si" "$(echo "$CAB" | grep -qi '^content-type: text/event-stream' && echo si || echo no)"
-  verificar "El tiempo real no se guarda en caché ni en buffer" "si" "$(echo "$CAB" | grep -qi '^x-accel-buffering: no' && echo si || echo no)"
+  # Sin buffer en nginx, la primera línea del flujo llega enseguida (con buffer no llegaría hasta juntar varios KB).
+  PRIMERA="$(curl -s -N -m 4 -b "$JAR" "$BASE/api/eventos/" 2>/dev/null | head -c 40 | tr -d '\r\n')"
+  verificar "El tiempo real llega sin demora (nginx no lo retiene)" "si" "$(echo "$PRIMERA" | grep -q 'retry:' && echo si || echo no)"
 else
   echo "== (Sin PRUEBA_CORREO y PRUEBA_CLAVE no se prueba lo privado)"
 fi

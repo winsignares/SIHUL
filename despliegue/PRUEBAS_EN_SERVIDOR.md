@@ -24,9 +24,12 @@ Muestra el correo (`prueba.sistema@unilibre.edu.co`) y una clave al azar, **una 
 
 ## 3. Pruebas de humo (sin entrar a ninguna pantalla)
 ```bash
+ENTORNO=pruebas BACKEND_DIRECTO=http://127.0.0.1:8100 \
 PRUEBA_CORREO=prueba.sistema@unilibre.edu.co PRUEBA_CLAVE='<clave>' \
   bash despliegue/scripts/probar-entorno.sh http://<ip>:5273
 ```
+- `BACKEND_DIRECTO`: en pruebas nginx envía `/health/` al frontend, así que la salud se consulta directo al backend (`http://127.0.0.1:8100`; en producción no hace falta).
+- `ENTORNO=pruebas`: en pruebas nginx publica `/chatbot/docs` a propósito; en producción debe dar 404.
 Comprueba, con curl: salud, frontend, que lo privado pida sesión, inicio de sesión, los listados de cada módulo, y que el tiempo real responda como `text/event-stream`. Debe terminar en `0 con falla`. No crea ni borra datos.
 
 ## 4. Probar cada cosa por comandos
