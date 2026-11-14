@@ -1,0 +1,256 @@
+import { useState, useEffect, useMemo } from 'react';
+import type { EspacioOcupacion } from '../../../models/index';
+import { ocupacionSemanalService } from '../services/ocupacionSemanalAPI';
+import { periodoActivoService } from '../../gestionAcademica/services/periodos/periodoActivoAPI';
+import { toast } from 'sonner';
+import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
+
+const OCUPACION_SEMANAL_PERIODO_CACHE_KEY = 'reporte-ocupacion-semanal-periodo';
+const OCUPACION_SEMANAL_TIPOS_CACHE_KEY = 'reporte-ocupacion-semanal-tipos';
+const OCUPACION_SEMANAL_DATA_CACHE_KEY = 'reporte-ocupacion-semanal-data';
+
+export function useOcupacionSemanal() {
+  // Alguien más cambió los datos del reporte: se vuelve a calcular.
+  const [recarga, setRecarga] = useState(0);
+  useActualizacionEnVivo(['horarios', 'horarios-fusionados', 'espacios', 'espacios-permitidos', 'tipos-espacio', 'periodos', 'sedes', 'prestamos-espacio'], () => setRecarga((n) => n + 1));
+
+  const [tipoEspacio, setTipoEspacio] = useState<string>('todos');
+  const [tiposEspacioOptions, setTiposEspacioOptions] = useState<Array<{ id: number; nombre: string }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [ultimaActualizacion, setUltimaActualizacion] = useState(new Date());
+  const [espaciosOcupacion, setEspaciosOcupacion] = useState<EspacioOcupacion[]>([]);
+  const [semanaInfo, setSemanaInfo] = useState({ inicio: '', fin: '' });
+  const [periodoActual, setPeriodoActual] = useState('Cargando...');
+  const [periodoInfo, setPeriodoInfo] = useState({ nombre: '', inicio: '', fin: '' });
+  const [validacionPeriodo, setValidacionPeriodo] = useState<{ valido: boolean; mensaje: string }>({ valido: true, mensaje: '' });
+
+  // Cargar período activo
+  useEffect(() => {
+    const cargarPeriodo = async () => {
+      try {
+        const activeToken = localStorage.getItem('auth_token');
+        const periodo = await periodoActivoService.getPeriodoActivo();
+        if (periodo && periodo.nombre) {
+          setPeriodoActual(periodo.nombre);
+          const periodoInfoData = {
+            nombre: periodo.nombre,
+            inicio: periodo.fecha_inicio,
+            fin: periodo.fecha_fin
+          };
+          setPeriodoInfo(periodoInfoData);
+          setSessionCacheData(OCUPACION_SEMANAL_PERIODO_CACHE_KEY, activeToken, {
+            periodoActual: periodo.nombre,
+            periodoInfo: periodoInfoData
+          });
+        } else {
+          setPeriodoActual('Sin periodo activo');
+        }
+      } catch (error) {
+        console.error('Error al cargar período activo:', error);
+        setPeriodoActual('Sin periodo activo');
+      }
+    };
+    cargarPeriodo();
+  }, [recarga]);
+
+  // Cargar tipos de espacio
+  useEffect(() => {
+    const cargarTipos = async () => {
+      try {
+        const activeToken = localStorage.getItem('auth_token');
+        const cachedTipos = getSessionCacheData<Array<{ id: number; nombre: string }>>(
+          OCUPACION_SEMANAL_TIPOS_CACHE_KEY,
+          activeToken
+        );
+
+        if (cachedTipos) {
+          setTiposEspacioOptions(cachedTipos);
+          return;
+        }
+
+        const tipos = await ocupacionSemanalService.getTiposEspacio();
+        setTiposEspacioOptions(tipos);
+        setSessionCacheData(OCUPACION_SEMANAL_TIPOS_CACHE_KEY, activeToken, tipos);
+      } catch (error) {
+        console.error('Error loading tipos de espacio:', error);
+      }
+    };
+
+    cargarTipos();
+  }, [recarga]);
+
+  // Validar que los datos corresponden al período actual (no por semana individual)
+  const validarDatosPeriodo = (): { valido: boolean; mensaje: string } => {
+    if (!periodoInfo.nombre) {
+      return { valido: true, mensaje: '' };
+    }
+
+    // Solo validar que el período está cargado correctamente
+    // Los datos de ocupación siempre corresponden al período actual
+    return { valido: true, mensaje: '' };
+  };
+
+  // Cargar datos de ocupación semanal cuando cambia el tipo de espacio
+  useEffect(() => {
+    const cargarOcupacion = async () => {
+      setLoading(true);
+      try {
+        const activeToken = localStorage.getItem('auth_token');
+        const tipoId = obtenerTipoIdSeleccionado();
+        const dataCacheKey = `${OCUPACION_SEMANAL_DATA_CACHE_KEY}-${tipoEspacio}-${periodoInfo.nombre || 'sin-periodo'}`;
+        const cachedData = getSessionCacheData<{
+          espaciosOcupacion: EspacioOcupacion[];
+          semanaInfo: { inicio: string; fin: string };
+          ultimaActualizacion: string;
+        }>(dataCacheKey, activeToken);
+
+        if (cachedData) {
+          setEspaciosOcupacion(cachedData.espaciosOcupacion);
+          setSemanaInfo(cachedData.semanaInfo);
+          setUltimaActualizacion(new Date(cachedData.ultimaActualizacion));
+          const validacion = validarDatosPeriodo();
+          setValidacionPeriodo(validacion);
+          return;
+        }
+
+        const response = await ocupacionSemanalService.getOcupacionSemanal(tipoId, 0);
+        
+        // Validar que los datos corresponden al período actual
+        const validacion = validarDatosPeriodo();
+        setValidacionPeriodo(validacion);
+
+        // Mapear datos del backend al formato esperado por el modelo
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ocupacionMapeada: EspacioOcupacion[] = response.ocupacion.map((espacio: any) => ({
+          id: espacio.id.toString(),
+          nombre: espacio.nombre,
+          tipo: espacio.tipo,
+          capacidad: espacio.capacidad,
+          horasOcupadas: espacio.horasOcupadasSemana,
+          horasDisponibles: espacio.horasDisponibles,
+          porcentajeOcupacion: Number(espacio.porcentajeOcupacion ?? 0),
+          edificio: espacio.edificio,
+          jornada: {
+            manana: normalizePercentage(espacio.porcentajeManana),
+            tarde: normalizePercentage(espacio.porcentajeTarde),
+            noche: normalizePercentage(espacio.porcentajeNoche)
+          }
+        }));
+        
+        setEspaciosOcupacion(ocupacionMapeada);
+        setSemanaInfo({
+          inicio: response.semana_inicio,
+          fin: response.semana_fin
+        });
+        const now = new Date();
+        setUltimaActualizacion(now);
+        setSessionCacheData(dataCacheKey, activeToken, {
+          espaciosOcupacion: ocupacionMapeada,
+          semanaInfo: {
+            inicio: response.semana_inicio,
+            fin: response.semana_fin
+          },
+          ultimaActualizacion: now.toISOString()
+        });
+      } catch (error) {
+        console.error('Error loading ocupación semanal:', error);
+        toast.error('Error cargando datos de ocupación semanal');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarOcupacion();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoEspacio, periodoInfo, recarga]);
+
+  const normalizePercentage = (value: number | string | undefined | null) => {
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) return 0;
+    return Number(parsed.toFixed(1));
+  };
+
+  const obtenerTipoIdSeleccionado = () => {
+    if (tipoEspacio === 'todos') return undefined;
+    const tipo = tiposEspacioOptions.find(option => option.nombre === tipoEspacio);
+    return tipo?.id;
+  };
+
+  const espaciosFiltrados = useMemo(() => {
+    return tipoEspacio === 'todos'
+      ? espaciosOcupacion
+      : espaciosOcupacion.filter(e => e.tipo === tipoEspacio);
+  }, [tipoEspacio, espaciosOcupacion]);
+
+  const estadisticas = useMemo(() => {
+    const promedioOcupacion = espaciosFiltrados.length > 0
+      ? espaciosFiltrados.reduce((acc, e) => acc + e.porcentajeOcupacion, 0) / espaciosFiltrados.length
+      : 0;
+    const totalHorasOcupadas = espaciosFiltrados.reduce((acc, e) => acc + e.horasOcupadas, 0);
+    const totalHorasDisponibles = espaciosFiltrados.reduce((acc, e) => acc + e.horasDisponibles, 0);
+    const espaciosSobreocupados = espaciosFiltrados.filter(e => e.porcentajeOcupacion > 85).length;
+    const espaciosSubutilizados = espaciosFiltrados.filter(e => e.porcentajeOcupacion < 50).length;
+
+    return {
+      promedioOcupacion,
+      totalHorasOcupadas,
+      totalHorasDisponibles,
+      espaciosSobreocupados,
+      espaciosSubutilizados
+    };
+  }, [espaciosFiltrados]);
+
+  const exportarReporte = async () => {
+    try {
+      setLoading(true);
+      const tipoId = obtenerTipoIdSeleccionado();
+      await ocupacionSemanalService.generarPDFOcupacion(tipoId, 0);
+      toast.success('PDF generado exitosamente');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al generar PDF');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getColorPorOcupacion = (porcentaje: number) => {
+    if (porcentaje >= 85) return 'text-red-600 bg-red-100 border-red-300';
+    if (porcentaje >= 70) return 'text-yellow-600 bg-yellow-100 border-yellow-300';
+    if (porcentaje >= 50) return 'text-green-600 bg-green-100 border-green-300';
+    return 'text-slate-600 bg-slate-100 border-slate-300';
+  };
+
+  const getBarColor = (porcentaje: number) => {
+    if (porcentaje >= 85) return 'bg-red-600';
+    if (porcentaje >= 70) return 'bg-yellow-600';
+    if (porcentaje >= 50) return 'bg-green-600';
+    return 'bg-slate-400';
+  };
+
+  // Generar opciones para el select dinámicamente
+  const tiposOptions = [
+    { value: 'todos', label: 'Todos los tipos' },
+    ...tiposEspacioOptions.map(tipo => ({
+      value: tipo.nombre,
+      label: tipo.nombre
+    }))
+  ];
+
+  return {
+    periodoActual,
+    tipoEspacio,
+    setTipoEspacio,
+    tiposOptions,
+    loading,
+    ultimaActualizacion,
+    espaciosFiltrados,
+    estadisticas,
+    exportarReporte,
+    getColorPorOcupacion,
+    getBarColor,
+    semanaInfo,
+    validacionPeriodo
+  };
+}

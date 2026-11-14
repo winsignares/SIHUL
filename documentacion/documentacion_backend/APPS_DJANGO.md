@@ -12,16 +12,26 @@ Django 5.2.7 + Django REST Framework, sirviendo tanto la API académica como el 
 - `reportlab`, `pypdf`, `openpyxl`, `Pillow` → generación de PDF/Excel/imágenes (reportes, facturas).
 - `gunicorn` (producción), `werkzeug`, `cryptography`, `requests`.
 
-Proyecto Django raíz: `backend/mysite/` (contiene `settings.py`, `urls.py`, y no es una app de dominio sino el núcleo transversal: autenticación de sesión, permisos, middleware, seeders).
+Proyecto Django raíz: `backend/nucleo/` (contiene `settings.py`, `urls.py`, y no es una app de dominio sino el núcleo transversal: autenticación de sesión, permisos, middleware, seeders).
+
+Los ViewSets DRF de cada app están en `<app>/viewsets.py` (sedes, facultades, programas, grupos, asignaturas, espacios, horario, usuarios y recursos) y se registran en el router de `config/urls.py`.
 
 ## Apps Django
 
-Cada app vive en `backend/<app>/` con su `models.py`/`views.py`/`urls.py` estándar.
+Las apps se agrupan por dominio en `backend/<dominio>/<app>/`, cada una con su `models.py`/`views.py`/`urls.py` estándar. El nombre interno de cada app (`label`) no cambió, por lo que las migraciones, las tablas y las referencias de modelo (`'usuarios.Usuario'`) siguen igual; solo cambia la ruta de importación (por ejemplo `from identidad.usuarios.models import Usuario`). Ver [../general/ARQUITECTURA_OBJETIVO.md](../general/ARQUITECTURA_OBJETIVO.md).
+
+| Dominio (carpeta) | Apps |
+|---|---|
+| `identidad/` | `usuarios`, `componentes` |
+| `academico/` | `sedes`, `facultades`, `programas`, `asignaturas`, `grupos`, `periodos`, `horario` |
+| `instalaciones/` | `espacios`, `recursos`, `prestamos` |
+| (en la raíz de `backend/`) | `config`, `nucleo`, `chatbot`, `notificaciones`, `financiero` |
 
 | App | Responsabilidad |
 |---|---|
-| `mysite` | Núcleo transversal: settings, urls raíz, autenticación de sesión custom (`seccional_auth.py`), helpers de roles (`auth_helpers.py`), permisos DRF (`permissions.py`), middleware de sede (`middleware.py`), vistas de auth (`auth_views.py`), adaptador OAuth (`social_adapter.py`), filtro Oracle por seccional (`oracle_seccional_filter.py`), seeders (`management/commands/seed_initial_data.py` + `seeders/*`). |
-| `usuarios` | Modelo `Usuario` (custom, login por `correo`), `Rol`, staging Oracle de docentes/estudiantes, comandos ETL relacionados. |
+| `config` | Proyecto Django: `settings.py`, `urls.py`, `wsgi.py` y `asgi.py`. |
+| `nucleo` | Núcleo transversal: autenticación de sesión custom (`seccional_auth.py`), helpers de roles (`auth_helpers.py`), permisos DRF (`permissions.py`), middleware de sede (`middleware.py`), vistas de auth (`auth_views.py`), adaptador OAuth (`social_adapter.py`), filtro Oracle por seccional (`oracle_seccional_filter.py`), seeders (`management/commands/seed_initial_data.py` + `seeders/*`). |
+| `usuarios` | Modelo `Usuario` (custom, login por `correo`), `Rol`, staging Oracle de docentes/estudiantes, comandos ETL relacionados. `sesion.py`: inicio de sesión con bloqueo por intentos, estado de la sesión y cambio de contraseña, sin depender de la petición HTTP. |
 | `componentes` | Sistema de permisos dinámico: `Componente`, `ComponenteRol`, `ComponenteUsuario`. Ver [AUTENTICACION_Y_PERMISOS.md](AUTENTICACION_Y_PERMISOS.md). |
 | `sedes` | `Sede`, `Seccional` (Bogotá, Cali, Barranquilla, Cúcuta, Cartagena, Pereira, El Socorro, Virtual, Nacional) + ETL. |
 | `facultades` | Facultades académicas. |
@@ -29,13 +39,13 @@ Cada app vive en `backend/<app>/` con su `models.py`/`views.py`/`urls.py` están
 | `periodos` | Periodos académicos (usado también como filtro global `ETL_PERIODO`). |
 | `grupos` | Grupos académicos + staging Oracle. |
 | `asignaturas` | Asignaturas y su relación con programas + ETL. |
-| `horario` | Núcleo de horarios académicos, ETL Oracle, reportes de horarios sin espacio asignado. |
-| `espacios` | Espacios físicos (aulas, laboratorios), `EspacioPermitido` (autorización de supervisores), ETL Oracle. |
+| `horario` | Núcleo de horarios académicos, ETL Oracle, reportes de horarios sin espacio asignado. `exportaciones.py`: archivos PDF y Excel de horarios (por grupo y por docente; también la descarga de Mi horario). |
+| `espacios` | Espacios físicos (aulas, laboratorios), `EspacioPermitido` (autorización de supervisores), ETL Oracle. `reportes/` (paquete): cálculos de los reportes (ocupación semanal, ocupación por jornada, más usados, disponibilidad y capacidad, con la semana y la carga de datos en `_semana.py`) sin depender de la petición. `reportes_pdf.py`: los PDF de esos reportes a partir de los datos ya calculados. |
 | `recursos` | Recursos/equipos asociados a espacios. |
 | `prestamos` | Préstamos de espacios/recursos, lógica de disponibilidad (`availability.py`). |
 | `chatbot` | App puente Django ↔ servicio FastAPI: `api_views.py`/`api_urls.py` actúan de proxy hacia `CHATBOT_FASTAPI_URL`. |
-| `notificaciones` | Notificaciones vía señales Django (`signals.py`), consumidas por el frontend con polling cada 30s. Ver `backend/notificaciones/README.md` para el detalle completo de tipos de evento y prioridades. |
-| `financiero` | Módulo de facturación institucional. Ver [MODULO_FINANCIERO.md](MODULO_FINANCIERO.md). |
+| `notificaciones` | Notificaciones vía señales Django (paquete `signals/`, un módulo por dominio), consumidas por el frontend con polling cada 30s. Ver `backend/notificaciones/README.md` para el detalle completo de tipos de evento y prioridades. |
+| `financiero` | Módulo de facturación institucional. Ver [MODULO_FINANCIERO.md](MODULO_FINANCIERO.md). `flujo_factura/` (paquete, uno por quién actúa): pasos del flujo de la factura (crear, radicar, causar, alistar, auditoría, Dirección Financiera, Rectoría, control y registro del pago, devolución y corrección), con su historial y notificaciones. `archivos.py`: archivos que genera el módulo (expediente consolidado con portada, archivo plano convertido a PDF, reporte financiero en Excel y PDF). |
 
 ## Documentos relacionados en esta carpeta
 
@@ -43,3 +53,23 @@ Cada app vive en `backend/<app>/` con su `models.py`/`views.py`/`urls.py` están
 - [CONFIGURACION_SETTINGS.md](CONFIGURACION_SETTINGS.md) — `settings.py`: base de datos, apps instaladas, middleware, variables de entorno.
 - [MODULO_FINANCIERO.md](MODULO_FINANCIERO.md) — modelo de facturación institucional.
 - [TESTS_Y_SEEDERS.md](TESTS_Y_SEEDERS.md) — tests existentes y seeders de datos.
+
+## Convención de la capa HTTP
+
+Cada app tiene la misma forma:
+
+| Carpeta o archivo | Contenido |
+|---|---|
+| `api/viewsets.py` | `ModelViewSet` de CRUD estándar; el router de `config/urls.py` genera sus rutas. |
+| `api/endpoints.py` (o un archivo por tema) | Vistas de un solo endpoint (`APIView`, genéricas o funciones) con su lógica HTTP. |
+| `api/urls.py` | Rutas escritas a mano de esos endpoints. |
+| `servicios/` | Lógica de negocio sin HTTP (sesión, reglas de gestión, contraseñas). |
+| `tests/` | Todas las pruebas de la app. |
+
+Un ViewSet se usa cuando el recurso es un CRUD y una vista suelta cuando el endpoint hace otra cosa (exportar, marcar, consultar un proxy).
+
+### Vistas de un solo endpoint: `VistaJson`
+
+Las vistas de un endpoint ya no son funciones con `@csrf_exempt`: son clases que heredan de `nucleo.vistas.VistaJson` (una `APIView`) con un método por verbo HTTP (`get`, `post`, `put`). `VistaJson` conserva lo que hacían las funciones: no exige autenticación DRF (cada vista valida el acceso con sus ayudantes), `request.user` es el de la petición Django, un verbo no permitido responde 405 con `{"error": "Solo se permite GET"}` y no rechaza por la cabecera `Accept`. Una vista nueva debe escribirse así; para un CRUD se usa un `ViewSet`.
+
+Los endpoints de `nucleo` (sesión, cierre de sesión, salud y registro de errores del cliente) también son clases `VistaJson`.

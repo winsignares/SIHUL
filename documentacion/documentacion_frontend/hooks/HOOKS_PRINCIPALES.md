@@ -11,7 +11,9 @@ Hooks sueltos en la raíz de `hooks/`, usados a través de todo el proyecto (no 
 - No llama servicios.
 - El hook responsivo más usado del proyecto: consumido en 39 archivos, entre ellos `layouts/AdminDashboard.tsx` y prácticamente todas las páginas de `gestionAcademica/`, `horarios/`, `espacios/`, `prestamos/`, `reporte/`, `users/`, `chatbot/`, `dashboard/`. Documentado también en [RESPONSIVE_UPDATES.md](RESPONSIVE_UPDATES.md).
 
-## `useAdminDashboard.ts` (698 líneas)
+## `useAdminDashboard.ts` (138 líneas)
+
+La construcción de cada menú está en `hooks/adminDashboard/`: `menuPublico.ts`, `menuFinanciero.ts` (un menú por perfil financiero), `menuGeneral.ts` y `menuTipos.ts`.
 
 El hook que arma el sidebar del panel autenticado. Único consumidor: `layouts/AdminDashboard.tsx`.
 

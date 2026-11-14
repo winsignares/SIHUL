@@ -39,7 +39,18 @@ class Settings(BaseSettings):
     # Django espera 30 s al RAG: embedding (mitad de este tiempo) + LLM, sin reintentos,
     # deben sumar menos para poder responder con un error limpio.
     OPENAI_TIMEOUT_SECONDS: float = 18
+    # Pool de conexiones a la base: los valores por defecto de SQLAlchemy (5 + 10). Ajustar a
+    # UVICORN_WORKERS y al `max_connections` de PostgreSQL.
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
     OPENAI_INGEST_TIMEOUT_SECONDS: float = 60
+    # Acceso directo desde el navegador (app/routers/directo.py): Django entrega a quien inició
+    # sesión un token firmado con esta clave compartida y este servicio lo verifica. Sin clave
+    # (valor por defecto) las rutas directas responden 503 y todo sigue pasando por Django.
+    CHATBOT_TOKEN_SECRET: str | None = None
+    CHATBOT_TOKEN_AUDIENCE: str = "sihul-chatbot"
+    DIRECTO_PREGUNTAS_POR_MINUTO: int = 10
+    DIRECTO_PREGUNTA_MAX_CARACTERES: int = 2000
 
     class Config:
         env_file = ".env"

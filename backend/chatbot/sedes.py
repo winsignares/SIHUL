@@ -32,7 +32,7 @@ def normalizar_sede(raw_value):
 
 def ids_seccionales(sede_value):
     """Ids de las Seccional cuyo nombre normalizado es `sede_value` (normalmente una)."""
-    from sedes.models import Seccional
+    from academico.sedes.models import Seccional
 
     if not sede_value:
         return []

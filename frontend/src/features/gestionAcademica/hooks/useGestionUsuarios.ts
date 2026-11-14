@@ -1,0 +1,707 @@
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNotification } from '../../../components/ui/notificationBanner';
+import { userService, type Usuario } from '../../users/services/authService';
+import { espacioPermitidoService } from '../../espacios/services/espaciosAPI';
+import { isSpaceSupervisorRole } from '../../../context/spaceSupervisorRole';
+import {
+    PAGE_SIZE_DEFAULT,
+    getPageNumbers,
+    getTotalPages,
+    hasNextPageWindow,
+    hasPrevPageWindow,
+    normalizePage,
+    getTargetPageForNextWindow,
+    getTargetPageForPrevWindow,
+} from './paginacion';
+import {
+    BUSQUEDA_ESPERA_MS,
+    USUARIOS_POR_BLOQUE,
+    getRelationId,
+    normalizeEspacioAsignable,
+    resolverSeleccionPendiente,
+    type EspacioAsignable,
+} from './usuarios/usuariosUtils';
+import { useCatalogosUsuarios } from './usuarios/useCatalogosUsuarios';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
+
+export function useGestionUsuarios() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
+    const { notification, showNotification } = useNotification();
+    const {
+        rolesDisponibles,
+        facultadesDisponibles,
+        espaciosDisponibles, setEspaciosDisponibles,
+        sedesDisponibles,
+        seccionalesDisponibles,
+        tiposEspacioDisponibles,
+        loadRoles,
+        loadFacultades,
+        loadEspacios,
+        loadSedes,
+        loadSeccionales,
+        loadTiposEspacio,
+    } = useCatalogosUsuarios();
+
+    // Bloque de usuarios cargado (hasta 100), su número y el total que coincide con la búsqueda
+    const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+    const [bloqueCargado, setBloqueCargado] = useState(0);
+    const [totalUsuarios, setTotalUsuarios] = useState(0);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [busquedaAplicada, setBusquedaAplicada] = useState('');
+    const [filterRol, setFilterRolState] = useState('todos');
+    const [currentUsuarioPage, setCurrentUsuarioPage] = useState(1);
+    const consultaUsuariosRef = useRef({ clave: '', numero: 0 });
+    const consultaActualRef = useRef({ bloque: 1, busqueda: '', rol: 'todos' });
+
+    // Estados de diálogos
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<Usuario | null>(null);
+    const [editingUser, setEditingUser] = useState<Usuario | null>(null);
+
+    // Estados para creación de usuario
+    const [nuevoUsuario, setNuevoUsuario] = useState<Partial<Usuario>>({
+        nombre: '',
+        correo: '',
+        contrasena: '',
+        rol_id: null,
+        activo: true
+    });
+
+    // Estados de validación para creación
+    const [confirmarCorreo, setConfirmarCorreo] = useState('');
+    const [confirmarPassword, setConfirmarPassword] = useState('');
+    const [sedeSeleccionada, setSedeSeleccionada] = useState('');
+    const [seccionalSeleccionada, setSeccionalSeleccionada] = useState('');
+
+
+    // Estados para espacios permitidos (roles con supervisión de espacios)
+    const [espacioSeleccionado, setEspacioSeleccionado] = useState('');
+    const [espaciosPermitidos, setEspaciosPermitidos] = useState<number[]>([]);
+    const [espacioSeleccionadoEdit, setEspacioSeleccionadoEdit] = useState('');
+    const [espaciosPermitidosEdit, setEspaciosPermitidosEdit] = useState<number[]>([]);
+
+    // Estado para facultad seleccionada (solo planeacion_facultad)
+    const [facultadSeleccionada, setFacultadSeleccionada] = useState<number | null>(null);
+    const [facultadSeleccionadaEdit, setFacultadSeleccionadaEdit] = useState<number | null>(null);
+
+    // Callbacks memorizados para actualizar campos del formulario
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateNuevoUsuarioField = useCallback((field: string, value: any) => {
+        setNuevoUsuario(prev => ({ ...prev, [field]: value }));
+    }, []);
+
+    useEffect(() => {
+        loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Estados agregados para asignacion por tipo de espacio.
+    // Se declaran despues de los hooks originales para mantener orden estable en Fast Refresh.
+    const [modoAsignacionSupervisor, setModoAsignacionSupervisor] = useState<'individual' | 'tipo'>('individual');
+    const [modoAsignacionSupervisorEdit, setModoAsignacionSupervisorEdit] = useState<'individual' | 'tipo'>('individual');
+    const [tipoEspacioSeleccionado, setTipoEspacioSeleccionado] = useState('');
+    const [tiposEspacioPermitidos, setTiposEspacioPermitidos] = useState<number[]>([]);
+    const [asignarTodosEspaciosPorTipo, setAsignarTodosEspaciosPorTipo] = useState(false);
+    const [tipoEspacioSeleccionadoEdit, setTipoEspacioSeleccionadoEdit] = useState('');
+    const [tiposEspacioPermitidosEdit, setTiposEspacioPermitidosEdit] = useState<number[]>([]);
+    const [asignarTodosEspaciosPorTipoEdit, setAsignarTodosEspaciosPorTipoEdit] = useState(false);
+
+    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
+        await Promise.all([
+            loadUsuarios({ force }),
+            loadRoles({ force }),
+            loadFacultades({ force }),
+            loadEspacios({ force }),
+            loadSedes({ force }),
+            loadSeccionales(),
+            loadTiposEspacio({ force })
+        ]);
+    };
+
+    const setUsuariosAndCache = useCallback((updater: (prev: Usuario[]) => Usuario[]) => {
+        setUsuarios(updater);
+    }, []);
+
+    // Alguien más creó, editó o borró un usuario: se vuelve a leer el bloque que se está viendo.
+    useActualizacionEnVivo(['usuarios'], () => {
+        void loadUsuarios();
+    });
+
+    // Cargar desde el servidor el bloque de 100 que contiene la página actual, con la búsqueda y el rol vigentes.
+    // Si llegan dos respuestas, solo cuenta la de la última consulta.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const loadUsuarios = async (_opciones: { force?: boolean } = {}) => {
+        const { bloque, busqueda, rol } = consultaActualRef.current;
+        const consulta = consultaUsuariosRef.current;
+        consulta.clave = `${bloque}|${busqueda}|${rol}`;
+        const numero = ++consulta.numero;
+        try {
+            const response = await userService.listarUsuariosPagina({
+                page: bloque,
+                pageSize: USUARIOS_POR_BLOQUE,
+                search: busqueda,
+                rol,
+            });
+            if (numero !== consulta.numero) return;
+            setUsuarios(response.usuarios);
+            setTotalUsuarios(response.total);
+            setBloqueCargado(bloque);
+        } catch (error) {
+            console.error('Error cargando usuarios:', error);
+            showNotification('Error al cargar usuarios', 'error');
+        }
+    };
+
+
+    // Funciones para manejar espacios permitidos (Creación)
+    const agregarEspacioPermitido = useCallback(() => {
+        if (espacioSeleccionado && !espaciosPermitidos.includes(parseInt(espacioSeleccionado))) {
+            setEspaciosPermitidos([...espaciosPermitidos, parseInt(espacioSeleccionado)]);
+            setEspacioSeleccionado('');
+        }
+    }, [espacioSeleccionado, espaciosPermitidos]);
+
+    const eliminarEspacioPermitido = useCallback((espacioId: number) => {
+        setEspaciosPermitidos(espaciosPermitidos.filter(id => id !== espacioId));
+    }, [espaciosPermitidos]);
+
+    // Funciones para manejar tipos de espacio permitidos (Creacion)
+    const agregarTipoEspacioPermitido = useCallback(() => {
+        if (!tipoEspacioSeleccionado) return;
+
+        if (tipoEspacioSeleccionado === 'todos') {
+            setAsignarTodosEspaciosPorTipo(true);
+            setTipoEspacioSeleccionado('');
+            return;
+        }
+
+        const tipoId = parseInt(tipoEspacioSeleccionado, 10);
+        if (!tiposEspacioPermitidos.includes(tipoId)) {
+            setTiposEspacioPermitidos([...tiposEspacioPermitidos, tipoId]);
+        }
+        setTipoEspacioSeleccionado('');
+    }, [tipoEspacioSeleccionado, tiposEspacioPermitidos]);
+
+    const eliminarTipoEspacioPermitido = useCallback((tipoId: number) => {
+        setTiposEspacioPermitidos(tiposEspacioPermitidos.filter(id => id !== tipoId));
+    }, [tiposEspacioPermitidos]);
+
+    // Funciones para manejar espacios permitidos (Edición)
+    const agregarEspacioPermitidoEdit = useCallback(() => {
+        if (espacioSeleccionadoEdit && !espaciosPermitidosEdit.includes(parseInt(espacioSeleccionadoEdit))) {
+            setEspaciosPermitidosEdit([...espaciosPermitidosEdit, parseInt(espacioSeleccionadoEdit)]);
+            setEspacioSeleccionadoEdit('');
+        }
+    }, [espacioSeleccionadoEdit, espaciosPermitidosEdit]);
+
+    const eliminarEspacioPermitidoEdit = useCallback((espacioId: number) => {
+        setEspaciosPermitidosEdit(espaciosPermitidosEdit.filter(id => id !== espacioId));
+    }, [espaciosPermitidosEdit]);
+
+    // Funciones para manejar tipos de espacio permitidos (Edicion)
+    const agregarTipoEspacioPermitidoEdit = useCallback(() => {
+        if (!tipoEspacioSeleccionadoEdit) return;
+
+        if (tipoEspacioSeleccionadoEdit === 'todos') {
+            setAsignarTodosEspaciosPorTipoEdit(true);
+            setTipoEspacioSeleccionadoEdit('');
+            return;
+        }
+
+        const tipoId = parseInt(tipoEspacioSeleccionadoEdit, 10);
+        if (!tiposEspacioPermitidosEdit.includes(tipoId)) {
+            setTiposEspacioPermitidosEdit([...tiposEspacioPermitidosEdit, tipoId]);
+        }
+        setTipoEspacioSeleccionadoEdit('');
+    }, [tipoEspacioSeleccionadoEdit, tiposEspacioPermitidosEdit]);
+
+    const eliminarTipoEspacioPermitidoEdit = useCallback((tipoId: number) => {
+        setTiposEspacioPermitidosEdit(tiposEspacioPermitidosEdit.filter(id => id !== tipoId));
+    }, [tiposEspacioPermitidosEdit]);
+
+    const getEspaciosDisponiblesPorSede = useCallback((sedeId?: number | null) => {
+        if (!sedeId) return [];
+        const espaciosDeSede = espaciosDisponibles.filter(espacio => espacio.sede_id === sedeId);
+        if (espaciosDeSede.length > 0) {
+            return espaciosDeSede;
+        }
+
+        const seccionalId = sedesDisponibles.find(sede => sede.id === sedeId)?.seccional_id ?? null;
+        if (!seccionalId) return [];
+        return espaciosDisponibles.filter(espacio => espacio.sede_seccional_id === seccionalId);
+    }, [espaciosDisponibles, sedesDisponibles]);
+
+    const espaciosDisponiblesCreacion = useMemo(
+        () => getEspaciosDisponiblesPorSede(sedeSeleccionada ? parseInt(sedeSeleccionada, 10) : null),
+        [getEspaciosDisponiblesPorSede, sedeSeleccionada]
+    );
+
+    const espaciosDisponiblesEdicion = useMemo(
+        () => getEspaciosDisponiblesPorSede(editingUser?.sede_id ?? null),
+        [getEspaciosDisponiblesPorSede, editingUser?.sede_id]
+    );
+
+    useEffect(() => {
+        setEspacioSeleccionado('');
+        setEspaciosPermitidos([]);
+        setTipoEspacioSeleccionado('');
+        setTiposEspacioPermitidos([]);
+        setAsignarTodosEspaciosPorTipo(false);
+    }, [sedeSeleccionada]);
+
+    // Tipos de la asignación por tipo («todos» = todos los del catálogo); lista vacía = ninguno. El
+    // backend mantiene los espacios derivados de los tipos (también los que se creen después) y solo
+    // con tipos asignados el supervisor puede crear espacios. Se combina con las asignaciones
+    // individuales (`espacios_permitidos`), que son los espacios sueltos elegidos a mano.
+    const buildTiposPayload = useCallback((tiposIds: number[], asignarTodos: boolean) => {
+        if (asignarTodos) {
+            return tiposEspacioDisponibles.map((tipo) => tipo.id).filter((id): id is number => typeof id === 'number');
+        }
+        return tiposIds;
+    }, [tiposEspacioDisponibles]);
+
+
+    // Crear usuario
+    const crearUsuario = async () => {
+        // Validaciones
+        if (!nuevoUsuario.nombre || !nuevoUsuario.correo || !nuevoUsuario.contrasena || !nuevoUsuario.rol_id) {
+            showNotification('Por favor complete todos los campos obligatorios', 'error');
+            return;
+        }
+
+        // Validar correos coinciden
+        if (nuevoUsuario.correo !== confirmarCorreo) {
+            showNotification('Los correos no coinciden', 'error');
+            return;
+        }
+
+        // Validar contraseñas coinciden
+        if (nuevoUsuario.contrasena !== confirmarPassword) {
+            showNotification('Las contraseñas no coinciden', 'error');
+            return;
+        }
+
+        // La seccional sale de la sede; si no se elige sede, hay que elegir la seccional
+        if (!sedeSeleccionada && !seccionalSeleccionada) {
+            showNotification('Seleccione una sede o, si no tiene sede, una seccional', 'error');
+            return;
+        }
+
+        try {
+            // Si el rol supervisa espacios, incluir espacios permitidos.
+            const rol = rolesDisponibles.find(r => r.id === nuevoUsuario.rol_id);
+            let espaciosPayload: number[] = [];
+            let tiposPayload: number[] | undefined;
+
+            if (isSpaceSupervisorRole(rol)) {
+                const sel = resolverSeleccionPendiente(
+                    tiposEspacioPermitidos, asignarTodosEspaciosPorTipo, tipoEspacioSeleccionado, espaciosPermitidos, espacioSeleccionado,
+                );
+                espaciosPayload = sel.espaciosFinal;
+                tiposPayload = buildTiposPayload(sel.tiposFinal, sel.todosFinal);
+            }
+
+            const created = await userService.crearUsuario({
+                nombre: nuevoUsuario.nombre,
+                correo: nuevoUsuario.correo,
+                contrasena: nuevoUsuario.contrasena,
+                rol_id: nuevoUsuario.rol_id,
+                facultad_id: facultadSeleccionada,
+                activo: true,
+                espacios_permitidos: espaciosPayload,
+                tipos_espacio_permitidos: tiposPayload,
+                sede_id: sedeSeleccionada ? parseInt(sedeSeleccionada) : null,
+                seccional_id: !sedeSeleccionada && seccionalSeleccionada ? parseInt(seccionalSeleccionada) : undefined
+            });
+
+            try {
+                const usuarioCreado = await userService.obtenerUsuario(created.id);
+                setUsuariosAndCache((prev) => [usuarioCreado, ...prev.filter((u) => u.id !== usuarioCreado.id)]);
+                setCurrentUsuarioPage(1);
+            } catch {
+                void loadUsuarios({ force: true });
+            }
+
+            showNotification('Usuario creado exitosamente', 'success');
+            setDialogOpen(false);
+            resetNuevoUsuario();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            console.error('Error creando usuario:', error);
+            showNotification(error.message || 'Error al crear usuario', 'error');
+        }
+    };
+
+    // Actualizar usuario
+    const actualizarUsuario = async () => {
+        if (!editingUser?.id) {
+            showNotification('No se pudo identificar el usuario a actualizar', 'error');
+            return;
+        }
+
+        try {
+            // Si el rol supervisa espacios, incluir espacios permitidos.
+            const rolId = editingUser.rol_id || editingUser.rol?.id;
+            const rol = rolesDisponibles.find(r => r.id === rolId);
+            let espaciosPayload: number[] = [];
+            let tiposPayload: number[] | undefined;
+
+            if (isSpaceSupervisorRole(rol)) {
+                const sel = resolverSeleccionPendiente(
+                    tiposEspacioPermitidosEdit, asignarTodosEspaciosPorTipoEdit, tipoEspacioSeleccionadoEdit, espaciosPermitidosEdit, espacioSeleccionadoEdit,
+                );
+                espaciosPayload = sel.espaciosFinal;
+                tiposPayload = buildTiposPayload(sel.tiposFinal, sel.todosFinal);
+            }
+
+            const rolActualizado = editingUser.rol_id
+                ? rolesDisponibles.find((r) => r.id === editingUser.rol_id)
+                : null;
+            const facultadActualizada = facultadSeleccionadaEdit
+                ? facultadesDisponibles.find((f) => f.id === facultadSeleccionadaEdit) ?? null
+                : null;
+            const sedeActualizada = editingUser.sede_id
+                ? sedesDisponibles.find((s) => s.id === editingUser.sede_id) ?? null
+                : null;
+
+            await userService.actualizarUsuario({
+                id: editingUser.id,
+                nombre: editingUser.nombre,
+                correo: editingUser.correo,
+                contrasena: editingUser.contrasena,
+                contrasena_hash: editingUser.contrasena_hash,
+                rol_id: editingUser.rol_id,
+                facultad_id: facultadSeleccionadaEdit,
+                sede_id: editingUser.sede_id ?? null,
+                // Con sede, la seccional se deriva de ella; sin sede, se envía la elegida (o null para quitarla)
+                seccional_id: editingUser.sede_id ? undefined : (editingUser.seccional_id ?? null),
+                activo: editingUser.activo,
+                espacios_permitidos: espaciosPayload,
+                tipos_espacio_permitidos: tiposPayload
+            });
+
+            // Reflejar cambio local de inmediato para mejor feedback en UI.
+            setUsuariosAndCache((prev) => prev.map((u) => (
+                u.id === editingUser.id
+                    ? {
+                        ...u,
+                        nombre: editingUser.nombre,
+                        correo: editingUser.correo,
+                        rol_id: editingUser.rol_id,
+                        facultad_id: facultadSeleccionadaEdit,
+                        sede_id: editingUser.sede_id ?? null,
+                        seccional_id: editingUser.sede_id
+                            ? (sedeActualizada?.seccional_id ?? null)
+                            : (editingUser.seccional_id ?? null),
+                        rol: rolActualizado ?? u.rol,
+                        facultad: facultadActualizada,
+                        sede: sedeActualizada
+                            ? {
+                                id: sedeActualizada.id,
+                                nombre: sedeActualizada.nombre,
+                                seccional_id: sedeActualizada.seccional_id,
+                            }
+                            : null,
+                        espacios_permitidos: espaciosPayload,
+                        tipos_espacio_permitidos: tiposPayload ?? u.tipos_espacio_permitidos,
+                        activo: editingUser.activo,
+                    }
+                    : u
+            )));
+
+            showNotification('Usuario actualizado exitosamente', 'success');
+            setEditDialogOpen(false);
+            resetEditStates();
+            void loadUsuarios({ force: true });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            console.error('Error actualizando usuario:', error);
+            showNotification(error.message || 'Error al actualizar usuario', 'error');
+        }
+    };
+
+    // Cambiar estado de usuario
+    const cambiarEstadoUsuario = async (id: number) => {
+        try {
+            const usuario = usuarios.find(u => u.id === id);
+            if (!usuario) return;
+
+            const nuevoEstado = !usuario.activo;
+            setUsuariosAndCache((prev) => prev.map((u) => (
+                u.id === id ? { ...u, activo: nuevoEstado } : u
+            )));
+            await userService.actualizarUsuario({ id, activo: nuevoEstado });
+            showNotification(`Usuario ${!usuario.activo ? 'activado' : 'desactivado'} exitosamente`, 'success');
+            void loadUsuarios({ force: true });
+        } catch (error) {
+            console.error('Error cambiando estado:', error);
+            showNotification('Error al cambiar estado del usuario', 'error');
+            void loadUsuarios({ force: true });
+        }
+    };
+
+    // Eliminar usuario
+    const confirmarEliminarUsuario = async () => {
+        if (!userToDelete || !userToDelete.id) return;
+
+        try {
+            await userService.eliminarUsuario(userToDelete.id as number);
+            setUsuariosAndCache((prev) => prev.filter((u) => u.id !== userToDelete.id));
+            showNotification('Usuario eliminado exitosamente', 'success');
+            setDeleteDialogOpen(false);
+            setUserToDelete(null);
+            void loadUsuarios({ force: true });
+        } catch (error) {
+            console.error('Error eliminando usuario:', error);
+            showNotification('Error al eliminar usuario', 'error');
+        }
+    };
+
+    // Abrir edición
+    const abrirEdicion = async (usuario: Usuario) => {
+        // Resolver el rol completo usando rol_id si es necesario
+        const rolId = usuario.rol_id || usuario.rol?.id;
+        const rol = usuario.rol || rolesDisponibles.find(r => r.id === rolId);
+
+        // Resolver facultad_id
+        const facultadId = usuario.facultad_id || usuario.facultad?.id || null;
+        const sedeId = usuario.sede_id || getRelationId(usuario.sede) || null;
+
+        const usuarioConDatosCompletos = {
+            ...usuario,
+            rol_id: rolId,
+            facultad_id: facultadId,
+            sede_id: sedeId,
+            rol: usuario.rol || rolesDisponibles.find(r => r.id === rolId) // Asegurar que el objeto rol exista si es posible
+        };
+
+        setEditingUser(usuarioConDatosCompletos);
+        setFacultadSeleccionadaEdit(facultadId);
+        setEspacioSeleccionadoEdit('');
+        setTipoEspacioSeleccionadoEdit('');
+
+        // Cargar espacios permitidos si el rol supervisa espacios.
+        if (isSpaceSupervisorRole(rol)) {
+            try {
+                // Los tipos se piden al servidor: la lista de usuarios puede venir de la caché de la sesión
+                // (anterior a que se asignaran) y mostraría la asignación por tipo vacía
+                const [response, usuarioActual] = await Promise.all([
+                    espacioPermitidoService.listByUsuario(usuario.id as number),
+                    userService.obtenerUsuario(usuario.id as number).catch(() => usuario),
+                ]);
+                const espaciosPermitidosNormalizados = (response.espacios || [])
+                    .map(normalizeEspacioAsignable)
+                    .filter((espacio): espacio is EspacioAsignable => espacio !== null);
+                // Solo los asignados a mano van a la lista individual; los derivados salen de los tipos
+                const espaciosIds = (response.espacios || [])
+                    .filter((espacio) => espacio.individual !== false)
+                    .map((espacio) => espacio.id)
+                    .filter((id): id is number => typeof id === 'number');
+                setEspaciosDisponibles((prev) => {
+                    const espaciosPorId = new Map(prev.map((espacio) => [espacio.id, espacio]));
+                    espaciosPermitidosNormalizados.forEach((espacio) => {
+                        espaciosPorId.set(espacio.id, espacio);
+                    });
+                    return Array.from(espaciosPorId.values());
+                });
+                setEspaciosPermitidosEdit(espaciosIds);
+                const tiposAsignados = usuarioActual.tipos_espacio_permitidos ?? usuario.tipos_espacio_permitidos ?? [];
+                if (tiposAsignados.length > 0) {
+                    // Asignación por tipo: se conserva como tal (si no, al guardar pasaría a individual)
+                    setModoAsignacionSupervisorEdit('tipo');
+                    setTiposEspacioPermitidosEdit(tiposAsignados);
+                    setAsignarTodosEspaciosPorTipoEdit(
+                        tiposEspacioDisponibles.length > 0
+                        && tiposEspacioDisponibles.every((tipo) => tipo.id != null && tiposAsignados.includes(tipo.id)),
+                    );
+                } else {
+                    setModoAsignacionSupervisorEdit('individual');
+                    setTiposEspacioPermitidosEdit([]);
+                    setAsignarTodosEspaciosPorTipoEdit(false);
+                }
+            } catch (error) {
+                console.error('Error cargando espacios permitidos:', error);
+                setEspaciosPermitidosEdit([]);
+            }
+        } else {
+            setEspaciosPermitidosEdit([]);
+            setTiposEspacioPermitidosEdit([]);
+            setAsignarTodosEspaciosPorTipoEdit(false);
+        }
+
+        setEditDialogOpen(true);
+    };
+
+    // Reset estados
+    const resetNuevoUsuario = () => {
+        setNuevoUsuario({
+            nombre: '',
+            correo: '',
+            contrasena: '',
+            rol_id: null,
+            activo: true
+        });
+        setConfirmarCorreo('');
+        setConfirmarPassword('');
+        setSedeSeleccionada('');
+        setSeccionalSeleccionada('');
+        setEspaciosPermitidos([]);
+        setModoAsignacionSupervisor('individual');
+        setTipoEspacioSeleccionado('');
+        setTiposEspacioPermitidos([]);
+        setAsignarTodosEspaciosPorTipo(false);
+        setFacultadSeleccionada(null);
+    };
+
+    const resetEditStates = () => {
+        setEditingUser(null);
+        setEspaciosPermitidosEdit([]);
+        setEspacioSeleccionadoEdit('');
+        setModoAsignacionSupervisorEdit('individual');
+        setTipoEspacioSeleccionadoEdit('');
+        setTiposEspacioPermitidosEdit([]);
+        setAsignarTodosEspaciosPorTipoEdit(false);
+        setFacultadSeleccionadaEdit(null);
+    };
+
+    // El servidor ya filtra por búsqueda y rol: aquí solo se parte el bloque cargado en páginas de PAGE_SIZE
+    const totalFilteredUsuarios = totalUsuarios;
+    const totalUsuarioPages = getTotalPages(totalFilteredUsuarios, PAGE_SIZE);
+    const usuarioPageNumbers = useMemo(
+        () => getPageNumbers(totalUsuarioPages, currentUsuarioPage),
+        [totalUsuarioPages, currentUsuarioPage]
+    );
+
+    const bloqueNecesario = Math.floor(((currentUsuarioPage - 1) * PAGE_SIZE) / USUARIOS_POR_BLOQUE) + 1;
+    consultaActualRef.current = { bloque: bloqueNecesario, busqueda: busquedaAplicada, rol: filterRol };
+    const cargandoUsuarios = bloqueCargado !== bloqueNecesario;
+
+    const paginatedUsuarios = useMemo(() => {
+        if (bloqueCargado !== bloqueNecesario) return [];
+        const inicio = (currentUsuarioPage - 1) * PAGE_SIZE - (bloqueCargado - 1) * USUARIOS_POR_BLOQUE;
+        return usuarios.slice(inicio, inicio + PAGE_SIZE);
+    }, [usuarios, bloqueCargado, bloqueNecesario, currentUsuarioPage, PAGE_SIZE]);
+
+    // Pedir al servidor otro bloque cuando cambia el bloque que se necesita, la búsqueda o el rol
+    useEffect(() => {
+        const { bloque, busqueda, rol } = consultaActualRef.current;
+        if (consultaUsuariosRef.current.clave !== `${bloque}|${busqueda}|${rol}`) {
+            void loadUsuarios();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [bloqueNecesario, busquedaAplicada, filterRol]);
+
+    // La búsqueda se aplica al dejar de escribir; al cambiarla se vuelve a la página 1
+    useEffect(() => {
+        const espera = setTimeout(() => {
+            setBusquedaAplicada(searchTerm);
+            setCurrentUsuarioPage(1);
+        }, BUSQUEDA_ESPERA_MS);
+        return () => clearTimeout(espera);
+    }, [searchTerm]);
+
+    const setFilterRol = (rol: string) => {
+        setFilterRolState(rol);
+        setCurrentUsuarioPage(1);
+    };
+
+    useEffect(() => {
+        setCurrentUsuarioPage((prev) => normalizePage(prev, totalUsuarioPages));
+    }, [totalUsuarioPages]);
+
+    const goToUsuarioPage = (page: number) => {
+        setCurrentUsuarioPage(normalizePage(page, totalUsuarioPages));
+    };
+
+    const goToNextUsuarioPage = () => {
+        goToUsuarioPage(currentUsuarioPage + 1);
+    };
+
+    const goToPrevUsuarioPage = () => {
+        goToUsuarioPage(currentUsuarioPage - 1);
+    };
+
+    const goToPrevUsuarioPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentUsuarioPage, totalUsuarioPages);
+        if (target != null) goToUsuarioPage(target);
+    };
+
+    const goToNextUsuarioPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentUsuarioPage, totalUsuarioPages);
+        if (target != null) goToUsuarioPage(target);
+    };
+
+    return {
+        searchTerm, setSearchTerm,
+        filterRol, setFilterRol,
+        dialogOpen, setDialogOpen,
+        editDialogOpen, setEditDialogOpen,
+        deleteDialogOpen, setDeleteDialogOpen,
+        userToDelete, setUserToDelete,
+        editingUser, setEditingUser,
+        nuevoUsuario, setNuevoUsuario,
+        updateNuevoUsuarioField,
+        crearUsuario,
+        resetNuevoUsuario,
+        actualizarUsuario,
+        resetEditStates,
+        abrirEdicion,
+        cambiarEstadoUsuario,
+        confirmarEliminarUsuario,
+        cargandoUsuarios,
+        paginatedUsuarios,
+        totalFilteredUsuarios,
+        currentUsuarioPage,
+        totalUsuarioPages,
+        usuarioPageNumbers,
+        goToUsuarioPage,
+        goToNextUsuarioPage,
+        goToPrevUsuarioPage,
+        hasPrevUsuarioPageWindow: hasPrevPageWindow(currentUsuarioPage, totalUsuarioPages),
+        hasNextUsuarioPageWindow: hasNextPageWindow(currentUsuarioPage, totalUsuarioPages),
+        goToPrevUsuarioPageWindow,
+        goToNextUsuarioPageWindow,
+        pageSize: PAGE_SIZE,
+        notification,
+        // Datos dinámicos
+        rolesDisponibles,
+        facultadesDisponibles,
+        espaciosDisponibles,
+        espaciosDisponiblesCreacion,
+        espaciosDisponiblesEdicion,
+        sedesDisponibles,
+        seccionalesDisponibles,
+        tiposEspacioDisponibles,
+        espacioSeleccionado, setEspacioSeleccionado,
+        espaciosPermitidos,
+        modoAsignacionSupervisor, setModoAsignacionSupervisor,
+        tipoEspacioSeleccionado, setTipoEspacioSeleccionado,
+        tiposEspacioPermitidos,
+        asignarTodosEspaciosPorTipo, setAsignarTodosEspaciosPorTipo,
+        agregarTipoEspacioPermitido,
+        eliminarTipoEspacioPermitido,
+        espacioSeleccionadoEdit, setEspacioSeleccionadoEdit,
+        espaciosPermitidosEdit,
+        setEspaciosPermitidosEdit,
+        modoAsignacionSupervisorEdit, setModoAsignacionSupervisorEdit,
+        tipoEspacioSeleccionadoEdit, setTipoEspacioSeleccionadoEdit,
+        tiposEspacioPermitidosEdit,
+        setTiposEspacioPermitidosEdit,
+        asignarTodosEspaciosPorTipoEdit, setAsignarTodosEspaciosPorTipoEdit,
+        agregarTipoEspacioPermitidoEdit,
+        eliminarTipoEspacioPermitidoEdit,
+        facultadSeleccionada, setFacultadSeleccionada,
+        facultadSeleccionadaEdit, setFacultadSeleccionadaEdit,
+        agregarEspacioPermitido,
+        eliminarEspacioPermitido,
+        agregarEspacioPermitidoEdit,
+        eliminarEspacioPermitidoEdit,
+        // Campos de validación
+        confirmarCorreo, setConfirmarCorreo,
+        confirmarPassword, setConfirmarPassword,
+        sedeSeleccionada, setSedeSeleccionada,
+        seccionalSeleccionada, setSeccionalSeleccionada
+    };
+}

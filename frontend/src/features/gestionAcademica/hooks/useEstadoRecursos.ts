@@ -1,0 +1,325 @@
+import { useState, useEffect, useMemo } from 'react';
+import { espacioService, espacioPermitidoService, type EspacioFisico } from '../../espacios/services/espaciosAPI';
+import type { Sede } from '../../../services/sedes/sedeAPI';
+import { sedeService } from '../../../services/sedes/sedeAPI';
+import {
+  getPageNumbers,
+  getPageSlice,
+  getTargetPageForNextWindow,
+  getTargetPageForPrevWindow,
+  getTotalPages,
+  hasNextPageWindow,
+  hasPrevPageWindow,
+  normalizePage,
+  PAGE_SIZE_DEFAULT
+} from './paginacion';
+import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
+import {
+    CheckCircle2,
+    AlertTriangle,
+    XCircle,
+    Monitor,
+    Wifi,
+    Volume2,
+    Projector,
+    AirVent,
+    Lightbulb
+} from 'lucide-react';
+
+const ESTADO_RECURSOS_CACHE_KEY = 'gestion-academica-estado-recursos';
+const ESPACIOS_UPDATED_EVENT = 'espacios-updated';
+const RECURSOS_UPDATED_EVENT = 'recursos-updated';
+const SEDES_UPDATED_EVENT = 'sedes-updated';
+
+export function useEstadoRecursos() {
+    const PAGE_SIZE = PAGE_SIZE_DEFAULT;
+    const [espacios, setEspacios] = useState<EspacioFisico[]>([]);
+    const [sedes, setSedes] = useState<Sede[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filtroEstado, setFiltroEstado] = useState<string>('all');
+    const [filtroTipo, setFiltroTipo] = useState<string>('all');
+    const [showDetallesModal, setShowDetallesModal] = useState(false);
+    const [espacioSeleccionado, setEspacioSeleccionado] = useState<EspacioFisico | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    useEffect(() => {
+        const handleEspaciosUpdated = () => {
+            void loadData({ force: true });
+        };
+
+        window.addEventListener(ESPACIOS_UPDATED_EVENT, handleEspaciosUpdated);
+        window.addEventListener(RECURSOS_UPDATED_EVENT, handleEspaciosUpdated);
+        window.addEventListener(SEDES_UPDATED_EVENT, handleEspaciosUpdated);
+        return () => {
+            window.removeEventListener(ESPACIOS_UPDATED_EVENT, handleEspaciosUpdated);
+            window.removeEventListener(RECURSOS_UPDATED_EVENT, handleEspaciosUpdated);
+            window.removeEventListener(SEDES_UPDATED_EVENT, handleEspaciosUpdated);
+        };
+    }, []);
+
+    // Alguien más cambió espacios, recursos o sedes: se vuelve a leer sin mostrar el spinner.
+    useActualizacionEnVivo(['espacios', 'tipos-espacio', 'recursos', 'espacios-recursos', 'sedes'], () => {
+        void loadData({ force: true, silent: true });
+    });
+
+    const loadData = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
+        if (!silent) setLoading(true);
+        try {
+            const activeToken = localStorage.getItem('auth_token');
+            const cachedData = force
+                ? null
+                : getSessionCacheData<{ espacios: EspacioFisico[]; sedes: Sede[] }>(ESTADO_RECURSOS_CACHE_KEY, activeToken);
+
+            if (cachedData) {
+                setEspacios(cachedData.espacios);
+                setSedes(cachedData.sedes);
+                return;
+            }
+
+            // Obtener usuario y rol del localStorage (la clave correcta es 'auth_user')
+            const userStr = localStorage.getItem('auth_user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            const userId = user?.id;
+            const userRole = user?.rol?.nombre || ''; // El login response tiene rol.nombre
+
+            let espaciosPromise;
+
+            // Verificar si el usuario no está autenticado
+            if (!userId) {
+                console.warn('No hay usuario autenticado');
+                setEspacios([]);
+                setSedes([]);
+                setLoading(false);
+                return;
+            }
+
+            // Detectar si es Admin basado en el nombre del rol
+            // Soporta variantes: "Admin", "Administrador", "ADMIN", etc.
+            const esAdmin = userRole.toLowerCase().includes('admin');
+
+            console.log('Estado de Recursos - Usuario:', user?.nombre, '| Rol:', userRole, '| Es Admin:', esAdmin);
+
+            if (esAdmin) {
+                // Admin ve TODOS los espacios del sistema
+                console.log('Cargando TODOS los espacios (Admin)');
+                espaciosPromise = espacioService.list().then(res => res.espacios);
+            } else {
+                // Supervisor General (y otros roles) solo ven sus espacios permitidos
+                console.log('Cargando solo espacios permitidos (Supervisor General)');
+                espaciosPromise = espacioPermitidoService.listByUsuario(userId)
+                    .then(res => {
+                        console.log(`Espacios permitidos encontrados: ${res.espacios?.length || 0}`);
+                        return res.espacios;
+                    });
+            }
+
+            const [espaciosData, sedesRes] = await Promise.all([
+                espaciosPromise,
+                sedeService.listarSedes()
+            ]);
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const sedesData = (sedesRes as any).sedes || (Array.isArray(sedesRes) ? sedesRes : []);
+
+            setEspacios(espaciosData || []);
+            setSedes(sedesData);
+            setSessionCacheData(ESTADO_RECURSOS_CACHE_KEY, activeToken, {
+                espacios: espaciosData || [],
+                sedes: sedesData
+            });
+        } catch (error) {
+            console.error('Error loading data:', error);
+            setEspacios([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Iconos para recursos
+    const getRecursoIcon = (recurso: string) => {
+        const recursoLower = recurso.toLowerCase();
+        if (recursoLower.includes('computador') || recursoLower.includes('pc')) {
+            return { component: Monitor, props: { className: "w-4 h-4" } };
+        }
+        if (recursoLower.includes('proyector')) {
+            return { component: Projector, props: { className: "w-4 h-4" } };
+        }
+        if (recursoLower.includes('wifi') || recursoLower.includes('internet')) {
+            return { component: Wifi, props: { className: "w-4 h-4" } };
+        }
+        if (recursoLower.includes('audio') || recursoLower.includes('sonido')) {
+            return { component: Volume2, props: { className: "w-4 h-4" } };
+        }
+        if (recursoLower.includes('aire') || recursoLower.includes('clima')) {
+            return { component: AirVent, props: { className: "w-4 h-4" } };
+        }
+        return { component: Lightbulb, props: { className: "w-4 h-4" } };
+    };
+
+    // Filtrar espacios
+    const espaciosFiltrados = useMemo(() => {
+        return espacios.filter(espacio => {
+            const matchSearch =
+                (espacio.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                (espacio.tipo_espacio?.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+
+            const matchEstado = filtroEstado === 'all' || espacio.estado === filtroEstado;
+            const matchTipo = filtroTipo === 'all' || espacio.tipo_espacio?.nombre === filtroTipo;
+
+            return matchSearch && matchEstado && matchTipo;
+        });
+    }, [espacios, searchTerm, filtroEstado, filtroTipo]);
+
+    const totalEspaciosFiltrados = espaciosFiltrados.length;
+    const totalPages = getTotalPages(totalEspaciosFiltrados, PAGE_SIZE);
+    const pageNumbers = useMemo(() => getPageNumbers(totalPages, currentPage), [totalPages, currentPage]);
+
+    const paginaActualEspacios = useMemo(() => {
+        return getPageSlice(espaciosFiltrados, currentPage, PAGE_SIZE);
+    }, [espaciosFiltrados, currentPage, PAGE_SIZE]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filtroEstado, filtroTipo]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => normalizePage(prev, totalPages));
+    }, [totalPages]);
+
+    const goToPage = (page: number) => {
+        setCurrentPage(normalizePage(page, totalPages));
+    };
+
+    const goToNextPage = () => {
+        goToPage(currentPage + 1);
+    };
+
+    const goToPrevPage = () => {
+        goToPage(currentPage - 1);
+    };
+
+    const goToPrevPageWindow = () => {
+        const target = getTargetPageForPrevWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    const goToNextPageWindow = () => {
+        const target = getTargetPageForNextWindow(currentPage, totalPages);
+        if (target != null) goToPage(target);
+    };
+
+    // Estadísticas
+    const estadisticas = {
+        total: espacios.length,
+        disponibles: espacios.filter(e => e.estado === 'Disponible').length,
+        mantenimiento: espacios.filter(e => e.estado === 'Mantenimiento').length,
+        noDisponibles: espacios.filter(e => e.estado === 'No Disponible').length
+    };
+
+    // Icono de estado
+    const getEstadoIcon = (estado: string) => {
+        switch (estado) {
+            case 'Disponible':
+            case 'disponible':
+                return { component: CheckCircle2, props: { className: "w-5 h-5 text-green-600" } };
+            case 'Mantenimiento':
+            case 'mantenimiento':
+                return { component: AlertTriangle, props: { className: "w-5 h-5 text-yellow-600" } };
+            case 'Perdido':
+            case 'perdido':
+                return { component: XCircle, props: { className: "w-5 h-5 text-orange-600" } };
+            case 'No Disponible':
+            case 'no disponible':
+            case 'no_disponible':
+                return { component: XCircle, props: { className: "w-5 h-5 text-red-600" } };
+            default:
+                return null;
+        }
+    };
+
+    // Función para obtener el badge de estado de recurso
+    const getEstadoRecursoBadge = (estado: string) => {
+        const estadoLower = estado.toLowerCase();
+        switch (estadoLower) {
+            case 'disponible':
+                return { className: "bg-green-600", label: "Disponible" };
+            case 'mantenimiento':
+            case 'en mantenimiento':
+                return { className: "bg-yellow-600", label: "Mantenimiento" };
+            case 'perdido':
+                return { className: "bg-orange-600", label: "Perdido" };
+            case 'no disponible':
+            case 'no_disponible':
+                return { className: "bg-red-600", label: "No Disponible" };
+            default:
+                return { className: "bg-slate-600", label: "Desconocido" };
+        }
+    };
+
+    // Función para obtener recursos con estado desde el backend
+    const getRecursosConEstado = (espacio: EspacioFisico) => {
+        // El backend ya retorna los recursos con su estado
+        if (espacio.recursos && espacio.recursos.length > 0) {
+            return espacio.recursos.map(r => ({
+                nombre: r.nombre,
+                estado: r.estado
+            }));
+        }
+        return [];
+    };
+
+    const verDetalles = (espacio: EspacioFisico) => {
+        setEspacioSeleccionado(espacio);
+        setShowDetallesModal(true);
+    };
+
+    // Get sede name helper
+    const getSedeNombre = (sedeId: number) => {
+        const sede = sedes.find(s => s.id === sedeId);
+        return sede?.nombre || 'Sede desconocida';
+    };
+
+    // Get all unique tipos from espacios que tienen al menos un salón
+    const tiposDisponibles = Array.from(
+        new Set(espacios.map(e => e.tipo_espacio?.nombre).filter(Boolean))
+    ) as string[];
+
+    return {
+        espacios,
+        searchTerm, setSearchTerm,
+        filtroEstado, setFiltroEstado,
+        filtroTipo, setFiltroTipo,
+        showDetallesModal, setShowDetallesModal,
+        espacioSeleccionado, setEspacioSeleccionado,
+        loadData,
+        getRecursoIcon,
+        espaciosFiltrados,
+        paginaActualEspacios,
+        totalEspaciosFiltrados,
+        currentPage,
+        totalPages,
+        pageNumbers,
+        pageSize: PAGE_SIZE,
+        goToPage,
+        goToNextPage,
+        goToPrevPage,
+        hasPrevPageWindow: hasPrevPageWindow(currentPage, totalPages),
+        hasNextPageWindow: hasNextPageWindow(currentPage, totalPages),
+        goToPrevPageWindow,
+        goToNextPageWindow,
+        estadisticas,
+        getEstadoIcon,
+        getEstadoRecursoBadge,
+        getRecursosConEstado,
+        verDetalles,
+        getSedeNombre,
+        tiposDisponibles,
+        loading
+    };
+}

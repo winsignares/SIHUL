@@ -15,9 +15,9 @@ Ver también `hooks/horarios/useVisualizacionHorarios.ts` y `hooks/espacios/useS
 
 ## Hooks reales (sobre backend Django)
 
-### `useCrearHorarios.ts` (817 líneas) — el hook más complejo del dominio académico
+### `useCrearHorarios.ts` (641 líneas) — el hook más complejo del dominio académico
 
-Usado en `pages/gestionAcademica/CrearHorarios.tsx`.
+Usado en `features/gestionAcademica/pages/CrearHorarios.tsx`, que arma la pantalla con los componentes de `features/gestionAcademica/components/crearHorarios/` (filtros, tabla de grupos, grilla semanal, lista de asignaturas y modal de asignación). Los filtros, sus listas disponibles y la paginación de la tabla están en `hooks/crearHorarios/useFiltrosCrearHorarios.ts`.
 
 - Estado: catálogos (`facultades`, `programas`, `grupos`, `espacios`, `asignaturas`, `asignaturasPrograma`, `docentes`, `periodos`, `todosLosHorarios`), 9 filtros independientes, vista (`lista|asignar`), modal de asignación con `diasSeleccionados`/`horasPorDia`.
 - Servicios: `facultadService`, `programaService`, `espacioService`, `asignaturaService`, `asignaturaProgramaService`, `userService.listarDocentes`, `periodoService`, `grupoService`, `horarioService.listExtendidos`, `solicitudEspacioService`.
@@ -25,9 +25,9 @@ Usado en `pages/gestionAcademica/CrearHorarios.tsx`.
 - Valida conflictos de horario vía el sub-hook `useValidacionHorarios.ts`.
 - Notifica cambios con el evento global `horariosUpdated` y limpia cache con `clearSessionCacheByPrefix` (`gestion-academica-crear-horarios`, `gestion-academica-centro-horarios-v2`).
 
-### `useGestionUsuarios.ts` (840 líneas)
+### `useGestionUsuarios.ts` (701 líneas)
 
-Usado en `pages/gestionAcademica/GestionUsuarios.tsx`. CRUD de usuarios con roles/facultades/sedes/espacios permitidos (individual o por tipo de espacio).
+Usado en `pages/gestionAcademica/GestionUsuarios.tsx`. CRUD de usuarios con roles/facultades/sedes/espacios permitidos (individual o por tipo de espacio). La carga de los catálogos y los listeners de recarga están en `hooks/usuarios/useCatalogosUsuarios.ts`; las constantes, los tipos y las funciones puras, en `hooks/usuarios/usuariosUtils.ts`.
 
 - Servicios: `userService`, `rolService` (`services/users/authService.ts`), `espacioService`/`espacioPermitidoService`, `facultadService`, `sedeService`.
 - Cache multi-clave (usuarios, roles, facultades, espacios, sedes, tipos de espacio), cada una con su propio evento de invalidación (`ROLES_UPDATED_EVENT`, `ESPACIOS_UPDATED_EVENT`, `SEDES_UPDATED_EVENT`, `ACADEMIC_CATALOG_UPDATED_EVENT`), incluyendo un listener en `window.addEventListener('focus', ...)` para refrescar catálogos al recuperar el foco.

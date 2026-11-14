@@ -37,6 +37,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libpq-dev
       - name: Instalar dependencias
         run: pip install -r backend/requirements.txt
+      - name: Código sin uso (imports y variables)
+        run: |
+          pip install ruff==0.17.4
+          ruff check --select F --exclude migrations backend
       - name: Chequeos de Django
         working-directory: backend
         run: python manage.py check
@@ -46,6 +50,24 @@ jobs:
       - name: Tests
         working-directory: backend
         run: python manage.py test
+
+  chatbot-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: chatbot/requirements.txt
+      - name: Instalar dependencias
+        run: pip install -r chatbot/requirements.txt
+      # No usan base de datos, Redis ni OpenAI: las pruebas fijan valores falsos para los ajustes
+      - name: Tests
+        working-directory: chatbot
+        env:
+          PYTHONPATH: .
+        run: python -m unittest discover -s tests -t .
 
   frontend-build:
     runs-on: ubuntu-latest
@@ -59,6 +81,9 @@ jobs:
       - name: Instalar dependencias
         working-directory: frontend
         run: npm ci
+      - name: Tipos (tsc)
+        working-directory: frontend
+        run: npx tsc -b
       - name: Build
         working-directory: frontend
         run: npm run build

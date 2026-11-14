@@ -1,0 +1,255 @@
+import {
+  Building2,
+  MapPin,
+  Clock,
+  BookOpen,
+  Activity as ActivityIcon,
+  Users,
+  CheckCircle2,
+  TrendingUp,
+  DoorOpen,
+  Layers,
+  Calendar,
+  CheckCircle,
+  AlertCircle,
+} from 'lucide-react';
+import type { DashboardStat, Activity, QuickAction, OccupancyData } from '../models/types';
+
+// DashboardHome Data
+export const dashboardHomeStats: DashboardStat[] = [
+    {
+        label: 'Total Facultades',
+        value: '8',
+        change: '+12.5%',
+        icon: Building2,
+        gradient: 'from-violet-500 to-violet-600',
+        bgGradient: 'from-violet-500/10 to-violet-600/10',
+        iconBg: 'bg-violet-500',
+        changePositive: true
+    },
+    {
+        label: 'Espacios Activos',
+        value: '156',
+        change: '+8.2%',
+        icon: MapPin,
+        gradient: 'from-blue-500 to-blue-600',
+        bgGradient: 'from-blue-500/10 to-blue-600/10',
+        iconBg: 'bg-blue-500',
+        changePositive: true
+    },
+    {
+        label: 'Horarios Creados',
+        value: '342',
+        change: '+23.1%',
+        icon: Clock,
+        gradient: 'from-emerald-500 to-emerald-600',
+        bgGradient: 'from-emerald-500/10 to-emerald-600/10',
+        iconBg: 'bg-emerald-500',
+        changePositive: true
+    },
+    {
+        label: 'Programas Activos',
+        value: '24',
+        change: '+5.4%',
+        icon: BookOpen,
+        gradient: 'from-amber-500 to-amber-600',
+        bgGradient: 'from-amber-500/10 to-amber-600/10',
+        iconBg: 'bg-amber-500',
+        changePositive: true
+    }
+];
+
+export const dashboardHomeActivities: Activity[] = [
+    {
+        id: '1',
+        title: 'Nuevo Horario Creado',
+        description: 'Ingeniería de Sistemas - Grupo A',
+        time: 'Hace 5 minutos',
+        status: 'pending',
+        icon: Clock,
+        color: 'bg-blue-500',
+        date: '2025-11-01 10:00'
+    },
+    {
+        id: '2',
+        title: 'Espacio Actualizado',
+        description: 'Laboratorio 301 - Edificio C',
+        time: 'Hace 15 minutos',
+        status: 'pending',
+        icon: MapPin,
+        color: 'bg-emerald-500',
+        date: '2025-11-01 09:45'
+    },
+    {
+        id: '3',
+        title: 'Programa Activado',
+        description: 'Administración de Empresas 2025-1',
+        time: 'Hace 1 hora',
+        status: 'completed',
+        icon: BookOpen,
+        color: 'bg-violet-500',
+        date: '2025-11-01 09:00'
+    },
+    {
+        id: '4',
+        title: 'Conflicto Detectado',
+        description: 'Aula 205 - Jueves 10:00 AM',
+        time: 'Hace 2 horas',
+        status: 'pending',
+        icon: ActivityIcon,
+        color: 'bg-amber-500',
+        date: '2025-11-01 08:00'
+    },
+    {
+        id: '5',
+        title: 'Usuario Creado',
+        description: 'Nuevo docente registrado',
+        time: 'Hace 3 horas',
+        status: 'completed',
+        icon: Users,
+        color: 'bg-indigo-500',
+        date: '2025-11-01 07:00'
+    },
+    {
+        id: '6',
+        title: 'Préstamo Aprobado',
+        description: 'Sala 101 - Reunión administrativa',
+        time: 'Hace 4 horas',
+        status: 'completed',
+        icon: CheckCircle2,
+        color: 'bg-green-500',
+        date: '2025-11-01 06:00'
+    }
+];
+
+export const dashboardHomeQuickStats = [
+    { label: 'Tasa de Ocupación', value: '85%', icon: TrendingUp, trend: 'up' },
+    { label: 'Conflictos Resueltos', value: '23', icon: CheckCircle2, trend: 'up' },
+    { label: 'Espacios Disponibles', value: '12', icon: CheckCircle, trend: 'neutral' } // Changed Circle to CheckCircle for now as Circle is not imported or standard lucide
+];
+
+export const dashboardHomeOccupationDetails: OccupancyData[] = [
+    {
+        day: 'Lunes',
+        franjas: [
+            { hora: '07:00 - 09:00', ocupacion: 65, color: 'bg-blue-500' },
+            { hora: '09:00 - 11:00', ocupacion: 92, color: 'bg-red-600' },
+            { hora: '11:00 - 13:00', ocupacion: 88, color: 'bg-red-600' },
+            { hora: '13:00 - 15:00', ocupacion: 70, color: 'bg-blue-500' },
+            { hora: '15:00 - 17:00', ocupacion: 82, color: 'bg-red-600' },
+            { hora: '17:00 - 19:00', ocupacion: 45, color: 'bg-emerald-500' }
+        ]
+    },
+    {
+        day: 'Martes',
+        franjas: [
+            { hora: '07:00 - 09:00', ocupacion: 70, color: 'bg-blue-500' },
+            { hora: '09:00 - 11:00', ocupacion: 95, color: 'bg-red-600' },
+            { hora: '11:00 - 13:00', ocupacion: 90, color: 'bg-red-600' },
+            { hora: '13:00 - 15:00', ocupacion: 75, color: 'bg-blue-500' },
+            { hora: '15:00 - 17:00', ocupacion: 85, color: 'bg-red-600' },
+            { hora: '17:00 - 19:00', ocupacion: 50, color: 'bg-emerald-500' }
+        ]
+    },
+    {
+        day: 'Miércoles',
+        franjas: [
+            { hora: '07:00 - 09:00', ocupacion: 68, color: 'bg-blue-500' },
+            { hora: '09:00 - 11:00', ocupacion: 88, color: 'bg-red-600' },
+            { hora: '11:00 - 13:00', ocupacion: 92, color: 'bg-red-600' },
+            { hora: '13:00 - 15:00', ocupacion: 72, color: 'bg-blue-500' },
+            { hora: '15:00 - 17:00', ocupacion: 80, color: 'bg-blue-500' },
+            { hora: '17:00 - 19:00', ocupacion: 48, color: 'bg-emerald-500' }
+        ]
+    }
+];
+
+export const dashboardHomeOccupationStats: OccupancyData[] = [
+    { day: 'Lunes', value: 85, color: 'bg-red-600' },
+    { day: 'Martes', value: 92, color: 'bg-blue-600' },
+    { day: 'Miércoles', value: 88, color: 'bg-violet-600' },
+    { day: 'Jueves', value: 78, color: 'bg-emerald-600' },
+    { day: 'Viernes', value: 65, color: 'bg-amber-600' },
+    { day: 'Sábado', value: 45, color: 'bg-slate-600' }
+];
+
+// SupervisorGeneral Data
+export const supervisorMetrics: DashboardStat[] = [
+    {
+        label: 'Espacios Totales',
+        value: '156',
+        icon: Building2,
+        color: 'from-blue-500 to-blue-600',
+        bgColor: 'bg-blue-100',
+        textColor: 'text-blue-600',
+        trend: '+5%',
+        trendUp: true
+    },
+    {
+        label: 'Espacios Disponibles',
+        value: '98',
+        icon: CheckCircle2,
+        color: 'from-green-500 to-green-600',
+        bgColor: 'bg-green-100',
+        textColor: 'text-green-600',
+        trend: '63%',
+        trendUp: true
+    },
+    {
+        label: 'Espacios Ocupados',
+        value: '58',
+        icon: Clock,
+        color: 'from-orange-500 to-orange-600',
+        bgColor: 'bg-orange-100',
+        textColor: 'text-orange-600',
+        trend: '37%',
+        trendUp: false
+    },
+    {
+        label: 'Salones Abiertos',
+        value: '45',
+        icon: DoorOpen,
+        color: 'from-purple-500 to-purple-600',
+        bgColor: 'bg-purple-100',
+        textColor: 'text-purple-600',
+        trend: '+12',
+        trendUp: true
+    }
+];
+
+export const supervisorQuickActions: QuickAction[] = [
+    {
+        title: 'Disponibilidad de Espacios',
+        description: 'Ver cronograma de ocupación de espacios',
+        icon: Calendar,
+        action: 'cronograma',
+        color: 'from-blue-600 to-blue-700',
+        iconBg: 'bg-blue-100',
+        iconColor: 'text-blue-600'
+    },
+    {
+        title: 'Apertura y Cierre de Salones',
+        description: 'Gestionar el estado de los salones',
+        icon: DoorOpen,
+        action: 'apertura-cierre',
+        color: 'from-purple-600 to-purple-700',
+        iconBg: 'bg-purple-100',
+        iconColor: 'text-purple-600'
+    },
+    {
+        title: 'Estado de Recursos',
+        description: 'Consultar inventario y estado de recursos',
+        icon: Layers,
+        action: 'estado-recursos',
+        color: 'from-orange-600 to-orange-700',
+        iconBg: 'bg-orange-100',
+        iconColor: 'text-orange-600'
+    }
+];
+
+export const supervisorActivityLogs: Activity[] = [
+    { title: 'Salón A-101 abierto', time: 'Hace 5 minutos', tipo: 'apertura', description: '', icon: DoorOpen },
+    { title: 'Proyector en B-203 reportado en mantenimiento', time: 'Hace 15 minutos', tipo: 'mantenimiento', description: '', icon: AlertCircle },
+    { title: 'Salón C-305 cerrado', time: 'Hace 30 minutos', tipo: 'cierre', description: '', icon: DoorOpen },
+    { title: 'Auditorio Principal reservado', time: 'Hace 1 hora', tipo: 'reserva', description: '', icon: Calendar }
+];

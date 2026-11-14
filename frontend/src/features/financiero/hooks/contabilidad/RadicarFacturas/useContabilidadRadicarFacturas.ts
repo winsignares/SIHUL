@@ -1,0 +1,323 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { documentosService, facturasService } from '../../../services';
+import type { DocumentoAdjunto, Factura } from '../../../models/core.models';
+import { type SharedFacturaDetail } from '../../../components/factura-detail-modal';
+import { buildSharedFacturaDetail } from '../../../components/factura-details-helpers';
+import type { TableFilterValues } from '../../../../../components/ui/table-filters';
+import { useActualizacionEnVivo } from '../../../../../hooks/useActualizacionEnVivo';
+
+const DOCUMENTOS_REQUERIDOS = [
+  { tipo: 'Factura', label: 'Factura Original' },
+  { tipo: 'Orden de Compra', label: 'Orden de Compra / Contrato' },
+  { tipo: 'Certificación Bancaria', label: 'Certificación Bancaria del Proveedor' },
+] as const;
+
+const TIPO_DOC_KEYWORDS: Record<string, string[]> = {
+  Factura: ['factura'],
+  'Orden de Compra': ['orden', 'compra', 'contrato'],
+  'Certificación Bancaria': ['certif', 'bancari'],
+};
+
+const esDocumentoTipo = (doc: DocumentoAdjunto, tipoRequerido: string): boolean => {
+  if (doc.tipo_documento === tipoRequerido) return true;
+  const nombreLower = (doc.nombre_archivo || '').toLowerCase();
+  const keywords = TIPO_DOC_KEYWORDS[tipoRequerido] || [];
+  return keywords.some((kw) => nombreLower.includes(kw));
+};
+
+const validarDocumentosCompletos = (docs: DocumentoAdjunto[]): boolean =>
+  DOCUMENTOS_REQUERIDOS.every((req) => docs.some((d) => esDocumentoTipo(d, req.tipo)));
+
+const obtenerDocumentosFaltantes = (docs: DocumentoAdjunto[]): string[] =>
+  DOCUMENTOS_REQUERIDOS.filter((req) => !docs.some((d) => esDocumentoTipo(d, req.tipo))).map((req) => req.label);
+
+const getSlaLevel = (dias: number): 'verde' | 'amarillo' | 'naranja' | 'vencido' => {
+  if (dias >= 17) return 'vencido';
+  if (dias >= 12) return 'naranja';
+  if (dias >= 8) return 'amarillo';
+  return 'verde';
+};
+
+const facturaToSharedDetail = (factura: Factura, docs: DocumentoAdjunto[]): SharedFacturaDetail => {
+  const base = buildSharedFacturaDetail(factura);
+  return {
+    ...base,
+    documentos: docs.map((d) => ({
+      id: String(d.id),
+      nombre: d.nombre_archivo,
+      tipo: d.tipo_documento,
+      verificado: d.verificado,
+      url: d.archivo_url ?? d.url_storage ?? undefined,
+    })),
+  };
+};
+
+export function useContabilidadRadicarFacturas() {
+  const [facturas, setFacturas] = useState<Factura[]>([]);
+  const [docsMap, setDocsMap] = useState<Record<number, DocumentoAdjunto[]>>({});
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [facturaSeleccionada, setFacturaSeleccionada] = useState<Factura | null>(null);
+  const [accion, setAccion] = useState<'radicar' | 'devolver' | null>(null);
+  const [observaciones, setObservaciones] = useState('');
+  const [numeroOperacionContable, setNumeroOperacionContable] = useState('');
+  const [consecutivoOperacion, setConsecutivoOperacion] = useState('');
+  const [procesando, setProcesando] = useState(false);
+  const [toast, setToast] = useState<{ tipo: 'ok' | 'err'; msg: string } | null>(null);
+  const [errorConsecutivo, setErrorConsecutivo] = useState<string | null>(null);
+
+  const [modalFactura, setModalFactura] = useState<SharedFacturaDetail | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const [filtros, setFiltros] = useState<TableFilterValues>({
+    numeroFactura: '',
+    proveedor: '',
+    estado: '',
+    areaSolicitante: '',
+    fechaInicio: '',
+    fechaFin: '',
+    montoMin: '',
+    montoMax: '',
+  });
+
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void cargarFacturas({ silent: true });
+  });
+
+  const cargarFacturas = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setCargando(true);
+    setError(null);
+    try {
+      const [registradas] = await Promise.all([
+        facturasService.getByEstado('Registrada'),
+      ]);
+
+      const lista = registradas.filter((f) => f.estado === 'Registrada' && f.etapa_actual !== 'Corrección Radicación');
+
+      setFacturas(lista);
+      const docsResults = await Promise.all(
+        lista.map((f) =>
+          documentosService
+            .getByFactura(f.id)
+            .then((d) => ({ id: f.id, docs: d }))
+            .catch(() => ({ id: f.id, docs: [] as DocumentoAdjunto[] }))
+        )
+      );
+      const map: Record<number, DocumentoAdjunto[]> = {};
+      docsResults.forEach(({ id, docs }) => {
+        map[id] = docs;
+      });
+      setDocsMap(map);
+    } catch {
+      setError('No se pudo cargar las facturas. Verifique la conexión.');
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargarFacturas();
+  }, [cargarFacturas]);
+
+  const showToast = (tipo: 'ok' | 'err', msg: string) => {
+    setToast({ tipo, msg });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const facturasFiltradas = useMemo(() => {
+    const filtered = facturas.filter((f) => {
+      const proveedor = f.proveedor?.razon_social ?? '';
+      const area = f.departamento?.nombre ?? '';
+      if (filtros.numeroFactura && !f.numero_factura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;
+      if (filtros.proveedor && proveedor !== filtros.proveedor) return false;
+      if (filtros.areaSolicitante && area !== filtros.areaSolicitante) return false;
+      if (filtros.fechaInicio && f.fecha_recepcion < filtros.fechaInicio) return false;
+      if (filtros.fechaFin && f.fecha_recepcion > filtros.fechaFin) return false;
+      if (filtros.montoMin && Number(f.valor_total) < Number(filtros.montoMin)) return false;
+      if (filtros.montoMax && Number(f.valor_total) > Number(filtros.montoMax)) return false;
+      return true;
+    });
+
+    const desc = filtros.orden === 'desc';
+    filtered.sort((a, b) => {
+      const cmp = (a.fecha_recepcion || '').localeCompare(b.fecha_recepcion || '');
+      return desc ? -cmp : cmp;
+    });
+
+    return filtered;
+  }, [facturas, filtros]);
+
+  // Paginación
+  const totalPages = Math.ceil(facturasFiltradas.length / itemsPerPage);
+  const facturasPaginadas = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return facturasFiltradas.slice(startIndex, endIndex);
+  }, [facturasFiltradas, currentPage, itemsPerPage]);
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filtros.numeroFactura, filtros.proveedor, filtros.estado, filtros.areaSolicitante, filtros.fechaInicio, filtros.fechaFin]);
+
+  const abrirDetalle = (factura: Factura) => {
+    const docs = docsMap[factura.id] ?? [];
+    setModalFactura(facturaToSharedDetail(factura, docs));
+  };
+
+  const iniciarAccion = (factura: Factura, acc: 'radicar' | 'devolver') => {
+    setFacturaSeleccionada(factura);
+    setAccion(acc);
+    setObservaciones('');
+    setNumeroOperacionContable(factura.numero_operacion_contable || '');
+    setConsecutivoOperacion(factura.consecutivo_operacion || '');
+  };
+
+  const cancelarAccion = () => {
+    setFacturaSeleccionada(null);
+    setAccion(null);
+    setObservaciones('');
+    setNumeroOperacionContable('');
+    setConsecutivoOperacion('');
+    setErrorConsecutivo(null);
+  };
+
+  const validarConsecutivo = (valor: string) => {
+    setConsecutivoOperacion(valor);
+    if (!valor.trim()) {
+      setErrorConsecutivo(null);
+      return;
+    }
+    const duplicada = facturas.find(
+      (f) =>
+        f.consecutivo_operacion &&
+        f.consecutivo_operacion.trim() === valor.trim() &&
+        f.id !== facturaSeleccionada?.id
+    );
+    if (duplicada) {
+      setErrorConsecutivo(
+        `El consecutivo "${valor}" ya está registrado en la factura ${duplicada.numero_factura} (Radicado: ${duplicada.numero_radicado ?? duplicada.consecutivo_operacion}). El consecutivo debe ser único.`
+      );
+    } else {
+      setErrorConsecutivo(null);
+    }
+  };
+
+  const confirmarRadicacion = async () => {
+    if (!facturaSeleccionada) return;
+
+    if (!observaciones.trim()) {
+      showToast('err', 'Las observaciones son obligatorias para radicar.');
+      return;
+    }
+
+    if (!numeroOperacionContable.trim()) {
+      showToast('err', 'El número de operación contable es obligatorio para radicar.');
+      return;
+    }
+
+    if (!consecutivoOperacion.trim()) {
+      showToast('err', 'El consecutivo de operación es obligatorio para radicar.');
+      return;
+    }
+
+    if (errorConsecutivo) {
+      showToast('err', errorConsecutivo);
+      return;
+    }
+
+    const docs = docsMap[facturaSeleccionada.id] ?? [];
+    if (!validarDocumentosCompletos(docs)) {
+      const faltantes = obtenerDocumentosFaltantes(docs);
+      showToast('err', `No se puede radicar. Faltan soportes: ${faltantes.join(', ')}.`);
+      return;
+    }
+
+    setProcesando(true);
+    try {
+      await facturasService.radicar(facturaSeleccionada.id, {
+        observaciones: observaciones || undefined,
+        numero_operacion_contable: numeroOperacionContable.trim(),
+        consecutivo_operacion: consecutivoOperacion.trim(),
+      });
+      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} radicada exitosamente.`);
+      cancelarAccion();
+      cargarFacturas();
+    } catch (err: unknown) {
+      const msg =
+        (err as { message?: string })?.message ??
+        'Error al radicar la factura. Intente de nuevo.';
+      showToast('err', msg);
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const confirmarDevolucion = async () => {
+    if (!facturaSeleccionada) return;
+    if (!observaciones.trim() || observaciones.trim().length < 10) {
+      showToast('err', 'El motivo de devolución es requerido (mínimo 10 caracteres).');
+      return;
+    }
+    setProcesando(true);
+    try {
+      await facturasService.rechazar(facturaSeleccionada.id, observaciones.trim(), 'proveedor');
+      showToast('ok', `Factura ${facturaSeleccionada.numero_factura} devuelta al proveedor para correccion.`);
+      cancelarAccion();
+      cargarFacturas();
+    } catch {
+      showToast('err', 'Error al devolver la factura. Intente de nuevo.');
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const dotColor = (nivel: ReturnType<typeof getSlaLevel>) =>
+    nivel === 'vencido' ? 'bg-purple-700' : nivel === 'naranja' ? 'bg-orange-500' : nivel === 'amarillo' ? 'bg-yellow-500' : 'bg-green-500';
+
+  const diasColor = (nivel: ReturnType<typeof getSlaLevel>) =>
+    nivel === 'vencido' ? 'text-purple-700' : nivel === 'naranja' ? 'text-orange-600' : nivel === 'amarillo' ? 'text-yellow-700' : 'text-green-700';
+
+  return {
+    facturas,
+    docsMap,
+    cargando,
+    error,
+    facturaSeleccionada,
+    accion,
+    observaciones,
+    numeroOperacionContable,
+    consecutivoOperacion,
+    procesando,
+    toast,
+    modalFactura,
+    filtros,
+    facturasFiltradas,
+    facturasPaginadas,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    itemsPerPage,
+    setObservaciones,
+    setNumeroOperacionContable,
+    setConsecutivoOperacion,
+    validarConsecutivo,
+    errorConsecutivo,
+    setFiltros,
+    setModalFactura,
+    cargarFacturas,
+    abrirDetalle,
+    iniciarAccion,
+    cancelarAccion,
+    confirmarRadicacion,
+    confirmarDevolucion,
+    validarDocumentosCompletos,
+    obtenerDocumentosFaltantes,
+    getSlaLevel,
+    dotColor,
+    diasColor,
+  };
+}

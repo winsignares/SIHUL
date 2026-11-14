@@ -1,0 +1,46 @@
+"""
+Middleware para filtrado de datos por sede del usuario
+"""
+from django.utils.deprecation import MiddlewareMixin
+
+
+class SedeFilterMiddleware(MiddlewareMixin):
+    """
+    Middleware que agrega la sede del usuario autenticado a cada request.
+    Permite filtrar automáticamente los datos según la sede del usuario.
+    """
+    
+    def process_request(self, request):
+        """
+        Procesa cada request y agrega información de la sede del usuario
+        """
+        # Obtener el ID de usuario desde la sesión
+        user_id = request.session.get('user_id')
+        
+        if user_id:
+            try:
+                from identidad.usuarios.models import Usuario
+                usuario = Usuario.objects.select_related('rol', 'sede').get(id=user_id)
+                if not usuario.activo:
+                    # Una cuenta desactivada pierde la sesión que tuviera abierta
+                    request.session.flush()
+                    raise Usuario.DoesNotExist
+                
+                # Agregar información de sede al request
+                request.sede_id = usuario.sede_id if usuario.sede else None
+                request.sede = usuario.sede
+                request.seccional = usuario.seccional if getattr(usuario, 'seccional_id', None) else getattr(usuario.sede, 'seccional', None)
+                request.user_obj = usuario  # También agregar el usuario completo
+                
+            except Usuario.DoesNotExist:
+                # Usuario no encontrado o desactivado, establecer valores por defecto
+                request.sede_id = None
+                request.sede = None
+                request.seccional = None
+                request.user_obj = None
+        else:
+            # No hay usuario autenticado
+            request.sede_id = None
+            request.sede = None
+            request.seccional = None
+            request.user_obj = None

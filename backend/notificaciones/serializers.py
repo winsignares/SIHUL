@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.core.exceptions import ValidationError
 
-from mysite.xss_protection import NOTIFICACION_SCHEMA, sanitize_dict
+from nucleo.xss_protection import NOTIFICACION_SCHEMA, sanitize_dict
 from .models import Notificacion
 
 

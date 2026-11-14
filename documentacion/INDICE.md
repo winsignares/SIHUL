@@ -16,11 +16,18 @@ La base de datos operativa de SIHUL **no es Oracle, es PostgreSQL** (`pgvector/p
 ## Cómo está organizada esta carpeta
 
 - **Este archivo (`INDICE.md`)**: punto de entrada, mapa general del sistema y de la infraestructura Docker.
-- **`documentacion_backend/`**: dividida por tema — [APPS_DJANGO.md](documentacion_backend/APPS_DJANGO.md) (listado de apps), [AUTENTICACION_Y_PERMISOS.md](documentacion_backend/AUTENTICACION_Y_PERMISOS.md) (RBAC dinámico por componente), [CONFIGURACION_SETTINGS.md](documentacion_backend/CONFIGURACION_SETTINGS.md) (`settings.py`), [MODULO_FINANCIERO.md](documentacion_backend/MODULO_FINANCIERO.md), [TESTS_Y_SEEDERS.md](documentacion_backend/TESTS_Y_SEEDERS.md).
+- **`documentacion_backend/`**: dividida por tema — [APPS_DJANGO.md](documentacion_backend/APPS_DJANGO.md) (listado de apps), [AUTENTICACION_Y_PERMISOS.md](documentacion_backend/AUTENTICACION_Y_PERMISOS.md) (RBAC dinámico por componente), [CONFIGURACION_SETTINGS.md](documentacion_backend/CONFIGURACION_SETTINGS.md) (`settings.py`), [MODULO_FINANCIERO.md](documentacion_backend/MODULO_FINANCIERO.md), [TESTS_Y_SEEDERS.md](documentacion_backend/TESTS_Y_SEEDERS.md), [PLAN_REESTRUCTURACION.md](documentacion_backend/PLAN_REESTRUCTURACION.md) (diagnóstico y fases de la reestructuración), [EVENTOS_TIEMPO_REAL.md](documentacion_backend/EVENTOS_TIEMPO_REAL.md) (actualización en vivo con SSE sobre Redis).
 - **`documentacion_frontend/`**: dividida en [ESTRUCTURA_Y_STACK.md](documentacion_frontend/ESTRUCTURA_Y_STACK.md), [ENRUTAMIENTO_DINAMICO.md](documentacion_frontend/ENRUTAMIENTO_DINAMICO.md) (`AuthContext`, `componentRoutes.ts`, `AppRouter.tsx`), [PAGINAS_INDICE.md](documentacion_frontend/PAGINAS_INDICE.md) (un archivo por dominio de páginas), [HOOKS_INDICE.md](documentacion_frontend/HOOKS_INDICE.md) (hooks por dominio + patrón de cache) y [SERVICES_INDICE.md](documentacion_frontend/SERVICES_INDICE.md) (clientes API por dominio + `core/` base). También conserva changelogs previos ([RESPONSIVE_UPDATES.md](documentacion_frontend/RESPONSIVE_UPDATES.md), [RESUMEN_NOTIFICACIONES.md](documentacion_frontend/RESUMEN_NOTIFICACIONES.md)).
 - **`documentacion_oracle/INTEGRACION_ETL_ORACLE.md`**: patrón ETL (staging → promoción a tablas reales), comandos disponibles, variables de entorno necesarias.
+- **`documentacion_oracle/INVENTARIO_VISTAS_Y_ESTRATEGIA.md`**: qué trae cada vista de Oracle, dónde se guarda y la estrategia para leerlas bajo demanda en lugar de la carga programada.
 - **`documentacion_chatbot/ARQUITECTURA_RAG_CHATBOT.md`**: arquitectura RAG del servicio FastAPI y su integración como proxy a través del backend Django.
-- **Documentos raíz existentes** (`ARQUITECTURA_COMPLETA_ANALISIS.md`, `REFERENCIA_RAPIDA.md`, `GUIA_INTEGRACION_MODULO_FINANCIERO.md`, `CAMBIOS_SIHUL_FINANCIERO.md`, `ENTORNO_PRUEBAS.md`): documentan bien el patrón de autenticación y componentes dinámicos, y el histórico del entorno de pruebas. **Ojo:** los modelos financieros de ejemplo en `ARQUITECTURA_COMPLETA_ANALISIS.md` y `GUIA_INTEGRACION_MODULO_FINANCIERO.md` (`Presupuesto`, `Transaccion`, `CentroFinanciero`) corresponden al **diseño original propuesto**, no al modelo realmente implementado (`Factura`, `Proveedor`, `CuentaContable`, ver [documentacion_backend/MODULO_FINANCIERO.md](documentacion_backend/MODULO_FINANCIERO.md)).
+- **`documentacion_chatbot/CAPAS_Y_AMPLIACION.md`**: evaluación del chatbot contra las ocho capas (prompt, RAG, herramientas, accesos, guardrails, caché, router y observabilidad) y plan para ampliarlo al resto del sistema.
+- **`general/INFORME_PRUEBAS_SISTEMA.md`**: qué se probó antes de montar la nueva versión (automáticas, API, navegador con dos sesiones y carga) y qué no se cubrió.
+- **`general/PENDIENTES.md`**: lo que queda fuera del trabajo actual (asistencia, Oracle y chatbot).
+- **`general/ARQUITECTURA_OBJETIVO.md`**: decisiones de arquitectura (dominios, un solo origen público, escalado horizontal, asistencia con ubicación) y hoja de ruta por pasos.
+- **`general/`**: [ARQUITECTURA_COMPLETA_ANALISIS.md](general/ARQUITECTURA_COMPLETA_ANALISIS.md), [REFERENCIA_RAPIDA.md](general/REFERENCIA_RAPIDA.md), [ENTORNO_PRUEBAS.md](general/ENTORNO_PRUEBAS.md) y [metodologia-trabajo-github.md](general/metodologia-trabajo-github.md): autenticación y componentes dinámicos, entorno de pruebas y forma de trabajo en GitHub.
+- **`historico/`**: [GUIA_INTEGRACION_MODULO_FINANCIERO.md](historico/GUIA_INTEGRACION_MODULO_FINANCIERO.md) y [CAMBIOS_SIHUL_FINANCIERO.md](historico/CAMBIOS_SIHUL_FINANCIERO.md). **Ojo:** los modelos financieros de ejemplo de la guía y de `general/ARQUITECTURA_COMPLETA_ANALISIS.md` (`Presupuesto`, `Transaccion`, `CentroFinanciero`) corresponden al **diseño original propuesto**, no al modelo realmente implementado (`Factura`, `Proveedor`, `CuentaContable`, ver [documentacion_backend/MODULO_FINANCIERO.md](documentacion_backend/MODULO_FINANCIERO.md)).
+- **`documentacion_chatbot/`** incluye también [chatbot-publico-enlaces.md](documentacion_chatbot/chatbot-publico-enlaces.md) y el informe [informe-chatbot-publico-seguro.pdf](documentacion_chatbot/informe-chatbot-publico-seguro.pdf).
 
 ## Infraestructura general (Docker)
 
@@ -33,7 +40,7 @@ El stack de desarrollo se levanta con `docker-compose.yml` (proyecto `sihul`) y 
 | `chatbot` | `chatbot.Dockerfile` | `8001` | FastAPI (`uvicorn --reload`), recibe `OPENAI_API_KEY` desde el `.env` de la raíz. |
 | `frontend` | `frontend.Dockerfile` | `5173` | Vite dev server con hot-reload (polling), `VITE_API_URL` apunta al backend. |
 
-Los entornos desplegados (pruebas y producción) usan otro compose, en `despliegue/` (ver [ENTORNO_PRUEBAS.md](ENTORNO_PRUEBAS.md) y `despliegue/README.md`).
+Los entornos desplegados (pruebas y producción) usan otro compose, en `despliegue/` (ver [ENTORNO_PRUEBAS.md](general/ENTORNO_PRUEBAS.md) y `despliegue/README.md`).
 
 ### Variables de entorno (dónde vive cada una)
 

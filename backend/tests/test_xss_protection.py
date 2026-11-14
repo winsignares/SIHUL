@@ -2,10 +2,9 @@
 Tests para validar protecciones contra XSS en SIHUL
 """
 
-import json
 from django.test import TestCase, Client
 from django.core.exceptions import ValidationError
-from mysite.xss_protection import (
+from nucleo.xss_protection import (
     sanitize_string,
     sanitize_integer,
     sanitize_boolean,
@@ -173,7 +172,7 @@ class GrupoXSSAPITestCase(TestCase):
         """Verifica que POST /grupos rechaza payloads XSS"""
         # Este test requeriría autenticación real
         # Aquí se muestra el patrón de prueba
-        payload = {
+        _payload = {
             'nombre': '<img src=x onerror="alert(\'XSS\')">',
             'programa_id': 1,
             'periodo_id': 1,
@@ -183,7 +182,7 @@ class GrupoXSSAPITestCase(TestCase):
 
     def test_create_grupo_with_script_injection(self):
         """Verifica que POST /grupos rechaza script injection"""
-        payload = {
+        _payload = {
             'nombre': '<script>alert("XSS")</script>',
             'programa_id': 1,
             'periodo_id': 1,
@@ -193,7 +192,7 @@ class GrupoXSSAPITestCase(TestCase):
 
     def test_create_grupo_with_event_handler(self):
         """Verifica que POST /grupos rechaza event handlers"""
-        payload = {
+        _payload = {
             'nombre': 'Grupo A" onclick="alert(1)',
             'programa_id': 1,
             'periodo_id': 1,

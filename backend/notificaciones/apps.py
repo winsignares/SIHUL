@@ -7,4 +7,4 @@ class NotificacionesConfig(AppConfig):
 
     def ready(self):
         """Importa las señales cuando la aplicación está lista"""
-        import notificaciones.signals
+        import notificaciones.signals  # noqa: F401  (registra las señales)

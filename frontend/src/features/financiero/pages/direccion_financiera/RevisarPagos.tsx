@@ -1,0 +1,525 @@
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../components/ui/card';
+import { Button } from '../../../../components/ui/button';
+import { Badge } from '../../../../components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table';
+import {
+  Loader2,
+  FileCheck,
+  CheckCircle2,
+  Eye,
+  AlertCircle,
+  Upload,
+  ClipboardList,
+  ShieldAlert,
+  Landmark,
+  FolderOpen,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  ListChecks,
+  XCircle,
+  Search,
+  Filter,
+  X,
+} from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../../components/ui/dialog';
+import { Textarea } from '../../../../components/ui/textarea';
+import { Input } from '../../../../components/ui/input';
+import { Label } from '../../../../components/ui/label';
+import FacturaDetailModal from '../../components/factura-detail-modal';
+import { SlaIndicator } from '../../components/sla-indicator';
+import { useRevisarPagos } from '../../hooks/direccion_financiera';
+import { displayRadicado, displayText } from '../../../../components/ui/field-placeholders';
+import { downloadDocumentosConsolidadosPdf, openDocumentosConsolidados } from '../../components/documentos-consolidados';
+
+const ITEMS_POR_PAGINA = 5;
+const ORDER_OPTIONS = [
+  { label: 'Mas recientes primero', value: 'recientes' },
+  { label: 'Mas antiguos primero', value: 'antiguos' },
+  { label: 'SLA critico primero', value: 'sla' },
+];
+
+export default function RevisarPagos() {
+  const {
+    facturasFiltradas,
+    cargando,
+    error,
+    procesando,
+    facturaSeleccionada,
+    detalleAbierto,
+    decisionAbierta,
+    decisionTipo,
+    observaciones,
+    filtros,
+    toast,
+    setFiltros,
+    setObservaciones,
+    setDetalleAbierto,
+    setDecisionAbierta,
+    abrirDetalle,
+    abrirDecision,
+    cerrarDecision,
+    aprobarFactura,
+    devolverFactura,
+    cargarFacturas,
+  } = useRevisarPagos();
+
+  const [paginaActual, setPaginaActual] = useState(1);
+
+  const totalPaginas = Math.max(1, Math.ceil(facturasFiltradas.length / ITEMS_POR_PAGINA));
+
+  const facturasPaginadas = useMemo(() => {
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+    return facturasFiltradas.slice(inicio, inicio + ITEMS_POR_PAGINA);
+  }, [facturasFiltradas, paginaActual]);
+
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [filtros]);
+
+  useEffect(() => {
+    setPaginaActual((prev) => Math.min(prev, totalPaginas));
+  }, [totalPaginas]);
+
+  const resumen = useMemo(() => {
+    const criticas = facturasFiltradas.filter((factura) => (factura.diasTranscurridos || 0) >= 3).length;
+    const devueltas = facturasFiltradas.filter((factura) => factura.estado === 'Rechazada por Rectoría').length;
+    const valorTotal = facturasFiltradas.reduce((acc, factura) => acc + factura.valorTotal, 0);
+    return {
+      criticas,
+      devueltas,
+      valorTotal,
+    };
+  }, [facturasFiltradas]);
+
+
+  return (
+    <div className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.16),_transparent_36%),linear-gradient(135deg,_#991b1b_0%,_#b91c1c_42%,_#7f1d1d_100%)] p-7 text-white shadow-[0_24px_60px_-24px_rgba(127,29,29,0.7)]"
+      >
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-red-50">
+              <ListChecks className="h-4 w-4 text-amber-300" />
+              Dirección Financiera / Sindicatura
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/12">
+                <FileCheck className="h-8 w-8 text-amber-300" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-black tracking-tight">Cargue y revisión</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-red-50/90">
+                  Consolida la validación final del expediente, revisa la trazabilidad documental completa y envía automáticamente cada factura a Rectoría.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
+              <p className="text-xs uppercase tracking-[0.2em] text-red-100/80">Pendientes</p>
+              <p className="mt-2 text-3xl font-black">{cargando ? '--' : facturasFiltradas.length}</p>
+            </div>
+            <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
+              <p className="text-xs uppercase tracking-[0.2em] text-red-100/80">SLA critico</p>
+              <p className="mt-2 text-3xl font-black">{cargando ? '--' : resumen.criticas}</p>
+            </div>
+            <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
+              <p className="text-xs uppercase tracking-[0.2em] text-red-100/80">Rechazadas por Rectoría</p>
+              <p className="mt-2 text-3xl font-black">{cargando ? '--' : resumen.devueltas}</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {toast && (
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`fixed right-6 top-6 z-50 flex items-center gap-3 rounded-xl px-5 py-4 text-sm font-semibold text-white shadow-xl ${toast.tipo === 'ok' ? 'bg-green-600' : 'bg-red-600'}`}
+        >
+          {toast.tipo === 'ok' ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
+          {toast.msg}
+        </motion.div>
+      )}
+
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-slate-800">Filtros y orden de revisión</CardTitle>
+              <CardDescription>Consulta únicamente facturas en etapa de cargue pendiente de Dirección Financiera, priorizadas por antigüedad o criticidad del SLA.</CardDescription>
+            </div>
+            {(filtros.numeroFactura || filtros.numeroRadicado || filtros.numeroProcesoPago) && (
+              <Button size="sm" variant="outline" onClick={() => setFiltros({ numeroFactura: '', numeroRadicado: '', numeroProcesoPago: '', orden: filtros.orden })} className="border-red-200 text-red-600 hover:bg-red-50 gap-1">
+                <X className="h-3 w-3" /> Limpiar
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Search className="h-3 w-3" /> N° Factura</Label>
+              <Input placeholder="Ej: FAC-2026-001" value={filtros.numeroFactura} onChange={(e) => setFiltros((p) => ({ ...p, numeroFactura: e.target.value }))} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Search className="h-3 w-3" /> N° Radicado</Label>
+              <Input placeholder="Ej: RAD-2026-001" value={filtros.numeroRadicado} onChange={(e) => setFiltros((p) => ({ ...p, numeroRadicado: e.target.value }))} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Search className="h-3 w-3" /> N° Proceso Pago</Label>
+              <Input placeholder="Ej: PRC-2026-001" value={filtros.numeroProcesoPago} onChange={(e) => setFiltros((p) => ({ ...p, numeroProcesoPago: e.target.value }))} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1 text-xs font-medium text-slate-600"><Filter className="h-3 w-3" /> Ordenar lista</Label>
+              <select value={filtros.orden} onChange={(e) => setFiltros((p) => ({ ...p, orden: e.target.value }))} className="h-8 w-full rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-700">
+                {ORDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle className="text-slate-800">Facturas de cargue y remisión a Rectoría</CardTitle>
+              <CardDescription>
+                Mostrando {facturasFiltradas.length === 0 ? 0 : (paginaActual - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaActual * ITEMS_POR_PAGINA, facturasFiltradas.length)} de {facturasFiltradas.length} facturas
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-blue-700">
+                Documentacion consolidada disponible
+              </Badge>
+              <Button onClick={() => void cargarFacturas()} variant="outline" disabled={cargando} className="border-slate-300 text-slate-700 hover:bg-slate-50">
+                <Loader2 className={`mr-2 h-4 w-4 ${cargando ? 'animate-spin' : ''}`} />
+                Actualizar
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4" />
+              {error}
+            </div>
+          )}
+
+          <div className="rounded-2xl border border-slate-200 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50">
+                  <TableHead className="font-semibold text-slate-700">Factura</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Radicado</TableHead>
+                  <TableHead className="font-semibold text-slate-700">N° Proceso Pago</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Proveedor / NIT</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Área</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Monto</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Días transcurridos</TableHead>
+                  <TableHead className="text-center font-semibold text-slate-700">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cargando ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-8 text-center text-slate-500">
+                      <div className="inline-flex items-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Cargando facturas...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : facturasFiltradas.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-10 text-center text-slate-500">
+                      No hay facturas pendientes con los filtros actuales.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  facturasPaginadas.map((factura, index) => {
+                    const dias = factura.diasTranscurridos || 0;
+
+                    return (
+                      <motion.tr
+                        key={factura.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.04 }}
+                        className="hover:bg-slate-50"
+                      >
+                        <TableCell>
+                          <span className="font-medium text-slate-800">{displayText(factura.numeroFactura)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="w-fit border border-blue-200 bg-blue-50 font-mono text-[10px] text-blue-700">
+                            {displayRadicado(factura.numeroRadicado)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-mono text-sm text-slate-700">{displayText(factura.numeroProcesoPago)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <p className="max-w-[220px] truncate font-medium text-slate-800" title={displayText(factura.proveedor)}>
+                            {displayText(factura.proveedor)}
+                          </p>
+                          <p className="font-mono text-xs text-slate-500">{displayText(factura.nit)}</p>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">{displayText(factura.areaSolicitante)}</TableCell>
+                        <TableCell className="font-semibold text-slate-800">${factura.valorTotal.toLocaleString('es-CO')}</TableCell>
+                        <TableCell>
+                          <SlaIndicator dias={dias} objetivo={factura.slaObjetivoDias} />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex flex-wrap items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => abrirDetalle(factura)}
+                              className="h-9 w-9 rounded-full border-amber-300 p-0 text-amber-700 hover:bg-amber-50"
+                              title="Ver detalle"
+                            >
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">Ver detalle</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                if (!factura.facturaId) return;
+                                void openDocumentosConsolidados(factura.facturaId, 'direccion_financiera');
+                              }}
+                              disabled={!factura.facturaId}
+                              className="h-9 w-9 rounded-full border-blue-200 p-0 text-blue-700 hover:bg-blue-50"
+                              title="Ver documentacion consolidada"
+                            >
+                              <FolderOpen className="h-4 w-4" />
+                              <span className="sr-only">Ver documentacion consolidada</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                if (!factura.facturaId) return;
+                                downloadDocumentosConsolidadosPdf(factura.facturaId, factura.numeroFactura, 'direccion_financiera');
+                              }}
+                              disabled={!factura.facturaId}
+                              className="h-9 w-9 rounded-full border-slate-300 p-0 text-slate-700 hover:bg-slate-50"
+                              title="Descargar documentacion"
+                            >
+                              <Download className="h-4 w-4" />
+                              <span className="sr-only">Descargar documentacion</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => abrirDecision(factura, 'devolver')}
+                              className="h-9 w-9 rounded-full border-red-300 p-0 text-red-700 hover:bg-red-50"
+                              title="Rechazo"
+                            >
+                              <XCircle className="h-4 w-4" />
+                              <span className="sr-only">Rechazo</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => abrirDecision(factura, 'aprobar')}
+                              className="h-9 w-9 rounded-full bg-emerald-600 p-0 text-white hover:bg-emerald-700"
+                              title="Cargar factura"
+                            >
+                              <Upload className="h-4 w-4" />
+                              <span className="sr-only">Cargar factura</span>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </motion.tr>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {totalPaginas > 1 && (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+              <p className="text-sm text-slate-600">
+                Mostrando {facturasFiltradas.length === 0 ? 0 : (paginaActual - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaActual * ITEMS_POR_PAGINA, facturasFiltradas.length)} de {facturasFiltradas.length} resultados
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPaginaActual((prev) => Math.max(1, prev - 1))}
+                  disabled={paginaActual === 1}
+                  className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                    let pageNum;
+                    if (totalPaginas <= 5) pageNum = i + 1;
+                    else if (paginaActual <= 3) pageNum = i + 1;
+                    else if (paginaActual >= totalPaginas - 2) pageNum = totalPaginas - 4 + i;
+                    else pageNum = paginaActual - 2 + i;
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        size="sm"
+                        variant={paginaActual === pageNum ? 'default' : 'outline'}
+                        onClick={() => setPaginaActual(pageNum)}
+                        className={paginaActual === pageNum ? 'bg-slate-900 text-white hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-50'}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPaginaActual((prev) => Math.min(totalPaginas, prev + 1))}
+                  disabled={paginaActual === totalPaginas}
+                  className="border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Siguiente
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={decisionAbierta} onOpenChange={setDecisionAbierta}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              {decisionTipo === 'aprobar' ? (
+                <>
+                  <Upload className="h-5 w-5 text-emerald-600" />
+                  Confirmación de cargue financiero
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-5 w-5 text-red-600" />
+                  Rechazo y devolución a Tesorería
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {decisionTipo === 'aprobar'
+                ? 'Valide el expediente y deje la factura cargada con envío automático a Rectoría.'
+                : 'Registre el motivo formal del rechazo para devolver la factura con trazabilidad completa.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {facturaSeleccionada && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Factura</p>
+                  <p className="font-semibold text-slate-800">{facturaSeleccionada.numeroFactura}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Proveedor</p>
+                  <p className="truncate font-semibold text-slate-800">{facturaSeleccionada.proveedor}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Valor total</p>
+                  <p className="font-semibold text-emerald-700">${facturaSeleccionada.valorTotal.toLocaleString('es-CO')}</p>
+                </div>
+              </div>
+
+              {decisionTipo === 'aprobar' ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <ClipboardList className="mt-0.5 h-5 w-5 text-emerald-700" />
+                    <div>
+                      <p className="font-semibold text-emerald-900">Checklist previo al cargue</p>
+                      <ul className="mt-2 space-y-1 text-sm text-emerald-800">
+                        <li>- Expediente completo y legible</li>
+                        <li>- Valor, área y tercero conciliados</li>
+                        <li>- Envío automático a Rectoría al confirmar</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <ShieldAlert className="mt-0.5 h-5 w-5 text-red-700" />
+                    <div>
+                      <p className="font-semibold text-red-900">Control de rechazo</p>
+                      <p className="mt-1 text-sm text-red-800">
+                        El motivo quedara almacenado en historial y la factura volvera al flujo para ajuste.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">
+              * {decisionTipo === 'devolver' ? 'Motivo de rechazo (Requerido)' : 'Observaciones del cargue (Requerido)'}
+            </label>
+            <Textarea
+              value={observaciones}
+              onChange={(e) => setObservaciones(e.target.value)}
+              placeholder={decisionTipo === 'devolver' ? 'Explique claramente el motivo del rechazo y el ajuste requerido...' : 'Registre las validaciones realizadas y el contexto para Rectoría...'}
+              className="border-slate-300"
+              rows={4}
+            />
+            <p className="text-xs text-slate-500">Mínimo 10 caracteres.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={cerrarDecision} disabled={procesando}>Cancelar</Button>
+            <Button
+              variant={decisionTipo === 'aprobar' ? 'default' : 'destructive'}
+              className={decisionTipo === 'aprobar' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+              onClick={decisionTipo === 'aprobar' ? aprobarFactura : devolverFactura}
+              disabled={procesando}
+            >
+              {procesando ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Procesando...
+                </>
+              ) : decisionTipo === 'aprobar' ? (
+                <>
+                  <Landmark className="mr-2 h-4 w-4" />
+                  Confirmar cargue financiero
+                </>
+              ) : (
+                <>
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Confirmar rechazo
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <FacturaDetailModal
+        factura={facturaSeleccionada}
+        isOpen={detalleAbierto}
+        onClose={() => {
+          setDetalleAbierto(false);
+        }}
+      />
+    </div>
+  );
+}

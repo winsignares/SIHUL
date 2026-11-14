@@ -92,6 +92,45 @@ services:
       - sihul_network
 
   # ==========================================
+  # TRABAJADOR DE TAREAS EN SEGUNDO PLANO (opcional)
+  # Se activa con: docker compose --profile cola up -d
+  # y TAREAS_COLA=rq en el backend; sin eso las tareas corren en un hilo del backend.
+  # ==========================================
+  trabajador:
+    container_name: sihul-trabajador
+    profiles: ["cola"]
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    restart: unless-stopped
+    command: ["python", "manage.py", "trabajador_tareas"]
+    env_file:
+      - ./.env
+    volumes:
+      - ./backend:/app
+      - sihul_media:/app/media
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: mysecretpassword
+      DB_NAME: mypostgresdb
+      REDIS_URL: redis://redis:6379/0
+      PYTHONUNBUFFERED: "1"
+      FINANCIERO_DOCUMENT_ROOT: /app/media
+      FINANCIERO_DOCUMENT_NETWORK_ROOT: ${FINANCIERO_DOCUMENT_NETWORK_ROOT}
+      FINANCIERO_DOCUMENT_NETWORK_USER: ${FINANCIERO_DOCUMENT_NETWORK_USER}
+      FINANCIERO_DOCUMENT_NETWORK_PASSWORD: ${FINANCIERO_DOCUMENT_NETWORK_PASSWORD}
+      OPENAI_API_KEY: ""
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sihul_network
+
+  # ==========================================
   # CHATBOT FASTAPI + RAG
   # ==========================================
   chatbot:

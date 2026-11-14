@@ -4,7 +4,7 @@ Ver también [HOOKS_INDICE.md](HOOKS_INDICE.md), [PAGINAS_HORARIOS_ESPACIOS_PRES
 
 ## `useConsultaEspacios.ts` — orquestador
 
-Usado en `pages/espacios/ConsultaEspacios.tsx`. Combina varios sub-hooks del mismo directorio:
+Usado en `pages/espacios/ConsultaEspacios.tsx` (a través de `useConsultaEspaciosPagina`, que además reúne el estado de arrastre y movimiento de clases). Combina varios sub-hooks del mismo directorio:
 
 - `useConsultaEspaciosFiltros` — filtros de búsqueda/tipo/apertura/sede/período/ocupación.
 - `useConsultaEspaciosDatos` — fetch de espacios/horarios/préstamos.
@@ -15,9 +15,16 @@ Usado en `pages/espacios/ConsultaEspacios.tsx`. Combina varios sub-hooks del mis
 
 Expone ~50 propiedades combinadas: filtros, `vistaActual` (`tarjetas|cronograma`), `filteredEspacios`, `paginatedEspacios`, `getOcupacionPorHora`, `getConflictoEnRango`, `horarios`, `prestamos`, exportación, selección por arrastre (`isDragging`, `seleccionRango`, `iniciarSeleccion`...), `verCronogramaIndividual`/`volverALista`.
 
-## `usePrestamosEspacios.ts` (737 líneas)
+## `usePrestamosEspacios.ts` (97 líneas) — orquestador
 
-Usado en `pages/espacios/PrestamosEspacios.tsx`. CRUD administrativo completo de préstamos de espacios.
+Usado en `pages/espacios/PrestamosEspacios.tsx` (a través de `usePrestamosEspaciosPagina`). CRUD administrativo completo de préstamos de espacios. Combina varios sub-hooks del mismo directorio:
+
+- `usePrestamosCatalogos` — catálogos del formulario de edición (espacios, tipos de actividad, recursos y períodos).
+- `usePrestamosCarga` — carga de los préstamos y sincronización.
+- `usePrestamosAcciones` — aprobar, rechazar, editar y eliminar solicitudes.
+- `usePrestamosFiltrados` — filtros y totales por estado.
+- `usePrestamosPaginacion` — paginación de la lista.
+- `prestamosEspaciosUtils.ts` — constantes y funciones puras (`parseUniqueId`, `getErrorMessage`, `normalizarEstado`).
 
 - Estado: filtros (búsqueda/estado/fecha), diálogos, paginación, `prestamos`.
 - Expone: `aprobarSolicitud`, `rechazarSolicitud`, `iniciarEdicion`/`guardarEdicion`/`cancelarEdicion`, `eliminarSolicitud`.
@@ -25,9 +32,9 @@ Usado en `pages/espacios/PrestamosEspacios.tsx`. CRUD administrativo completo de
 - Distingue préstamos "públicos" de "autenticados" por convención de ID (`auth-123` / `public-123`, función `parseUniqueId`).
 - Sincronización cross-tab: escucha el evento `storage` con clave `PRESTAMOS_CHANGED_STORAGE_KEY` y el evento custom `PRESTAMOS_CHANGED_EVENT`, más polling cada 15s (`PRESTAMOS_SYNC_INTERVAL_MS`) mientras la pestaña está visible.
 
-## `useAperturaCierre.ts` (684 líneas)
+## `useAperturaCierre.ts` (545 líneas)
 
-Gestión de apertura/cierre de salones para supervisores.
+Gestión de apertura/cierre de salones para supervisores. Apoyado en `aperturaCierreTipos.ts` (tipos y constantes), `useRevisionRecursos` (ventana de revisión de recursos al cerrar) y `useAperturaCierrePaginacion`.
 
 - Servicios: `aperturaCierreService`, `espacioService`, `espacioRecursoService`.
 - Auto-refresh cada 30 segundos.

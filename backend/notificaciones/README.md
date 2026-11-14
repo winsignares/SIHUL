@@ -233,7 +233,7 @@ post_save.connect(usuario_post_save, sender=Usuario)
 
 ### Modificar Mensajes de Notificación
 
-Edita el archivo `signals.py` y modifica el mensaje en la función correspondiente:
+Edita el módulo del dominio en `signals/` (`usuarios.py`, `academico.py`, `espacios.py`, `horarios.py`, `prestamos.py`, `componentes.py` o `chatbot.py`) y modifica el mensaje en la función correspondiente:
 
 ```python
 @receiver(post_save, sender=Usuario)

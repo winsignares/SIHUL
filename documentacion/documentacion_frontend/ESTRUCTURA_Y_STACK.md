@@ -10,24 +10,34 @@ React 19.1.1 + TypeScript + Vite 7. No es Next.js: el enrutamiento es explícito
 
 ## Estructura (`frontend/src/`)
 
+El código de cada dominio vive junto, en `features/`; lo transversal queda en la raíz de `src/`.
+
 ```
-assets/       → imágenes y CSS global (globals.css)
-components/   → common/, espacios/, horarios/, notificaciones/
-config/       → componentRoutes.ts (mapeo componente → ruta/ícono)
-context/      → AuthContext.tsx, UserContext.tsx, ThemeContext.tsx,
-                NotificacionesContext.tsx, roleUtils.ts, financialRoleUtils.ts
-core/         → apiClient.ts, endpoints.ts, backendUrl.ts, errorHandler.ts,
-                sessionCache.ts, apiActivity.ts
-hooks/        → organizados por dominio (ver HOOKS_INDICE.md)
-layouts/      → AdminDashboard.tsx (layout compartido con sidebar)
-models/       → tipos TS por dominio (academica, auth, chatbot, dashboard,
-                espacios, financiero, horarios, prestamos, recursos,
-                reporte, shared, users)
-pages/        → páginas por dominio (ver PAGINAS_INDICE.md)
-router/       → AppRouter.tsx (única fuente de rutas)
-services/     → clientes API por dominio (ver SERVICES_INDICE.md)
-utils/, share/ → utilidades varias
+features/<dominio>/
+  hooks/  components/  pages/  services/  models/
+      → financiero, espacios, horarios, prestamos, reporte, chatbot,
+        dashboard, users, permisos y gestionAcademica
+        (gestionAcademica incluye los servicios de asignaturas, facultades,
+        grupos, periodos y programas)
+components/
+  ui/       → componentes base (botón, tarjeta, tabla, diálogo, etc.)
+  common/, public/, ErrorBoundary.tsx
+assets/     → imágenes y CSS global (globals.css)
+config/     → componentRoutes.ts (mapeo componente → ruta/ícono)
+context/    → AuthContext, UserContext, ThemeContext, NotificacionesContext,
+              roleUtils.ts, financialRoleUtils.ts
+core/       → apiClient.ts, backendUrl.ts, errorHandler.ts, sessionCache.ts,
+              apiActivity.ts
+hooks/      → hooks transversales (useIsMobile, useSondeoVisible…)
+layouts/    → AdminDashboard.tsx (layout compartido con sidebar)
+models/     → index.ts (reexporta los tipos) y los modelos transversales
+router/     → AppRouter.tsx + rutas/ por área (ver ENRUTAMIENTO_DINAMICO.md)
+services/   → clientes transversales (auth, seccionales, sedes, componentes,
+              notificaciones, recursos)
+utils/
 ```
+
+> Los documentos de hooks, páginas y servicios de esta carpeta se escribieron cuando el código estaba repartido por tipo: donde dicen `hooks/<dominio>/`, `pages/<dominio>/`, `services/<dominio>/` o `models/<dominio>/`, hoy es `features/<dominio>/hooks/`, `pages/`, `services/` o `models/`. Lo que antes estaba en `share/` está en `components/ui/` (lo propio de facturas, en `features/financiero/components/`).
 
 ## Documentos relacionados en esta carpeta
 

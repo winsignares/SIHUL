@@ -4,11 +4,11 @@ Ver también [APPS_DJANGO.md](APPS_DJANGO.md).
 
 ## Tests
 
-Cada app tiene `tests.py`; la mayoría son el placeholder por defecto de Django. Con contenido real: `financiero/tests.py` (159 líneas), `prestamos/tests.py` (62 líneas), `periodos/tests.py` (47 líneas). No hay pytest configurado; se ejecutan con `manage.py test` (ver `../ENTORNO_PRUEBAS.md`).
+Las pruebas de cada app están en su carpeta `tests/` (`tests_general.py` y un `tests_<tema>.py` por tema); las apps sin pruebas no la tienen. La CI corre además `ruff` (reglas F) y `nucleo/tests/tests_dependencias.py`, que vigila qué app puede importar a cuál. No hay pytest configurado; se ejecutan con `manage.py test` (ver `../general/ENTORNO_PRUEBAS.md`).
 
 ## Seeders
 
-Los seeders individuales viven en `backend/mysite/management/commands/seeders/` (roles, sedes, tipos de espacio y de actividad,
+Los seeders individuales viven en `backend/nucleo/management/commands/seeders/` (roles, sedes, tipos de espacio y de actividad,
 facultades, programas, periodos, asignaturas, usuarios, espacios, componentes, grupos, horarios, agentes del chatbot, financiero…).
 Hay **un solo comando para pruebas locales**:
 

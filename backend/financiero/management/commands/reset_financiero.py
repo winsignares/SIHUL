@@ -23,7 +23,7 @@ from financiero.models import (
     ReporteGenerado,
     TipoCuenta,
 )
-from mysite.management.commands.seeders.financiero_seeder import create_financiero_data
+from nucleo.management.commands.seeders.financiero_seeder import create_financiero_data
 
 
 class Command(BaseCommand):

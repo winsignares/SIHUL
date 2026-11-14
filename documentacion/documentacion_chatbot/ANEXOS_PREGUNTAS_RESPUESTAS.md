@@ -81,7 +81,7 @@ Siempre está presente (lista vacía si no hay anexos o si el RAG falló). Djang
 - No exige sesión, porque el chat público también entrega anexos y un enlace `<a href>` no envía cabeceras: la autorización es el token, que solo emite el sistema al responder.
 - Los enlaces del chat dejan de servir (**404**) si la pregunta o el agente se desactivan; los de la gestión no.
 - Respuesta: el archivo real con `Content-Disposition: attachment; filename="<nombre original>"`, su tipo MIME, `X-Content-Type-Options: nosniff` y `Cache-Control: private, no-store`. La ruta en disco nunca se expone (tampoco en el admin de Django).
-- Con `DJANGO_DEBUG=True` el proyecto sirve todo `MEDIA_ROOT` en `/media/` (comportamiento previo, `mysite/urls.py`). Los anexos quedan fuera de alcance por esa vía porque su nombre en disco es un UUID aleatorio que no se publica; en producción (`DEBUG=False`) esa ruta no sirve archivos.
+- Con `DJANGO_DEBUG=True` el proyecto sirve todo `MEDIA_ROOT` en `/media/` (comportamiento previo, `config/urls.py`). Los anexos quedan fuera de alcance por esa vía porque su nombre en disco es un UUID aleatorio que no se publica; en producción (`DEBUG=False`) esa ruta no sirve archivos.
 
 ### RAG (FastAPI, interno)
 
@@ -127,11 +127,11 @@ Los archivos van a `MEDIA_ROOT` (volumen del backend): debe incluirse en las cop
 | Django | `backend/chatbot/models.py` | `PreguntaRespuesta`, `AnexoRespuesta`, `Conversacion.anexos` |
 | | `backend/chatbot/migrations/0014_preguntas_respuestas_anexos.py` | Migración |
 | | `backend/chatbot/anexos.py` | Validación de archivos, tokens y URL de descarga, JSON, aviso al RAG |
-| | `backend/chatbot/preguntas_respuestas_views.py` | CRUD de gestión y descarga |
-| | `backend/chatbot/views.py` | Anexos en el chat autenticado, público e historial |
+| | `backend/chatbot/api/preguntas_respuestas/` | CRUD de gestión y descarga |
+| | `backend/chatbot/api/chat/` | Anexos en el chat autenticado, público e historial |
 | | `backend/chatbot/signals.py` | Borrado del archivo al borrar el anexo |
 | | `backend/chatbot/admin.py` | Admin de Django (solo lectura de anexos) |
-| | `backend/chatbot/tests.py` | Pruebas unitarias (27) |
+| | `backend/chatbot/tests/tests_general.py` | Pruebas unitarias (27) |
 | RAG | `chatbot/app/services/qa_service.py` | Búsqueda, candidatas, verificador, contexto |
 | | `chatbot/app/services/chat_service.py` | Integración en `ask` (contexto, caché, cita) |
 | | `chatbot/app/routers/qa.py`, `routers/chat.py`, `schemas/schemas.py`, `models/models.py`, `core/config.py`, `main.py` | Endpoint de sincronización, `anexos` en la respuesta, tabla `qa_embeddings`, umbrales |
