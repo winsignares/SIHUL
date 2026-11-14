@@ -200,7 +200,7 @@ export default function RevisarPagos() {
               <Badge className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-blue-700">
                 Documentacion consolidada disponible
               </Badge>
-              <Button onClick={cargarFacturas} variant="outline" disabled={cargando} className="border-slate-300 text-slate-700 hover:bg-slate-50">
+              <Button onClick={() => void cargarFacturas()} variant="outline" disabled={cargando} className="border-slate-300 text-slate-700 hover:bg-slate-50">
                 <Loader2 className={`mr-2 h-4 w-4 ${cargando ? 'animate-spin' : ''}`} />
                 Actualizar
               </Button>

@@ -67,7 +67,7 @@ export default function MisPendientes() {
               <CardTitle>Cola de Prioridades</CardTitle>
               <CardDescription>Filtra y abre el detalle para gestionar trazabilidad completa</CardDescription>
             </div>
-            <Button onClick={recargar} variant="outline" size="sm" disabled={cargando}>
+            <Button onClick={() => void recargar()} variant="outline" size="sm" disabled={cargando}>
               <RefreshCw className={`w-4 h-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
               Actualizar
             </Button>

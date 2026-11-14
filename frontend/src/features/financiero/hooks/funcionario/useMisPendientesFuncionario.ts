@@ -6,6 +6,7 @@ import type { Factura } from '../../models/core.models';
 import type { FuncionarioPendingRow } from '../../models/funcionario';
 import type { SharedFacturaDetail } from '../../components/factura-detail-modal';
 import { ITEMS_PER_PAGE, mapFacturaToPendingRow } from './misPendientesFuncionarioUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y acciones de las facturas pendientes de registro (funcionario). */
 export function useMisPendientesFuncionario() {
@@ -44,6 +45,13 @@ export function useMisPendientesFuncionario() {
 
     void load();
   }, []);
+
+  // Alguien más cambió las facturas: se vuelve a leer sin mostrar el spinner y sin borrar lo que ya se ve si falla.
+  useActualizacionEnVivo(['facturas'], () => {
+    void facturasService.getPendientes()
+      .then((response) => setRows(Array.isArray(response) ? response.map(mapFacturaToPendingRow) : []))
+      .catch(() => undefined);
+  });
 
   const vencidas = useMemo(() => rows.filter(r => r.nivelRiesgo === 'vencido').length, [rows]);
   const proximas = useMemo(() => rows.filter(r => r.nivelRiesgo === 'amarillo').length, [rows]);

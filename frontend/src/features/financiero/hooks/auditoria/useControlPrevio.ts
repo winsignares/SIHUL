@@ -5,6 +5,7 @@ import { buildSharedFacturaDetail } from '../../components/factura-details-helpe
 import { facturasService } from '../../services';
 import type { Factura as APIFactura } from '../../models/core.models';
 import { FILTROS_INICIALES, ITEMS_POR_PAGINA, toList, mapFactura, getErrorMessage, type Factura } from './controlPrevioUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y acciones del control previo de facturas (auditoría). */
 export function useControlPrevio() {
@@ -63,6 +64,11 @@ export function useControlPrevio() {
 
     void load();
   }, []);
+
+  // Alguien más cambió las facturas: se vuelve a leer sin mostrar el spinner y sin borrar lo que ya se ve si falla.
+  useActualizacionEnVivo(['facturas'], () => {
+    void loadFacturas().then(setFacturasAlistadas).catch(() => undefined);
+  });
 
   const facturasFiltradas = useMemo(() => facturasAlistadas.filter((factura) => {
     if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;

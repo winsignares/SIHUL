@@ -17,10 +17,18 @@ Guardar registro ─► señal Django ─► Redis (canal sihul:eventos) ─► 
 - Evento de una **seccional**: el administrador general y las personas de esa seccional.
 - Evento **sin seccional** (catálogos globales como los roles): todas las personas con sesión.
 
-El navegador solo recibe `recurso`, `accion` e `id`; la seccional y el destinatario no salen del servidor.
+- Evento con **destinatarios** (módulo financiero): quienes figuran en `usuarios`, quienes tienen alguno de los `roles` y los administradores.
+
+El navegador solo recibe `recurso`, `accion` e `id`; la seccional y los destinatarios no salen del servidor.
+
+### Módulo financiero (`financiero/eventos.py`)
+Quién recibe cada evento replica quién ve esos datos en la API:
+- **Factura** (`facturas`): quien la creó, su responsable, el proveedor dueño, quienes intervinieron en ella (historial) y los roles que revisan todas las facturas (contabilidad, tesorería, auditoría, dirección financiera, rectoría y administración financiera). Mientras está recién recibida y sin responsable, también los funcionarios. Un documento, comentario, rechazo, ítem o movimiento del historial que cambia se publica como una actualización de su factura.
+- **Proveedores**: el propio proveedor y los roles internos. **Catálogos y parámetros**: quienes tienen un rol financiero.
+Para otro recurso con destinatarios propios se llama a `registrar_recurso(app, modelo, recurso, audiencia=..., referencia=...)`.
 
 ## Recursos publicados
-La lista está en `nucleo/eventos/registro.py` (sedes, seccionales, facultades, programas, asignaturas, grupos, periodos, horarios, espacios, recursos, préstamos, usuarios, roles, componentes, notificaciones y agentes de chatbot). Para publicar otro modelo se agrega una línea a `RECURSOS`; si su seccional no se alcanza por las rutas de `RUTAS_SECCIONAL`, se agrega la ruta. El módulo financiero queda fuera de esta primera entrega: sus eventos necesitan reglas de audiencia por rol.
+La lista está en `nucleo/eventos/registro.py` (sedes, seccionales, facultades, programas, asignaturas, grupos, periodos, horarios, espacios, recursos, préstamos, usuarios, roles, componentes, notificaciones y agentes de chatbot). Para publicar otro modelo se agrega una línea a `RECURSOS`; si su seccional no se alcanza por las rutas de `RUTAS_SECCIONAL`, se agrega la ruta. El módulo financiero se registra desde `financiero/eventos.py` con `registrar_recurso`, que admite reglas propias de destinatarios (ver más abajo).
 
 ## Frontend
 - `core/eventosTiempoReal.ts`: una sola conexión para toda la aplicación, con reconexión y espera creciente.

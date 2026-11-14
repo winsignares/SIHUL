@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Receipt, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { proveedoresService } from '../../../services';
 import type { Factura } from '../../../models/core.models';
+import { useActualizacionEnVivo } from '../../../../../hooks/useActualizacionEnVivo';
 
 const toList = <T,>(data: unknown): T[] => {
   if (Array.isArray(data)) return data as T[];
@@ -14,6 +15,11 @@ const toList = <T,>(data: unknown): T[] => {
 export function useProveedorHome(miProveedorId?: number) {
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Alguien más cambió las facturas: se vuelven a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void loadFacturas(true);
+  });
 
   const loadFacturas = useCallback(async (silent = false) => {
     if (!miProveedorId) {

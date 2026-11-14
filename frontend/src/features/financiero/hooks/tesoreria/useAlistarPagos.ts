@@ -5,6 +5,7 @@ import { facturasService, documentosService } from '../../services';
 import type { Factura as APIFactura } from '../../models/core.models';
 import { buildSharedFacturaDetail } from '../../components/factura-details-helpers';
 import { FILTROS_INICIALES, ITEMS_POR_PAGINA, toList, mapFactura, getErrorMessage, type Factura } from './alistarPagosUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y acciones de alistar pagos (tesorería). */
 export function useAlistarPagos() {
@@ -47,6 +48,11 @@ export function useAlistarPagos() {
 
     void load();
   }, []);
+
+  // Alguien más cambió las facturas: se vuelve a leer sin mostrar el spinner y sin borrar lo que ya se ve si falla.
+  useActualizacionEnVivo(['facturas'], () => {
+    void loadFacturas().then(setFacturasTesoreria).catch(() => undefined);
+  });
 
   const facturasFiltradas = useMemo(() => facturasTesoreria.filter((factura) => {
     if (filtros.numeroFactura && !factura.numeroFactura.toLowerCase().includes(filtros.numeroFactura.toLowerCase())) return false;

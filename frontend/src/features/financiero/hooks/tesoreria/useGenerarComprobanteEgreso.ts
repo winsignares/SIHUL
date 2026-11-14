@@ -4,6 +4,7 @@ import { buildSharedFacturaDetail } from '../../components/factura-details-helpe
 import { facturasService } from '../../services';
 import type { Factura as APIFactura } from '../../models/core.models';
 import { ITEMS_POR_PAGINA, toList, isComprobanteFlow, parseFecha, mapFactura, type FacturaComprobanteRow } from './generarComprobanteEgresoUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y acciones de generar el comprobante de egreso (tesorería). */
 export function useGenerarComprobanteEgreso() {
@@ -31,8 +32,13 @@ export function useGenerarComprobanteEgreso() {
     return toList<APIFactura>(response).filter((factura) => isComprobanteFlow(factura.estado));
   }, []);
 
-  const cargarFacturas = useCallback(async () => {
-    setLoading(true);
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void cargarFacturas({ silent: true });
+  });
+
+  const cargarFacturas = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
     setLoadError(null);
     try {
       const rows = await loadFacturas();

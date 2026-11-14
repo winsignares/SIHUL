@@ -4,6 +4,7 @@ import type { DocumentoAdjunto, Factura } from '../../../models/core.models';
 import { type SharedFacturaDetail } from '../../../components/factura-detail-modal';
 import { buildSharedFacturaDetail } from '../../../components/factura-details-helpers';
 import type { TableFilterValues } from '../../../../../components/ui/table-filters';
+import { useActualizacionEnVivo } from '../../../../../hooks/useActualizacionEnVivo';
 
 const facturaToDetail = (factura: Factura, docs: DocumentoAdjunto[]): SharedFacturaDetail => {
   const base = buildSharedFacturaDetail(factura);
@@ -47,8 +48,13 @@ export function useContabilidadCausarFacturas() {
     montoMax: '',
   });
 
-  const cargarDatos = useCallback(async () => {
-    setCargando(true);
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void cargarDatos({ silent: true });
+  });
+
+  const cargarDatos = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setCargando(true);
     setError(null);
     try {
       const [lista] = await Promise.all([facturasService.getByEstado('Radicada')]);
