@@ -1,6 +1,6 @@
 import logging
 from django.http import HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from nucleo.vistas import VistaJson
 from identidad.usuarios.models import Usuario
 from .. import exportaciones
 from ..models import Horario, HorarioEstudiante
@@ -89,14 +89,14 @@ def _mi_horario(request, clases_de):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@csrf_exempt
-def mi_horario_docente(request):
-    return _mi_horario(request, _clases_docente)
+class MiHorarioDocenteView(VistaJson):
+    def get(self, request):
+        return _mi_horario(request, _clases_docente)
 
 
-@csrf_exempt
-def mi_horario_estudiante(request):
-    return _mi_horario(request, _clases_estudiante)
+class MiHorarioEstudianteView(VistaJson):
+    def get(self, request):
+        return _mi_horario(request, _clases_estudiante)
 
 
 def _para_exportar(clase):
@@ -121,31 +121,29 @@ _FORMATOS_MI_HORARIO = {
 }
 
 
-def exportar_mi_horario(request, formato):
-    """Descarga de Mi horario: solo clases aprobadas.
+class ExportarMiHorarioView(VistaJson):
+    def get(self, request, formato):
+        """Descarga de Mi horario: solo clases aprobadas.
 
-    Al estudiante (rol «estudiante», como decide el frontend), las clases aprobadas en que está inscrito, una página
-    u hoja por grupo; a los demás, sus clases aprobadas como docente, en una página u hoja.
-    """
-    if request.method != 'GET':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        Al estudiante (rol «estudiante», como decide el frontend), las clases aprobadas en que está inscrito, una página
+        u hoja por grupo; a los demás, sus clases aprobadas como docente, en una página u hoja.
+        """
+        try:
+            usuario, error = _usuario_de_mi_horario(request)
+            if error:
+                return error
 
-    try:
-        usuario, error = _usuario_de_mi_horario(request)
-        if error:
-            return error
+            para_estudiante, para_docente, content_type, nombre = _FORMATOS_MI_HORARIO[formato]
+            if usuario.rol and usuario.rol.nombre == 'estudiante':
+                clases, generar = _clases_estudiante(usuario, solo_aprobadas=True), para_estudiante
+            else:
+                clases, generar = _clases_docente(usuario), para_docente
+            if not clases:
+                return JsonResponse({'error': 'No hay horarios registrados'}, status=400)
 
-        para_estudiante, para_docente, content_type, nombre = _FORMATOS_MI_HORARIO[formato]
-        if usuario.rol and usuario.rol.nombre == 'estudiante':
-            clases, generar = _clases_estudiante(usuario, solo_aprobadas=True), para_estudiante
-        else:
-            clases, generar = _clases_docente(usuario), para_docente
-        if not clases:
-            return JsonResponse({'error': 'No hay horarios registrados'}, status=400)
-
-        response = HttpResponse(generar([_para_exportar(c) for c in clases]), content_type=content_type)
-        response['Content-Disposition'] = f'attachment; filename="{nombre}"'
-        return response
-    except Exception as e:
-        logger.exception('Error al exportar Mi horario')
-        return JsonResponse({'error': str(e)}, status=500)
+            response = HttpResponse(generar([_para_exportar(c) for c in clases]), content_type=content_type)
+            response['Content-Disposition'] = f'attachment; filename="{nombre}"'
+            return response
+        except Exception as e:
+            logger.exception('Error al exportar Mi horario')
+            return JsonResponse({'error': str(e)}, status=500)

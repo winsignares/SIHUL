@@ -1,6 +1,6 @@
 from datetime import timedelta
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from nucleo.vistas import VistaJson
 from .. import ocupacion
 from ..models import EspacioFisico
 from nucleo.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
@@ -50,109 +50,107 @@ def _distribuir_horas_en_jornadas(hora_inicio, hora_fin):
     }
 
 
-@csrf_exempt
-def ocupacion_semanal(request):
-    if request.method != 'GET':
-        return JsonResponse({'error': 'Solo se permite GET'}, status=405)
+class OcupacionSemanalView(VistaJson):
+    def get(self, request):
 
-    try:
-        from django.utils import timezone
+        try:
+            from django.utils import timezone
 
-        if _usuario_sin_seccional(request):
-            return _missing_seccional_response()
+            if _usuario_sin_seccional(request):
+                return _missing_seccional_response()
 
-        tipo_espacio_id = request.GET.get('tipo_espacio_id')
-        espacio_id = request.GET.get('espacio_id')
-        semana_offset = int(request.GET.get('semana_offset', 0))
+            tipo_espacio_id = request.GET.get('tipo_espacio_id')
+            espacio_id = request.GET.get('espacio_id')
+            semana_offset = int(request.GET.get('semana_offset', 0))
 
-        hoy = timezone.now().date()
-        dias_hasta_lunes = (hoy.weekday() - 0) % 7
-        lunes = hoy - timedelta(days=dias_hasta_lunes)
-        lunes += timedelta(weeks=semana_offset)
-        sabado = lunes + timedelta(days=5)
+            hoy = timezone.now().date()
+            dias_hasta_lunes = (hoy.weekday() - 0) % 7
+            lunes = hoy - timedelta(days=dias_hasta_lunes)
+            lunes += timedelta(weeks=semana_offset)
+            sabado = lunes + timedelta(days=5)
 
-        dias_nombre = {
-            'Monday': 'Lunes',
-            'Tuesday': 'Martes',
-            'Wednesday': 'Miércoles',
-            'Thursday': 'Jueves',
-            'Friday': 'Viernes',
-            'Saturday': 'Sábado',
-            'Sunday': 'Domingo',
-        }
+            dias_nombre = {
+                'Monday': 'Lunes',
+                'Tuesday': 'Martes',
+                'Wednesday': 'Miércoles',
+                'Thursday': 'Jueves',
+                'Friday': 'Viernes',
+                'Saturday': 'Sábado',
+                'Sunday': 'Domingo',
+            }
 
-        espacios_query = _filtrar_espacios_por_sede_usuario(request, EspacioFisico.objects.all().select_related('tipo', 'sede'))
-        if tipo_espacio_id:
-            espacios_query = espacios_query.filter(tipo_id=tipo_espacio_id)
-        if espacio_id:
-            espacios_query = espacios_query.filter(id=espacio_id)
+            espacios_query = _filtrar_espacios_por_sede_usuario(request, EspacioFisico.objects.all().select_related('tipo', 'sede'))
+            if tipo_espacio_id:
+                espacios_query = espacios_query.filter(tipo_id=tipo_espacio_id)
+            if espacio_id:
+                espacios_query = espacios_query.filter(id=espacio_id)
 
-        espacios = list(espacios_query)
-        dias = []
-        fecha_actual = lunes
-        while fecha_actual <= sabado:
-            dia_nombre_en = fecha_actual.strftime('%A')
-            dias.append((fecha_actual, dias_nombre.get(dia_nombre_en, dia_nombre_en), dia_nombre_en))
-            fecha_actual += timedelta(days=1)
-        semana = ocupacion.cargar_semana([espacio.id for espacio in espacios], dias)
+            espacios = list(espacios_query)
+            dias = []
+            fecha_actual = lunes
+            while fecha_actual <= sabado:
+                dia_nombre_en = fecha_actual.strftime('%A')
+                dias.append((fecha_actual, dias_nombre.get(dia_nombre_en, dia_nombre_en), dia_nombre_en))
+                fecha_actual += timedelta(days=1)
+            semana = ocupacion.cargar_semana([espacio.id for espacio in espacios], dias)
 
-        ocupacion_list = []
-        for espacio in espacios:
-            horas_manana = 0.0
-            horas_tarde = 0.0
-            horas_noche = 0.0
-            horas_disponibles = 16 * 6
+            ocupacion_list = []
+            for espacio in espacios:
+                horas_manana = 0.0
+                horas_tarde = 0.0
+                horas_noche = 0.0
+                horas_disponibles = 16 * 6
 
-            for _fecha, horarios_dia, prestamos_dia in semana.get(espacio.id, []):
-                for horario in horarios_dia:
-                    horas_ocupadas = _distribuir_horas_en_jornadas(horario.hora_inicio, horario.hora_fin)
-                    horas_manana += horas_ocupadas['manana']
-                    horas_tarde += horas_ocupadas['tarde']
-                    horas_noche += horas_ocupadas['noche']
+                for _fecha, horarios_dia, prestamos_dia in semana.get(espacio.id, []):
+                    for horario in horarios_dia:
+                        horas_ocupadas = _distribuir_horas_en_jornadas(horario.hora_inicio, horario.hora_fin)
+                        horas_manana += horas_ocupadas['manana']
+                        horas_tarde += horas_ocupadas['tarde']
+                        horas_noche += horas_ocupadas['noche']
 
-                for prestamo in prestamos_dia:
-                    horas_ocupadas = _distribuir_horas_en_jornadas(prestamo.hora_inicio, prestamo.hora_fin)
-                    horas_manana += horas_ocupadas['manana']
-                    horas_tarde += horas_ocupadas['tarde']
-                    horas_noche += horas_ocupadas['noche']
+                    for prestamo in prestamos_dia:
+                        horas_ocupadas = _distribuir_horas_en_jornadas(prestamo.hora_inicio, prestamo.hora_fin)
+                        horas_manana += horas_ocupadas['manana']
+                        horas_tarde += horas_ocupadas['tarde']
+                        horas_noche += horas_ocupadas['noche']
 
-            horas_manana = min(horas_manana, 36)
-            horas_tarde = min(horas_tarde, 36)
-            horas_noche = min(horas_noche, 24)
-            horas_totales = horas_manana + horas_tarde + horas_noche
+                horas_manana = min(horas_manana, 36)
+                horas_tarde = min(horas_tarde, 36)
+                horas_noche = min(horas_noche, 24)
+                horas_totales = horas_manana + horas_tarde + horas_noche
 
-            porcentaje_manana = (horas_manana / 36) * 100 if horas_manana > 0 else 0
-            porcentaje_tarde = (horas_tarde / 36) * 100 if horas_tarde > 0 else 0
-            porcentaje_noche = (horas_noche / 24) * 100 if horas_noche > 0 else 0
-            porcentaje_ocupacion = (horas_totales / horas_disponibles) * 100 if horas_totales > 0 else 0
+                porcentaje_manana = (horas_manana / 36) * 100 if horas_manana > 0 else 0
+                porcentaje_tarde = (horas_tarde / 36) * 100 if horas_tarde > 0 else 0
+                porcentaje_noche = (horas_noche / 24) * 100 if horas_noche > 0 else 0
+                porcentaje_ocupacion = (horas_totales / horas_disponibles) * 100 if horas_totales > 0 else 0
 
-            ocupacion_list.append(
-                {
-                    'id': espacio.id,
-                    'nombre': espacio.nombre,
-                    'tipo': espacio.tipo.nombre,
-                    'ubicacion': espacio.ubicacion or 'Sin ubicación',
-                    'capacidad': espacio.capacidad,
-                    'sede': espacio.sede.nombre if espacio.sede else 'Sin sede',
-                    'edificio': espacio.ubicacion.split('-')[0] if espacio.ubicacion and '-' in espacio.ubicacion else 'N/A',
-                    'horasOcupadasSemana': round(horas_totales, 2),
-                    'horasDisponibles': horas_disponibles,
-                    'horasOcupadasManana': round(horas_manana, 2),
-                    'horasOcupadasTarde': round(horas_tarde, 2),
-                    'horasOcupadasNoche': round(horas_noche, 2),
-                    'porcentajeOcupacion': round(porcentaje_ocupacion, 2),
-                    'porcentajeManana': round(porcentaje_manana, 2),
-                    'porcentajeTarde': round(porcentaje_tarde, 2),
-                    'porcentajeNoche': round(porcentaje_noche, 2),
-                    'jornada': {
-                        'manana': round(porcentaje_manana, 1),
-                        'tarde': round(porcentaje_tarde, 1),
-                        'noche': round(porcentaje_noche, 1),
-                    },
-                    'estado': espacio.estado,
-                }
-            )
+                ocupacion_list.append(
+                    {
+                        'id': espacio.id,
+                        'nombre': espacio.nombre,
+                        'tipo': espacio.tipo.nombre,
+                        'ubicacion': espacio.ubicacion or 'Sin ubicación',
+                        'capacidad': espacio.capacidad,
+                        'sede': espacio.sede.nombre if espacio.sede else 'Sin sede',
+                        'edificio': espacio.ubicacion.split('-')[0] if espacio.ubicacion and '-' in espacio.ubicacion else 'N/A',
+                        'horasOcupadasSemana': round(horas_totales, 2),
+                        'horasDisponibles': horas_disponibles,
+                        'horasOcupadasManana': round(horas_manana, 2),
+                        'horasOcupadasTarde': round(horas_tarde, 2),
+                        'horasOcupadasNoche': round(horas_noche, 2),
+                        'porcentajeOcupacion': round(porcentaje_ocupacion, 2),
+                        'porcentajeManana': round(porcentaje_manana, 2),
+                        'porcentajeTarde': round(porcentaje_tarde, 2),
+                        'porcentajeNoche': round(porcentaje_noche, 2),
+                        'jornada': {
+                            'manana': round(porcentaje_manana, 1),
+                            'tarde': round(porcentaje_tarde, 1),
+                            'noche': round(porcentaje_noche, 1),
+                        },
+                        'estado': espacio.estado,
+                    }
+                )
 
-        return JsonResponse({'semana_inicio': lunes.isoformat(), 'semana_fin': sabado.isoformat(), 'ocupacion': ocupacion_list}, status=200)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'semana_inicio': lunes.isoformat(), 'semana_fin': sabado.isoformat(), 'ocupacion': ocupacion_list}, status=200)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)

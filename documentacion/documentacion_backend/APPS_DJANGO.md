@@ -67,3 +67,9 @@ Cada app tiene la misma forma:
 | `tests/` | Todas las pruebas de la app. |
 
 Un ViewSet se usa cuando el recurso es un CRUD y una vista suelta cuando el endpoint hace otra cosa (exportar, marcar, consultar un proxy).
+
+### Vistas de un solo endpoint: `VistaJson`
+
+Las vistas de un endpoint ya no son funciones con `@csrf_exempt`: son clases que heredan de `nucleo.vistas.VistaJson` (una `APIView`) con un método por verbo HTTP (`get`, `post`, `put`). `VistaJson` conserva lo que hacían las funciones: no exige autenticación DRF (cada vista valida el acceso con sus ayudantes), `request.user` es el de la petición Django, un verbo no permitido responde 405 con `{"error": "Solo se permite GET"}` y no rechaza por la cabecera `Accept`. Una vista nueva debe escribirse así; para un CRUD se usa un `ViewSet`.
+
+Siguen como funciones, a propósito, los endpoints de infraestructura de `nucleo` (sesión, token CSRF, salud y registro de errores del cliente).

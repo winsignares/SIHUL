@@ -12,12 +12,12 @@ from .endpoints import (
     TipoActividadListCreateAPIView,
     SupervisorEspaciosPermitidosPrestamosAPIView,
 )
-from .publico import list_espacios_disponibles_publico
+from .publico import ListEspaciosDisponiblesPublicoView
 
 urlpatterns = [
     path('tipos-actividad/', TipoActividadListCreateAPIView.as_view(), name='api-tipo-actividad-list-create'),
     path('tipos-actividad/<int:pk>/', TipoActividadDetailAPIView.as_view(), name='api-tipo-actividad-detail'),
-    path('public/espacios-disponibles/', list_espacios_disponibles_publico, name='api-public-espacios-disponibles'),
+    path('public/espacios-disponibles/', ListEspaciosDisponiblesPublicoView.as_view(), name='api-public-espacios-disponibles'),
     path('public/recaptcha/', PublicAccessRecaptchaVerifyAPIView.as_view(), name='api-public-recaptcha-verify'),
     path('espacios/', PrestamoEspacioListCreateAPIView.as_view(), name='api-prestamo-espacio-list-create'),
     path('espacios/<int:pk>/', PrestamoEspacioDetailAPIView.as_view(), name='api-prestamo-espacio-detail'),

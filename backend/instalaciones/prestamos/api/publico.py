@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from nucleo.vistas import VistaJson
 from ..models import PrestamoEspacio, PrestamoEspacioPublico
 from instalaciones.espacios.models import EspacioFisico
 from academico.horario.models import Horario
@@ -12,14 +12,13 @@ import datetime
 # ========== ENDPOINTS PARA USUARIOS PÚBLICOS ==========
 
 
-@csrf_exempt
-def list_espacios_disponibles_publico(request):
-    """
-    Lista espacios disponibles para una fecha y hora específica
-    Filtrado por sede (opcional)
-    Optimizado: usa consultas batch en lugar de N+1
-    """
-    if request.method == 'GET':
+class ListEspaciosDisponiblesPublicoView(VistaJson):
+    def get(self, request):
+        """
+        Lista espacios disponibles para una fecha y hora específica
+        Filtrado por sede (opcional)
+        Optimizado: usa consultas batch en lugar de N+1
+        """
         try:
             fecha = request.GET.get('fecha')
             hora_inicio = request.GET.get('hora_inicio')
@@ -123,5 +122,3 @@ def list_espacios_disponibles_publico(request):
             return JsonResponse({"error": f"Formato inválido: {str(e)}"}, status=400)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
-    else:
-        return JsonResponse({"error": "Método no permitido"}, status=405)
