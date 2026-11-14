@@ -15,7 +15,7 @@
 #   3. Obtiene las imágenes (pull o build).
 #   4. Ejecuta el job "release": migraciones + collectstatic.
 #   5. Levanta los servicios con la versión nueva.
-#   6. Espera a que backend, chatbot y frontend estén sanos; si no, vuelve a la versión anterior.
+#   6. Espera a que backend, eventos, chatbot y frontend estén sanos; si no, vuelve a la versión anterior.
 #
 # NUNCA ejecuta "down -v". Los volúmenes de datos no se tocan.
 # =============================================================================
@@ -49,6 +49,12 @@ dc() { TAG="$TAG_ACTIVO" docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE
 valor_env() { grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- ; }
 
 PROYECTO="$(valor_env COMPOSE_PROJECT_NAME)"; PROYECTO="${PROYECTO:-sihul}"
+
+# Servicios que se levantan. `eventos` atiende /api/eventos/ (tiempo real) con la misma imagen del backend.
+# `trabajador` (cola de tareas) solo si el entorno define TAREAS_COLA=rq.
+SERVICIOS="backend eventos chatbot frontend"
+PERFIL=()
+if [[ "$(valor_env TAREAS_COLA)" == "rq" ]]; then SERVICIOS="$SERVICIOS trabajador"; PERFIL=(--profile cola); fi
 
 # --- 1. Verificaciones ------------------------------------------------------
 if [[ "$ENTORNO" == "prod" ]]; then
@@ -94,7 +100,7 @@ dc --profile release run --rm release
 
 # --- 6. Levantar ------------------------------------------------------------
 echo "[deploy] Levantando servicios..."
-dc up -d --remove-orphans backend chatbot frontend
+dc ${PERFIL[@]+"${PERFIL[@]}"} up -d --remove-orphans $SERVICIOS
 
 # --- 7. Esperar salud o volver atrás ---------------------------------------
 servicio_sano() {
@@ -107,7 +113,7 @@ echo "[deploy] Esperando que los servicios estén sanos (máx. ${ESPERA_SEGUNDOS
 FIN=$((SECONDS + ESPERA_SEGUNDOS))
 SANO=0
 while (( SECONDS < FIN )); do
-  if servicio_sano backend && servicio_sano chatbot && servicio_sano frontend; then SANO=1; break; fi
+  if servicio_sano backend && servicio_sano eventos && servicio_sano chatbot && servicio_sano frontend; then SANO=1; break; fi
   sleep 5
 done
 
@@ -117,7 +123,7 @@ if (( SANO == 0 )); then
   if [[ -n "$ANTERIOR" ]]; then
     echo "[deploy] Volviendo a la versión anterior ($ANTERIOR)..." >&2
     TAG_ACTIVO="$ANTERIOR"
-    dc up -d --remove-orphans backend chatbot frontend
+    dc ${PERFIL[@]+"${PERFIL[@]}"} up -d --remove-orphans $SERVICIOS
   else
     echo "[deploy] No hay versión anterior registrada a la que volver." >&2
   fi
