@@ -13,6 +13,7 @@ import {
   PAGE_SIZE_DEFAULT
 } from './paginacion';
 import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const PAGE_SIZE = PAGE_SIZE_DEFAULT;
 const GESTION_RECURSOS_CACHE_KEY = 'gestion-academica-recursos';
@@ -32,14 +33,14 @@ export function useGestionRecursos() {
     descripcion: ''
   });
 
-  const loadRecursos = async ({ force = false }: { force?: boolean } = {}) => {
+  const loadRecursos = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
     try {
       const activeToken = localStorage.getItem('auth_token');
       const cachedRecursos = force ? null : getSessionCacheData<Recurso[]>(GESTION_RECURSOS_CACHE_KEY, activeToken);
 
       if (cachedRecursos) {
         setRecursos(cachedRecursos);
-      } else {
+      } else if (!silent) {
         setLoading(true);
       }
 
@@ -57,6 +58,11 @@ export function useGestionRecursos() {
   useEffect(() => {
     loadRecursos();
   }, []);
+
+  // Alguien más cambió los recursos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['recursos'], () => {
+    void loadRecursos({ force: true, silent: true });
+  });
 
   const notifyRecursosUpdated = () => {
     clearSessionCache(GESTION_RECURSOS_CACHE_KEY);

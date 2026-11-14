@@ -17,6 +17,7 @@ import {
   PAGE_SIZE_DEFAULT
 } from './paginacion';
 import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const ESPACIOS_FISICOS_CACHE_KEY = 'gestion-academica-espacios-fisicos';
 const ESTADO_RECURSOS_CACHE_KEY = 'gestion-academica-estado-recursos';
@@ -175,6 +176,11 @@ export function useEspaciosFisicos() {
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Alguien más cambió espacios, tipos, recursos o sedes: se vuelve a leer.
+    useActualizacionEnVivo(['espacios', 'tipos-espacio', 'recursos', 'espacios-recursos', 'espacios-permitidos', 'sedes'], () => {
+        void loadData({ force: true });
+    });
 
     const loadEspacios = async ({ force = false }: { force?: boolean } = {}) => {
         try {

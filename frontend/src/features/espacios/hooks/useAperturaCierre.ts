@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { hasNextPageWindow, hasPrevPageWindow, PAGE_SIZE_DEFAULT } from '../../gestionAcademica/hooks/paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
 import { useSondeoVisible } from '../../../hooks/useSondeoVisible';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 import {
     APERTURA_CIERRE_CACHE_KEY,
@@ -241,6 +242,12 @@ export function useAperturaCierre() {
 
     // Auto-refresh cada 30 segundos (más frecuente para contador en tiempo real), solo con la pestaña visible
     useSondeoVisible(() => cargarDatos({ force: true }), 30000);
+
+    // Alguien más abrió, cerró o cambió un espacio o un horario: se vuelve a leer sin esperar al sondeo.
+    useActualizacionEnVivo(['espacios', 'horarios', 'espacios-permitidos', 'tipos-espacio'], () => {
+        void cargarDatos({ force: true });
+        void cargarCatalogosEspacios({ force: true });
+    });
 
     /**
      * Función para refrescar manualmente

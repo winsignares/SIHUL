@@ -14,6 +14,7 @@ import {
   PAGE_SIZE_DEFAULT
 } from './paginacion';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 import {
     CheckCircle2,
     AlertTriangle,
@@ -62,8 +63,13 @@ export function useEstadoRecursos() {
         };
     }, []);
 
-    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
-        setLoading(true);
+    // Alguien más cambió espacios, recursos o sedes: se vuelve a leer sin mostrar el spinner.
+    useActualizacionEnVivo(['espacios', 'tipos-espacio', 'recursos', 'espacios-recursos', 'sedes'], () => {
+        void loadData({ force: true, silent: true });
+    });
+
+    const loadData = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
+        if (!silent) setLoading(true);
         try {
             const activeToken = localStorage.getItem('auth_token');
             const cachedData = force

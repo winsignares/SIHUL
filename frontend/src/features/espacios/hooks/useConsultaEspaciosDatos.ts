@@ -5,6 +5,7 @@ import { prestamoService } from '../../prestamos/services/prestamoAPI';
 import { prestamosPublicAPI } from '../../prestamos/services/prestamosPublicAPI';
 import type { PrestamoEspacio } from '../../prestamos/services/prestamoAPI';
 import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 import { isSpaceSupervisorRole } from '../../../context/spaceSupervisorRole';
 import {
   expandirPrestamosParaCronograma,
@@ -129,8 +130,8 @@ export function useConsultaEspaciosDatos({
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(
-    async ({ force = false }: { force?: boolean } = {}) => {
-      setLoading(true);
+    async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
+      if (!silent) setLoading(true);
       try {
         const activeToken = localStorage.getItem('auth_token');
         const cacheKey = getConsultaEspaciosCacheKey(
@@ -302,6 +303,14 @@ export function useConsultaEspaciosDatos({
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Alguien más cambió espacios, horarios, recursos o préstamos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(
+    ['espacios', 'horarios', 'horarios-fusionados', 'tipos-espacio', 'recursos', 'espacios-recursos', 'sedes', 'prestamos-espacio'],
+    () => {
+      void loadData({ force: true, silent: true });
+    }
+  );
 
   useEffect(() => {
     const loadPrestamos = async () => {

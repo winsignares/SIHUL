@@ -33,7 +33,7 @@ let huboError = false;
 
 function avisarATodos(evento: EventoTiempoReal | null): void {
   suscripciones.forEach((s) => {
-    if (evento === null || s.recursos.has(evento.recurso)) {
+    if (evento === null || s.recursos.has('*') || s.recursos.has(evento.recurso)) {
       try {
         s.oyente(evento);
       } catch (error) {

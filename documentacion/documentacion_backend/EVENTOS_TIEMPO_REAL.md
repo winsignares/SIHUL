@@ -25,7 +25,8 @@ La lista está en `nucleo/eventos/registro.py` (sedes, seccionales, facultades, 
 ## Frontend
 - `core/eventosTiempoReal.ts`: una sola conexión para toda la aplicación, con reconexión y espera creciente.
 - `hooks/useActualizacionEnVivo.ts`: `useActualizacionEnVivo(['sedes'], recargar)` llama a `recargar` cuando cambia alguno de esos recursos, y también al reconectar o al volver a ver la pestaña (por si se perdió algún evento). Agrupa eventos seguidos en una sola recarga.
-- Pantallas con esta actualización: sedes y seccionales. El resto se agrega pantalla por pantalla con el mismo hook.
+- `hooks/useCacheEnVivo.ts` (montado en `AppLayout`): mantiene la conexión abierta con la sesión y vacía la caché local cuando algo cambia, para que una pantalla que se abra después pida datos frescos.
+- Pantallas con esta actualización: sedes y seccionales; espacios, estado de recursos, recursos, apertura y cierre, y consulta de espacios. El resto se agrega pantalla por pantalla con el mismo hook.
 
 ## Garantías y límites
 - No hay entrega garantizada: si la conexión se cae, al reconectar el frontend recarga.
