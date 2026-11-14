@@ -4,6 +4,7 @@ import type { NotificacionUsuario, NotificacionBackend, FiltroTiempo, CategoriaN
 import { useAuth } from '../../../context/AuthContext';
 import { useNotificacionesContext } from '../../../context/NotificacionesContext';
 import { useSondeoVisible } from '../../../hooks/useSondeoVisible';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 import {
     obtenerMisNotificaciones,
     obtenerEstadisticas,
@@ -235,6 +236,12 @@ export function useNotificaciones(onNotificacionesChange?: (count: number) => vo
 
     // Estadísticas cada 30 s, solo con la pestaña visible
     useSondeoVisible(cargarEstadisticas, 30000);
+
+    // Llegó, se leyó o se borró una notificación tuya: se actualizan la lista y las estadísticas al instante.
+    useActualizacionEnVivo(['notificaciones'], () => {
+        void cargarEstadisticas();
+        void cargarNotificaciones(paginaActual);
+    });
 
     /**
      * Función para cambiar de página
