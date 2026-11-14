@@ -41,8 +41,8 @@ router.register(r'usuarios', UsuarioViewSet, basename='usuario-api')
 _vista_de_la_api = {patron.name: patron.callback for patron in router.urls}
 
 urlpatterns = [
-    path('health/', health.live),
-    path('health/ready/', health.ready),
+    path('health/', health.LiveView.as_view()),
+    path('health/ready/', health.ReadyView.as_view()),
     path('panel-sihul-gestion/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api/auth/', include('nucleo.auth_urls')),

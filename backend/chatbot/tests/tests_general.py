@@ -353,6 +353,9 @@ class ChatConAnexosTests(_BaseAnexos):
             'agente_id': self.agente.id, 'pregunta': '¿Cómo cancelo la matrícula?',
             'id_usuario': self.estudiante.id, 'nombre_usuario': 'Estudiante', **extra,
         }
+        if 'sin_sesion' not in extra:
+            self.entrar(self.estudiante)
+        datos.pop('sin_sesion', None)
         with self._rag(anexos):
             return self.client.post(reverse('api-legacy-pregunta'), json.dumps(datos), content_type='application/json')
 
@@ -389,6 +392,28 @@ class ChatConAnexosTests(_BaseAnexos):
         historial = self.client.get(reverse('api-legacy-historial'), {'chat_id': chat_id}).json()['mensajes']
         self.assertEqual(next(m for m in historial if m['tipo'] == 'bot')['anexos'], [])
 
+    def test_el_chat_con_sesion_exige_sesion(self):
+        self.client.logout()
+        self.assertEqual(self._preguntar(self.ids, sin_sesion=True).status_code, 401)
+        self.assertEqual(self.client.get(reverse('api-legacy-historial'), {'agente_id': self.agente.id}).status_code, 401)
+
+    def test_no_se_pregunta_a_nombre_de_otra_persona(self):
+        self.entrar(self.estudiante)
+        r = self._preguntar(self.ids, id_usuario=self.admin.id)
+        self.assertEqual(r.status_code, 403)
+
+    def test_el_historial_es_solo_del_dueno_de_la_sesion(self):
+        chat_id = self._preguntar(self.ids).json()['chat_id']
+        self.entrar(self.admin)
+        propio = self.client.get(reverse('api-legacy-historial'), {'chat_id': chat_id})
+        self.assertEqual(propio.json()['total'], 0)
+        porAgente = self.client.get(reverse('api-legacy-historial'), {'agente_id': self.agente.id})
+        self.assertEqual(porAgente.json()['total'], 0)
+        ajeno = self.client.get(reverse('api-legacy-historial'), {'chat_id': chat_id, 'id_usuario': self.estudiante.id})
+        self.assertEqual(ajeno.status_code, 403)
+        self.entrar(self.estudiante)
+        self.assertEqual(self.client.get(reverse('api-legacy-historial'), {'chat_id': chat_id}).json()['total'], 2)
+
     def test_chat_publico_entrega_anexos_de_su_seccional(self):
         datos = {'agente_id': self.agente.id, 'pregunta': 'cancelar matrícula', 'seccional': 'Barranquilla'}
         with self._rag(self.ids):
@@ -404,6 +429,7 @@ class ChatConAnexosTests(_BaseAnexos):
     def test_error_del_rag_no_entrega_anexos(self):
         import requests
 
+        self.entrar(self.estudiante)
         with mock.patch('chatbot.api.chat.rag._enviar_pregunta_fastapi', side_effect=requests.exceptions.ConnectionError):
             datos = {'agente_id': self.agente.id, 'pregunta': 'x', 'id_usuario': self.estudiante.id, 'nombre_usuario': 'E'}
             cuerpo = self.client.post(reverse('api-legacy-pregunta'), json.dumps(datos), content_type='application/json').json()

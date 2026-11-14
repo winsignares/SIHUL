@@ -97,9 +97,11 @@ class AlcancePorSeccionalTests(_BaseAnexos):
     def test_preguntar_a_un_chatbot_no_disponible_es_403_con_sesion(self):
         cuerpo = {'agente_id': self.solo_bq.id, 'pregunta': 'Hola', 'id_usuario': self.est_cali.id, 'nombre_usuario': 'x'}
         with mock.patch('chatbot.api.chat.chat._consultar_rag', return_value=('ok', None, [])) as rag:
+            self.entrar(self.est_cali)
             self.assertEqual(_json(self.client, reverse('api-legacy-pregunta'), cuerpo).status_code, 403)
             rag.assert_not_called()
             cuerpo['id_usuario'] = self.estudiante.id
+            self.entrar(self.estudiante)
             self.assertEqual(_json(self.client, reverse('api-legacy-pregunta'), cuerpo).status_code, 200)
 
     def test_no_se_sube_documentacion_a_una_seccional_donde_el_chatbot_no_esta(self):

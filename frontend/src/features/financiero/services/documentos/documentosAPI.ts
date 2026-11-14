@@ -22,12 +22,7 @@ export const documentosService = {
     if (file.type) formData.append('tipo_mime', file.type);
     formData.append('archivo', file);
 
-    try {
-      const response = await apiClient.postFormData<DocumentoAdjunto>(`${API_BASE}/documentos/`, formData);
-      return response;
-    } catch (err: unknown) {
-      throw err;
-    }
+    return apiClient.postFormData<DocumentoAdjunto>(`${API_BASE}/documentos/`, formData);
   },
 
   delete: async (id: number): Promise<void> => {

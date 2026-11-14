@@ -279,6 +279,7 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
   // Cargar datos al montar el componente y cada vez que el administrador general cambia de seccional
   useEffect(() => {
     cargarDatos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seccionElegida]);
 
   return {
