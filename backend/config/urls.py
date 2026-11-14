@@ -6,6 +6,7 @@ from django.views.static import serve
 from rest_framework.routers import DefaultRouter
 
 from nucleo import health
+from nucleo.eventos.vista import EventosView
 
 from academico.asignaturas.api.viewsets import AsignaturaProgramaViewSet, AsignaturaViewSet
 from instalaciones.espacios.api.viewsets import EspacioFisicoViewSet, EspacioPermitidoViewSet, TipoEspacioViewSet
@@ -51,6 +52,7 @@ urlpatterns = [
     path('api/chatbot/', include('chatbot.api.urls')),
     path('api/notificaciones/', include('notificaciones.api.urls')),
     path('api/asistencia/', include('asistencia.api_urls')),
+    path('api/eventos/', EventosView.as_view(), name='api-eventos'),
     path('api/financiero/', include('financiero.urls')),  # Rutas API Financiero
     # Solo login, logout, estado de sesión y cambio de contraseña: nginx reescribe
     # /api/usuarios/<ruta>/ a /usuarios/<ruta>/. Son las mismas vistas de /api/usuarios/; todo lo demás se sirve bajo /api/.
