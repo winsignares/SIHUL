@@ -7,7 +7,9 @@ from django.http import HttpResponse
 from datetime import datetime
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
-from .. import archivos, models, serializers
+from .. import archivos
+from .. import models
+from .. import serializers
 from identidad.usuarios.models import Usuario
 
 

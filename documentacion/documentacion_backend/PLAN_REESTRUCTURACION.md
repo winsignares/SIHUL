@@ -35,7 +35,7 @@ Las vistas concentran reglas de negocio, consultas y armado de archivos:
 | `horario/views.py` | generación de PDF y Excel de horarios |
 | `prestamos/serializers.py`, `privacidad.py`, `availability.py` | aprobación, recurrencia y privacidad repartidas entre serializer y módulos |
 | `financiero/views.py` | flujo de estados de la factura, permisos por rol y manejo de archivos |
-| `chatbot/views/` (`rag.py`) | llamada HTTP al servicio RAG dentro de la vista |
+| `chatbot/api/chat/` (`rag.py`) | llamada HTTP al servicio RAG dentro de la vista |
 
 ### 1.4 Consultas y tamaño de respuesta (entorno local)
 

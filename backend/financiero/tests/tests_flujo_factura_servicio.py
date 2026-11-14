@@ -13,7 +13,8 @@ from rest_framework.test import APIClient
 
 from identidad.usuarios.models import Rol, Usuario
 
-from .. import flujo_factura, models
+from .. import flujo_factura
+from .. import models
 from .tests_reloj import fijar_hoy
 
 AHORA = timezone.make_aware(datetime.datetime(2026, 11, 11, 15, 30))

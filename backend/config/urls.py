@@ -7,15 +7,15 @@ from rest_framework.routers import DefaultRouter
 
 from nucleo import health
 
-from academico.asignaturas.viewsets import AsignaturaProgramaViewSet, AsignaturaViewSet
-from instalaciones.espacios.viewsets import EspacioFisicoViewSet, EspacioPermitidoViewSet, TipoEspacioViewSet
-from academico.facultades.viewsets import FacultadViewSet
-from academico.grupos.viewsets import GrupoViewSet
-from academico.horario.viewsets import HorarioEstudianteViewSet, HorarioFusionadoViewSet, HorarioViewSet, SolicitudEspacioViewSet
-from academico.programas.viewsets import ProgramaViewSet
-from instalaciones.recursos.viewsets import EspacioRecursoViewSet, RecursoViewSet
-from academico.sedes.viewsets import SeccionalViewSet, SedeViewSet
-from identidad.usuarios.viewsets import RolViewSet, UsuarioViewSet
+from academico.asignaturas.api.viewsets import AsignaturaProgramaViewSet, AsignaturaViewSet
+from instalaciones.espacios.api.viewsets import EspacioFisicoViewSet, EspacioPermitidoViewSet, TipoEspacioViewSet
+from academico.facultades.api.viewsets import FacultadViewSet
+from academico.grupos.api.viewsets import GrupoViewSet
+from academico.horario.api.viewsets import HorarioEstudianteViewSet, HorarioFusionadoViewSet, HorarioViewSet, SolicitudEspacioViewSet
+from academico.programas.api.viewsets import ProgramaViewSet
+from instalaciones.recursos.api.viewsets import EspacioRecursoViewSet, RecursoViewSet
+from academico.sedes.api.viewsets import SeccionalViewSet, SedeViewSet
+from identidad.usuarios.api.viewsets import RolViewSet, UsuarioViewSet
 
 router = DefaultRouter()
 router.register(r'seccionales', SeccionalViewSet, basename='seccional')
@@ -45,11 +45,11 @@ urlpatterns = [
     path('panel-sihul-gestion/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api/auth/', include('nucleo.auth_urls')),
-    path('api/periodos/', include('academico.periodos.api_urls')),
-    path('api/componentes/', include('identidad.componentes.api_urls')),
-    path('api/prestamos/', include('instalaciones.prestamos.api_urls')),
-    path('api/chatbot/', include('chatbot.api_urls')),
-    path('api/notificaciones/', include('notificaciones.api_urls')),
+    path('api/periodos/', include('academico.periodos.api.urls')),
+    path('api/componentes/', include('identidad.componentes.api.urls')),
+    path('api/prestamos/', include('instalaciones.prestamos.api.urls')),
+    path('api/chatbot/', include('chatbot.api.urls')),
+    path('api/notificaciones/', include('notificaciones.api.urls')),
     path('api/asistencia/', include('asistencia.api_urls')),
     path('api/financiero/', include('financiero.urls')),  # Rutas API Financiero
     # Solo login, logout, estado de sesión y cambio de contraseña: nginx reescribe

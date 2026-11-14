@@ -63,7 +63,7 @@ class SeccionalEnLaSesionTests(TestCase):
 
     def test_la_seccional_propia_manda_sobre_la_de_la_sede(self):
         # Si por datos antiguos hubiera las dos distintas, el servidor ya usa la propia primero (ver
-        # chatbot.views._resolve_user_sede_value): la sesión debe decir lo mismo.
+        # chatbot.api.chat._resolve_user_sede_value): la sesión debe decir lo mismo.
         Usuario.objects.filter(pk=self.solo_sede.pk).update(seccional=self.bq)
         datos = self._login(self.solo_sede)
         self.assertEqual(datos['seccional']['ciudad'], 'Barranquilla')

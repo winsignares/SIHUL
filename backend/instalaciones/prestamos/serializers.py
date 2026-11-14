@@ -2,7 +2,8 @@ from django.db import transaction
 from rest_framework import serializers
 
 from nucleo.auth_helpers import is_authenticated_user
-from . import privacidad, reglas
+from . import privacidad
+from . import reglas
 from .availability import validar_disponibilidad_prestamo
 from .models import (
     PrestamoEspacio,

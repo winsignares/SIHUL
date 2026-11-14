@@ -163,7 +163,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
                 )
 
         # Quien gestiona usuarios sin ser administrador: sin roles de administración ni cambios a su propio rol
-        from identidad.usuarios import gestion
+        from identidad.usuarios.servicios import gestion
         if autenticado and gestion.permiso_de_gestion(solicitante):
             gestion.validar_datos(solicitante, self.instance, attrs)
         return attrs
