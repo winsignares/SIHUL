@@ -22,6 +22,7 @@ La base de datos operativa de SIHUL **no es Oracle, es PostgreSQL** (`pgvector/p
 - **`documentacion_oracle/INVENTARIO_VISTAS_Y_ESTRATEGIA.md`**: qué trae cada vista de Oracle, dónde se guarda y la estrategia para leerlas bajo demanda en lugar de la carga programada.
 - **`documentacion_chatbot/ARQUITECTURA_RAG_CHATBOT.md`**: arquitectura RAG del servicio FastAPI y su integración como proxy a través del backend Django.
 - **`documentacion_chatbot/CAPAS_Y_AMPLIACION.md`**: evaluación del chatbot contra las ocho capas (prompt, RAG, herramientas, accesos, guardrails, caché, router y observabilidad) y plan para ampliarlo al resto del sistema.
+- **`general/INFORME_PRUEBAS_SISTEMA.md`**: qué se probó antes de montar la nueva versión (automáticas, API, navegador con dos sesiones y carga) y qué no se cubrió.
 - **`general/PENDIENTES.md`**: lo que queda fuera del trabajo actual (asistencia, Oracle y chatbot).
 - **`general/ARQUITECTURA_OBJETIVO.md`**: decisiones de arquitectura (dominios, un solo origen público, escalado horizontal, asistencia con ubicación) y hoja de ruta por pasos.
 - **`general/`**: [ARQUITECTURA_COMPLETA_ANALISIS.md](general/ARQUITECTURA_COMPLETA_ANALISIS.md), [REFERENCIA_RAPIDA.md](general/REFERENCIA_RAPIDA.md), [ENTORNO_PRUEBAS.md](general/ENTORNO_PRUEBAS.md) y [metodologia-trabajo-github.md](general/metodologia-trabajo-github.md): autenticación y componentes dinámicos, entorno de pruebas y forma de trabajo en GitHub.
