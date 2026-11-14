@@ -25,12 +25,12 @@ from .agentes import (
     PreguntaSugeridaListCreateAPIView,
 )
 from .chat import (
-    enviar_pregunta,
-    enviar_pregunta_publico,
-    desafio_publico,
-    sesion_publica,
-    list_agentes_publico,
-    obtener_historial,
+    EnviarPreguntaView,
+    EnviarPreguntaPublicoView,
+    DesafioPublicoView,
+    SesionPublicaView,
+    ListAgentesPublicoView,
+    ObtenerHistorialView,
 )
 
 urlpatterns = [
@@ -67,12 +67,12 @@ urlpatterns = [
     path('anexos/enlaces/', AnexosEnlacesView.as_view(), name='api-anexos-enlaces'),
 
     # Endpoints publicos (sin autenticacion)
-    path('public/desafio/', desafio_publico, name='api-public-desafio'),
-    path('public/sesion/', sesion_publica, name='api-public-sesion'),
-    path('public/agentes/', list_agentes_publico, name='api-public-agentes'),
-    path('public/pregunta/', enviar_pregunta_publico, name='api-public-pregunta'),
+    path('public/desafio/', DesafioPublicoView.as_view(), name='api-public-desafio'),
+    path('public/sesion/', SesionPublicaView.as_view(), name='api-public-sesion'),
+    path('public/agentes/', ListAgentesPublicoView.as_view(), name='api-public-agentes'),
+    path('public/pregunta/', EnviarPreguntaPublicoView.as_view(), name='api-public-pregunta'),
 
     # Endpoints legacy usados por el frontend
-    path('pregunta/', enviar_pregunta, name='api-legacy-pregunta'),
-    path('historial/', obtener_historial, name='api-legacy-historial'),
+    path('pregunta/', EnviarPreguntaView.as_view(), name='api-legacy-pregunta'),
+    path('historial/', ObtenerHistorialView.as_view(), name='api-legacy-historial'),
 ]

@@ -12,7 +12,7 @@ from academico.programas.models import Programa
 from academico.sedes.models import Seccional, Sede
 from identidad.usuarios.models import Rol, Usuario
 
-from ..api.consultas import list_horarios_asignacion_espacios
+from ..api.consultas import ListHorariosAsignacionEspaciosView
 from ..models import Horario
 
 
@@ -92,7 +92,7 @@ class SeccionalScopeTests(TestCase):
         request = self.factory.get('/api/horarios/sin-espacio/')
         request.user_obj = usuario
         request.sede = usuario.sede
-        response = list_horarios_asignacion_espacios(request)
+        response = ListHorariosAsignacionEspaciosView.as_view()(request)
         return response, json.loads(response.content.decode('utf-8'))
 
     def test_admin_planeacion_con_sede_solo_ve_su_seccional(self):

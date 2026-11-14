@@ -1,6 +1,6 @@
 from django.http import JsonResponse, HttpResponse
 import json
-from django.views.decorators.csrf import csrf_exempt
+from nucleo.vistas import VistaJson
 import sys
 
 from .. import exportaciones
@@ -55,29 +55,29 @@ def _exportar_post(request, generar, content_type, nombre, etiqueta_error):
 
 
 # -------- Exportaciones del Centro de Horarios (POST con la lista de horarios) --------
-@csrf_exempt
-def exportar_horarios_pdf_post(request):
-    """PDF con una página por grupo."""
-    return _exportar_post(request, exportaciones.pdf_por_grupo, 'application/pdf',
-                          'horarios_centro.pdf', 'ERROR en PDF')
+class ExportarHorariosPdfPostView(VistaJson):
+    def post(self, request):
+        """PDF con una página por grupo."""
+        return _exportar_post(request, exportaciones.pdf_por_grupo, 'application/pdf',
+                              'horarios_centro.pdf', 'ERROR en PDF')
 
 
-@csrf_exempt
-def exportar_horarios_excel_post(request):
-    """Excel con una hoja por grupo."""
-    return _exportar_post(request, exportaciones.excel_por_grupo, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                          'horarios_centro.xlsx', 'ERROR en Excel')
+class ExportarHorariosExcelPostView(VistaJson):
+    def post(self, request):
+        """Excel con una hoja por grupo."""
+        return _exportar_post(request, exportaciones.excel_por_grupo, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                              'horarios_centro.xlsx', 'ERROR en Excel')
 
 
-@csrf_exempt
-def exportar_horarios_pdf_docente(request):
-    """PDF con una página por docente."""
-    return _exportar_post(request, exportaciones.pdf_por_docente, 'application/pdf',
-                          'horarios_docentes.pdf', 'ERROR en exportar_horarios_pdf_docente')
+class ExportarHorariosPdfDocenteView(VistaJson):
+    def post(self, request):
+        """PDF con una página por docente."""
+        return _exportar_post(request, exportaciones.pdf_por_docente, 'application/pdf',
+                              'horarios_docentes.pdf', 'ERROR en exportar_horarios_pdf_docente')
 
 
-@csrf_exempt
-def exportar_horarios_excel_docente(request):
-    """Excel con una hoja por docente."""
-    return _exportar_post(request, exportaciones.excel_por_docente, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                          'horarios_docentes.xlsx', 'ERROR en exportar_horarios_excel_docente')
+class ExportarHorariosExcelDocenteView(VistaJson):
+    def post(self, request):
+        """Excel con una hoja por docente."""
+        return _exportar_post(request, exportaciones.excel_por_docente, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                              'horarios_docentes.xlsx', 'ERROR en exportar_horarios_excel_docente')
