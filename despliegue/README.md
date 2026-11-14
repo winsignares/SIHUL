@@ -11,6 +11,7 @@ despliegue/
 ├─ nginx/      configuración del nginx del servidor (producción y pruebas)
 ├─ scripts/    deploy · rollback · backup · inventario · verificar-nas
 ├─ TIEMPO_REAL_Y_COLA.md   puesta en marcha del servicio de eventos, nginx y la cola de tareas
+├─ PRUEBAS_EN_SERVIDOR.md  usuario de pruebas, pruebas de humo, pruebas por comandos y limpieza
 └─ github/     reglas de protección de ramas (las aplica un administrador)
 ```
 
