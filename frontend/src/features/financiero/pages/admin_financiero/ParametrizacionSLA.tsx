@@ -11,6 +11,8 @@ import { AlertTriangle, Clock3, Edit3, Info, Save } from 'lucide-react';
 import { parametrosSlaAdminService } from '../../services';
 import type { ParametroSLA } from '../../models/core.models';
 import { toast } from 'sonner';
+import { useActualizacionProtegida } from '../../../../hooks/useActualizacionProtegida';
+import { AvisoCambios } from '../../../../components/common/AvisoCambios';
 
 const ETAPAS_ORDEN: Array<{ index: number; terms: string[] }> = [
   { index: 1, terms: ['registro por parte del funcionario'] },
@@ -71,8 +73,8 @@ export default function ParametrizacionSLAReal() {
       return { value: String(day), label: `Día ${day}` };
     });
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
+  const cargar = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const data = await parametrosSlaAdminService.listar();
       setParametros(data);
@@ -86,6 +88,11 @@ export default function ParametrizacionSLAReal() {
   useEffect(() => {
     void cargar();
   }, [cargar]);
+
+  // Alguien más cambió los parámetros SLA: se vuelven a leer solo si no estás editando uno.
+  const avisoCambios = useActualizacionProtegida(['parametros-financieros'], () => {
+    void cargar({ silent: true });
+  }, editingItem !== null);
 
   const parametrosOrdenados = useMemo(
     () => {
@@ -176,6 +183,7 @@ export default function ParametrizacionSLAReal() {
   return (
     <>
     <div className="space-y-6">
+      <AvisoCambios {...avisoCambios} />
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-700 via-red-700 to-red-800 p-6 text-white shadow-xl">
         <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-amber-300/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 left-1/3 h-32 w-32 rounded-full bg-white/10 blur-3xl" />

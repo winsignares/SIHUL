@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { downloadDocumentoIndividual } from '../../components/documentos-consolidados';
@@ -13,6 +13,7 @@ import type {
 } from '../../models/core.models';
 import type { FuncionarioDocumentType, FuncionarioUploadedDoc, PrefillFromPendiente } from '../../models/funcionario';
 import { DOCUMENT_TYPES, toList, buildApiErrorMessage, buildDocumentoContenidoUrl, validateUploadFile } from '../../components/registrarFactura/auxiliares';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y reglas de RegistrarFactura (la página solo dibuja). */
 export function useRegistrarFactura() {
@@ -64,39 +65,44 @@ export function useRegistrarFactura() {
     observaciones: '',
   });
 
-  useEffect(() => {
-    const load = async () => {
-      setCatalogLoading(true);
-      setError(null);
-      try {
-        const [prov, dept, resumenSla, numeroSugerido] = await Promise.all([
-          proveedoresService.getAll({ limit: 100 }),
-          departamentosService.getAreasSolicitantes(),
-          parametrosSlaService.getResumenProceso(),
-          facturasService.getNumeroSugerido(),
-        ]);
+  const load = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setCatalogLoading(true);
+    setError(null);
+    try {
+      const [prov, dept, resumenSla, numeroSugerido] = await Promise.all([
+        proveedoresService.getAll({ limit: 100 }),
+        departamentosService.getAreasSolicitantes(),
+        parametrosSlaService.getResumenProceso(),
+        facturasService.getNumeroSugerido(),
+      ]);
 
-        const provList = toList<Proveedor>(prov);
-        const depList = toList<Departamento>(dept);
+      const provList = toList<Proveedor>(prov);
+      const depList = toList<Departamento>(dept);
 
-        setProveedores(provList);
-        setDepartamentos(depList);
-        setSlaTotalDias(Number(resumenSla.totalDias) || 0);
-        setSlaTodosHabiles(Boolean(resumenSla.todosHabiles));
-        setSlaEtapas(Number(resumenSla.etapas) || 0);
-        setNumeroFacturaSugerido(numeroSugerido || '');
-      } catch {
-        setProveedores([]);
-        setDepartamentos([]);
-        setNumeroFacturaSugerido('');
-        setError('No fue posible cargar proveedores y departamentos. Verifique la conexión con el backend.');
-      } finally {
-        setCatalogLoading(false);
-      }
-    };
-
-    void load();
+      setProveedores(provList);
+      setDepartamentos(depList);
+      setSlaTotalDias(Number(resumenSla.totalDias) || 0);
+      setSlaTodosHabiles(Boolean(resumenSla.todosHabiles));
+      setSlaEtapas(Number(resumenSla.etapas) || 0);
+      setNumeroFacturaSugerido(numeroSugerido || '');
+    } catch {
+      setProveedores([]);
+      setDepartamentos([]);
+      setNumeroFacturaSugerido('');
+      setError('No fue posible cargar proveedores y departamentos. Verifique la conexión con el backend.');
+    } finally {
+      setCatalogLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Alguien más cambió catálogos o proveedores: se vuelven a leer sin tocar lo que ya escribiste en el formulario.
+  useActualizacionEnVivo(['catalogos-financieros', 'proveedores', 'facturas', 'parametros-financieros'], () => {
+    void load({ silent: true });
+  });
 
   useEffect(() => {
     setPrefillApplied(false);

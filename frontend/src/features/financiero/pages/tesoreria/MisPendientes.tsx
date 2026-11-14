@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
@@ -9,6 +9,7 @@ import FacturaDetailModal, { type SharedFacturaDetail } from '../../components/f
 import { facturasService } from '../../services';
 import type { Factura as APIFactura } from '../../models/core.models';
 import { Pagination } from '../../../../components/common/Pagination';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -229,27 +230,32 @@ export default function MisPendientes() {
     return { alistar, enviar, comprobantes };
   };
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setLoadError(null);
-      try {
-        const { alistar, enviar, comprobantes } = await loadPendientes();
-        setFacturasPendientesAlistar(alistar);
-        setFacturasAprobadasAuditoria(enviar);
-        setPagosPendientesComprobante(comprobantes);
-      } catch {
-        setFacturasPendientesAlistar([]);
-        setFacturasAprobadasAuditoria([]);
-        setPagosPendientesComprobante([]);
-        setLoadError('No fue posible cargar los pendientes de tesoreria.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
+  const load = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
+    setLoadError(null);
+    try {
+      const { alistar, enviar, comprobantes } = await loadPendientes();
+      setFacturasPendientesAlistar(alistar);
+      setFacturasAprobadasAuditoria(enviar);
+      setPagosPendientesComprobante(comprobantes);
+    } catch {
+      setFacturasPendientesAlistar([]);
+      setFacturasAprobadasAuditoria([]);
+      setPagosPendientesComprobante([]);
+      setLoadError('No fue posible cargar los pendientes de tesoreria.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void load({ silent: true });
+  });
 
   const todasFacturas = [...facturasPendientesAlistar, ...facturasAprobadasAuditoria, ...pagosPendientesComprobante];
 

@@ -26,6 +26,7 @@ import {
 } from './centroHorarios/centroHorariosTypes';
 import { cargarHorariosFusionados } from './centroHorarios/cargarHorariosFusionados';
 import { useFiltrosFusionados } from './centroHorarios/useFiltrosFusionados';
+import { useActualizacionProtegida } from '../../../hooks/useActualizacionProtegida';
 
 export type { Docente, GrupoAgrupado, HorarioExtendido, HorarioFusionadoExtendido } from './centroHorarios/centroHorariosTypes';
 
@@ -119,7 +120,7 @@ export function useCentroHorarios() {
         }
     }, [searchParams]);
 
-    const loadData = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
+    const loadData = useCallback(async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         try {
             const activeToken = localStorage.getItem('auth_token');
             const userScope = `${role?.nombre || 'no-role'}-${user?.id || 'no-user'}-${user?.facultad?.id || 'no-facultad'}`;
@@ -153,7 +154,7 @@ export function useCentroHorarios() {
                 return;
             }
 
-            setLoading(true);
+            if (!silent) setLoading(true);
             
             // Cargar horarios extendidos (incluir pendientes para gestión)
             const horariosResponse = await horarioService.listExtendidos({ includePending: true });
@@ -249,6 +250,12 @@ export function useCentroHorarios() {
             window.removeEventListener(ESPACIOS_UPDATED_EVENT, reloadCatalogos);
         };
     }, [loadData]);
+
+    // Alguien más cambió horarios o sus catálogos: se vuelve a leer solo si no estás editando un horario.
+    const avisoCambios = useActualizacionProtegida(['horarios', 'horarios-fusionados', 'grupos', 'asignaturas', 'asignaturas-programa', 'espacios', 'periodos', 'programas', 'facultades', 'usuarios'], () => {
+        clearSessionCacheByPrefix(CENTRO_HORARIOS_CACHE_KEY);
+        void loadData({ force: true, silent: true });
+    }, showEditModal);
 
     const notifyHorariosUpdated = () => {
         clearSessionCacheByPrefix(CENTRO_HORARIOS_CACHE_KEY);
@@ -625,6 +632,7 @@ export function useCentroHorarios() {
     };
 
     return {
+        avisoCambios,
         activeTab, setActiveTab,
         loading,
         horarios,

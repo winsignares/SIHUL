@@ -47,10 +47,11 @@ def _de_la_factura(hijo):
 
 def registrar_eventos_financieros():
     registrar_recurso('financiero', 'Factura', 'facturas', audiencia=audiencia_de_factura)
-    for hijo in ('DocumentoAdjunto', 'HistorialFactura', 'ComentarioFactura', 'RechazoDevolucion', 'ItemFactura'):
+    for hijo in ('DocumentoAdjunto', 'DocumentoUnificado', 'HistorialFactura', 'ComentarioFactura', 'RechazoDevolucion', 'ItemFactura'):
         registrar_recurso('financiero', hijo, 'facturas', audiencia=audiencia_de_factura, referencia=_de_la_factura)
     registrar_recurso('financiero', 'Proveedor', 'proveedores', audiencia=audiencia_de_proveedor)
-    for catalogo in ('Departamento', 'CuentaContable', 'CentroCosto', 'Banco', 'TipoCuenta'):
+    for catalogo in ('Departamento', 'CuentaContable', 'CentroCosto', 'Banco', 'TipoCuenta', 'Pais', 'DepartamentoGeografico', 'Ciudad'):
         registrar_recurso('financiero', catalogo, 'catalogos-financieros', audiencia=audiencia_financiera)
     for parametros in ('ParametroSLA', 'ParametrosFinanciero'):
         registrar_recurso('financiero', parametros, 'parametros-financieros', audiencia=audiencia_interna)
+    registrar_recurso('financiero', 'ReporteGenerado', 'reportes-financieros', audiencia=audiencia_interna)

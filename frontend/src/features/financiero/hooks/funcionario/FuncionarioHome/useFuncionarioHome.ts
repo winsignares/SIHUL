@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Receipt, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { facturasService } from '../../../services';
 import type { Factura } from '../../../models/core.models';
 import type { FuncionarioStatsApi } from '../../../models/funcionario';
+import { useActualizacionEnVivo } from '../../../../../hooks/useActualizacionEnVivo';
 
 const toList = <T,>(data: unknown): T[] => {
   if (Array.isArray(data)) return data as T[];
@@ -31,32 +32,37 @@ export function useFuncionarioHome() {
   const [statsApi, setStatsApi] = useState<FuncionarioStatsApi | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setLoadError(null);
-      try {
-        const [listResp, statsResp, pendingResp] = await Promise.all([
-          facturasService.getAll({ limit: 20 }),
-          facturasService.getEstadisticas(),
-          facturasService.getPendientes(),
-        ]);
+  const load = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
+    setLoadError(null);
+    try {
+      const [listResp, statsResp, pendingResp] = await Promise.all([
+        facturasService.getAll({ limit: 20 }),
+        facturasService.getEstadisticas(),
+        facturasService.getPendientes(),
+      ]);
 
-        setFacturas(toList<Factura>(listResp).filter((factura) => ['Recibida', 'Registrada'].includes(factura.estado)));
-        setStatsApi(isFuncionarioStatsApi(statsResp) ? statsResp : null);
-        setPendingCount(Array.isArray(pendingResp) ? pendingResp.length : 0);
-      } catch {
-        setFacturas([]);
-        setStatsApi(null);
-        setPendingCount(0);
-        setLoadError('No fue posible cargar el dashboard desde el backend.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
+      setFacturas(toList<Factura>(listResp).filter((factura) => ['Recibida', 'Registrada'].includes(factura.estado)));
+      setStatsApi(isFuncionarioStatsApi(statsResp) ? statsResp : null);
+      setPendingCount(Array.isArray(pendingResp) ? pendingResp.length : 0);
+    } catch {
+      setFacturas([]);
+      setStatsApi(null);
+      setPendingCount(0);
+      setLoadError('No fue posible cargar el dashboard desde el backend.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void load({ silent: true });
+  });
 
   const stats = useMemo(() => {
     const total = statsApi?.total_facturas ?? 0;

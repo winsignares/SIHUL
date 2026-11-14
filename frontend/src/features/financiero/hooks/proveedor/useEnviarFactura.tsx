@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { apiClient } from '../../../../core/apiClient';
 import { departamentosService, documentosService, facturasService, proveedoresService } from '../../services';
@@ -6,6 +6,7 @@ import { API_BASE } from '../../services/core/shared';
 import type { Departamento, Factura, Proveedor } from '../../models/core.models';
 import type { EnviarFacturaProps, UploadedDoc } from '../../models/proveedor';
 import { type BancoOption, type TipoCuentaOption, type FormState, type ServiceItem, createEmptyServiceItem, calculateServiceItem, DOC_TYPES, DOC_TYPE_DETAILS, BANCOS_COLOMBIA, TIPO_CUENTA_OPTS, type ApiListResponse, extractResults, getToday, validateDocFile } from '../../components/enviarFactura/auxiliares';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y reglas de EnviarFactura (la página solo dibuja). */
 export function useEnviarFactura({ miProveedor, onSuccess }: EnviarFacturaProps) {
@@ -137,41 +138,47 @@ export function useEnviarFactura({ miProveedor, onSuccess }: EnviarFacturaProps)
     return extractResults<T>(payload);
   }, []);
 
-  useEffect(() => {
-    const loadCatalogos = async () => {
-      setCatalogLoading(true);
-      try {
-        const [deptsResult, bancosResult, tiposResult] = await Promise.allSettled([
-          departamentosService.getAreasSolicitantes(),
-          fetchCatalog<BancoOption>(`${API_BASE}/bancos/?limit=500`),
-          fetchCatalog<TipoCuentaOption>(`${API_BASE}/tipos-cuenta/?limit=500`),
-        ]);
+  const loadCatalogos = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setCatalogLoading(true);
+    try {
+      const [deptsResult, bancosResult, tiposResult] = await Promise.allSettled([
+        departamentosService.getAreasSolicitantes(),
+        fetchCatalog<BancoOption>(`${API_BASE}/bancos/?limit=500`),
+        fetchCatalog<TipoCuentaOption>(`${API_BASE}/tipos-cuenta/?limit=500`),
+      ]);
 
-        if (deptsResult.status === 'fulfilled') {
-          setDepartamentos(Array.isArray(deptsResult.value) ? deptsResult.value : []);
-        } else {
-          console.error('[EnviarFactura] Error cargando areas solicitantes', deptsResult.reason);
-        }
-
-        if (bancosResult.status === 'fulfilled') {
-          setBancos(bancosResult.value);
-        } else {
-          console.error('[EnviarFactura] Error cargando bancos', bancosResult.reason);
-        }
-
-        if (tiposResult.status === 'fulfilled') {
-          setTiposCuenta(tiposResult.value);
-        } else {
-          console.error('[EnviarFactura] Error cargando tipos de cuenta', tiposResult.reason);
-        }
-      } catch (err) {
-        console.error('[EnviarFactura] Error inesperado cargando catalogos financieros', err);
-      } finally {
-        setCatalogLoading(false);
+      if (deptsResult.status === 'fulfilled') {
+        setDepartamentos(Array.isArray(deptsResult.value) ? deptsResult.value : []);
+      } else {
+        console.error('[EnviarFactura] Error cargando areas solicitantes', deptsResult.reason);
       }
-    };
-    void loadCatalogos();
+
+      if (bancosResult.status === 'fulfilled') {
+        setBancos(bancosResult.value);
+      } else {
+        console.error('[EnviarFactura] Error cargando bancos', bancosResult.reason);
+      }
+
+      if (tiposResult.status === 'fulfilled') {
+        setTiposCuenta(tiposResult.value);
+      } else {
+        console.error('[EnviarFactura] Error cargando tipos de cuenta', tiposResult.reason);
+      }
+    } catch (err) {
+      console.error('[EnviarFactura] Error inesperado cargando catalogos financieros', err);
+    } finally {
+      setCatalogLoading(false);
+    }
   }, [fetchCatalog]);
+
+  useEffect(() => {
+    void loadCatalogos();
+  }, [loadCatalogos]);
+
+  // Alguien más cambió los catálogos financieros: se vuelven a leer sin tocar el formulario.
+  useActualizacionEnVivo(['catalogos-financieros'], () => {
+    void loadCatalogos({ silent: true });
+  });
 
   useEffect(() => {
     if (isCorreccion) return;

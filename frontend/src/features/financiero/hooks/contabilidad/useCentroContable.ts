@@ -11,6 +11,7 @@ import {
   type CuentaContableForm,
   type TabKey,
 } from './centroContableUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y acciones del Centro Contable: cuentas contables y centros de costo. */
 export function useCentroContable() {
@@ -56,8 +57,8 @@ export function useCentroContable() {
     return departamentoId ? departamentosById.get(departamentoId)?.nombre : undefined;
   }, [departamentosById, resolveDepartamentoId]);
 
-  const fetchCuentas = async () => {
-    setLoadingCuentas(true);
+  const fetchCuentas = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoadingCuentas(true);
     try {
       const response = await cuentasContablesService.getAll({ page_size: 200 });
       setCuentas(resolveList<CuentaContable>(response as { results?: CuentaContable[] } | CuentaContable[]));
@@ -68,8 +69,8 @@ export function useCentroContable() {
     }
   };
 
-  const fetchCentros = async () => {
-    setLoadingCentros(true);
+  const fetchCentros = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoadingCentros(true);
     try {
       const response = await centrosCostoService.getAll({ page_size: 200 });
       setCentros(resolveList<CentroCosto>(response as { results?: CentroCosto[] } | CentroCosto[]));
@@ -80,8 +81,8 @@ export function useCentroContable() {
     }
   };
 
-  const fetchDepartamentos = async () => {
-    setLoadingDepartamentos(true);
+  const fetchDepartamentos = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoadingDepartamentos(true);
     try {
       const response = await departamentosService.getAll({ page_size: 200 });
       setDepartamentos(resolveList<Departamento>(response as { results?: Departamento[] } | Departamento[]));
@@ -97,6 +98,13 @@ export function useCentroContable() {
     void fetchCentros();
     void fetchDepartamentos();
   }, []);
+
+  // Alguien más cambió cuentas, centros de costo o departamentos: se vuelven a leer sin spinner.
+  useActualizacionEnVivo(['catalogos-financieros'], () => {
+    void fetchCuentas({ silent: true });
+    void fetchCentros({ silent: true });
+    void fetchDepartamentos({ silent: true });
+  });
 
   useEffect(() => {
     if (activeTab === 'centros' && centros.length === 0 && !loadingCentros) {

@@ -11,6 +11,7 @@ import {
     type ConfigSeccionalesChatbot,
 } from '../services/chatbotAdminAPI';
 import { limiteDocumentos, MAX_DOCUMENTOS, MIN_DOCUMENTOS, maxDocumentosPorDefecto, type ChatbotTipo } from '../models/chatbotAdmin.model';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 export type ChatbotFormState = {
     nombre: string;
@@ -130,8 +131,13 @@ export function useGestionChatbots() {
         chatbotAdminAPI.obtenerSeccionales().then(setConfigSeccionales).catch(() => setConfigSeccionales(null));
     }, []);
 
-    const cargarChatbots = useCallback(async () => {
-        setLoadingChatbots(true);
+    // Alguien más cambió los chatbots: se vuelven a leer sin spinner.
+    useActualizacionEnVivo(['chatbots'], () => {
+        void cargarChatbots({ silent: true });
+    });
+
+    const cargarChatbots = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+        if (!silent) setLoadingChatbots(true);
         try {
             const data = await chatbotAdminAPI.listarChatbots();
             setChatbots(data);
@@ -154,14 +160,19 @@ export function useGestionChatbots() {
         }
     }, [normalizarSeccional]);
 
-    const cargarDocumentos = useCallback(async () => {
+    // Alguien más cambió los documentos: se vuelven a leer sin spinner.
+    useActualizacionEnVivo(['chatbot-documentos', 'chatbots'], () => {
+        void cargarDocumentos({ silent: true });
+    });
+
+    const cargarDocumentos = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
         if (!seccionalValida) {
             setDocumentos([]);
             setLoadingDocumentos(false);
             return;
         }
 
-        setLoadingDocumentos(true);
+        if (!silent) setLoadingDocumentos(true);
         try {
             const data = await chatbotAdminAPI.listarDocumentos({
                 sede: seccionalUsuario,

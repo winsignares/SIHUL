@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useActualizacionEnVivo } from '../../../../../hooks/useActualizacionEnVivo';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, FileCheck, Calculator, TrendingUp, Receipt } from 'lucide-react';
 import { facturasService, historialService } from '../../../services';
@@ -21,8 +22,8 @@ export function useContabilidadHome({ onGoToPendientes, onGoToRadicar }: UseCont
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
 
-  useEffect(() => {
-    Promise.all([
+  const cargar = useCallback(() => {
+    return Promise.all([
       facturasService.getByEstado('Registrada'),
       facturasService.getByEstado('Radicada'),
       facturasService.getByEstado('Causada'),
@@ -37,6 +38,15 @@ export function useContabilidadHome({ onGoToPendientes, onGoToRadicar }: UseCont
       .catch(() => {})
       .finally(() => setLoadingStats(false));
   }, []);
+
+  useEffect(() => {
+    void cargar();
+  }, [cargar]);
+
+  // Alguien más cambió una factura: las cifras y la actividad se vuelven a leer.
+  useActualizacionEnVivo(['facturas'], () => {
+    void cargar();
+  });
 
   const historialContabilidad = useMemo(
     () =>

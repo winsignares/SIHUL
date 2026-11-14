@@ -7,6 +7,7 @@ import { userService } from '../../users/services/authService';
 import type { useAuth } from '../../../context/AuthContext';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
 import { REPORTES_HORARIOS_CACHE_KEY, type Docente } from './reportesConstantes';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 type Sesion = ReturnType<typeof useAuth>;
 
@@ -16,6 +17,10 @@ export function useHorariosReporte({ estadoReporte, user, role }: {
     user: Sesion['user'];
     role: Sesion['role'];
 }) {
+    // Alguien más cambió los datos del reporte: se vuelve a calcular.
+    const [recarga, setRecarga] = useState(0);
+    useActualizacionEnVivo(['horarios', 'horarios-fusionados', 'espacios', 'espacios-permitidos', 'tipos-espacio', 'periodos', 'sedes', 'prestamos-espacio'], () => setRecarga((n) => n + 1));
+
     const [horariosPrograma, setHorariosPrograma] = useState<HorarioPrograma[]>([]);
     const [programas, setProgramas] = useState<string[]>([]);
     const [horariosDocenteData, setHorariosDocenteData] = useState<HorarioDocente[]>([]);
@@ -139,7 +144,7 @@ export function useHorariosReporte({ estadoReporte, user, role }: {
 
         cargarHorarios();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [estadoReporte]);
+    }, [estadoReporte, recarga]);
 
     return { horariosPrograma, programas, horariosDocenteData, docentes, cargarHorariosExtendidosReporte };
 }

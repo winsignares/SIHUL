@@ -12,6 +12,7 @@ import { openDocumentosConsolidados, downloadDocumentoIndividual } from './docum
 import type { ItemFactura } from '../models/core.models';
 import { useAuth } from '../../../context/AuthContext';
 import { normalizeFinancialText, resolveCanonicalFinancialRole } from '../../../context/financialRoleUtils';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 type SharedFacturaDocumento = {
   id?: string;
@@ -237,6 +238,10 @@ function getEstadoBadge(estado: string) {
 export default function FacturaDetailModal({ factura, isOpen, onClose }: FacturaDetailModalProps) {
   const { user, components } = useAuth();
   const [detalleFactura, setDetalleFactura] = useState<SharedFacturaDetail | null>(factura ?? null);
+  const [recarga, setRecarga] = useState(0);
+
+  // Alguien más cambió una factura: con el detalle abierto, se vuelve a leer.
+  useActualizacionEnVivo(['facturas'], () => setRecarga((n) => n + 1), isOpen);
 
   useEffect(() => {
     setDetalleFactura(factura ?? null);
@@ -280,7 +285,7 @@ export default function FacturaDetailModal({ factura, isOpen, onClose }: Factura
       }
       setDetalleFactura(mapped);
     })();
-  }, [factura, isOpen]);
+  }, [factura, isOpen, recarga]);
 
   const currentFactura = detalleFactura ?? factura;
   if (!currentFactura) return null;

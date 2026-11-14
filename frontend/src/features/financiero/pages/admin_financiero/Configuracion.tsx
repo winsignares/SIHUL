@@ -5,6 +5,7 @@ import { BusquedaConfiguracion } from '../../components/admin_financiero/configu
 import { ParametrosPorCategoria } from '../../components/admin_financiero/configuracion/ParametrosPorCategoria';
 import { BarraGuardarConfiguracion } from '../../components/admin_financiero/configuracion/BarraGuardarConfiguracion';
 import { NotaConfiguracion } from '../../components/admin_financiero/configuracion/NotaConfiguracion';
+import { AvisoCambios } from '../../../../components/common/AvisoCambios';
 
 
 export default function ConfiguracionReal() {
@@ -12,6 +13,8 @@ export default function ConfiguracionReal() {
 
   return (
     <div className="space-y-6 pb-20">
+      <AvisoCambios {...gestion.avisoCambios} />
+
       <EncabezadoConfiguracion {...gestion} />
 
       <ResumenConfiguracion {...gestion} />

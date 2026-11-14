@@ -14,6 +14,7 @@ import { rolService } from '../../users/services/authService';
 import type { Rol } from '../../users/services/authService';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
 import { esComponenteFinanciero, normalizeFinancialRole } from '../../../context/financialRoleUtils';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const COMPONENTES_ROLES_CACHE_KEY = 'permisos-componentes-roles';
 
@@ -129,8 +130,8 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
   /**
    * Cargar todos los datos necesarios
    */
-  const cargarDatos = async ({ force = false }: { force?: boolean } = {}) => {
-    setLoading(true);
+  const cargarDatos = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
     setError(null);
     
     try {
@@ -275,6 +276,11 @@ export function useComponentesRoles(): UseComponentesRolesReturn {
       a => a.componente_id === componenteId && a.rol_id === rolId
     );
   };
+
+  // Alguien más cambió componentes, permisos o roles: la matriz se vuelve a leer sin spinner (cada cambio se guarda al instante).
+  useActualizacionEnVivo(['componentes', 'componentes-rol', 'componentes-usuario', 'roles', 'seccionales'], () => {
+    void cargarDatos({ force: true, silent: true });
+  });
 
   // Cargar datos al montar el componente y cada vez que el administrador general cambia de seccional
   useEffect(() => {

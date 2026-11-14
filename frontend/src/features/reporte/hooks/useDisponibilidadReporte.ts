@@ -4,9 +4,14 @@ import type { EstadoHorarioReporte } from '../services/reporteOcupacionAPI';
 import { disponibilidadService } from '../services/disponibilidadAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
 import { REPORTES_DISPONIBILIDAD_CACHE_KEY, disponibilidadEspaciosDefault } from './reportesConstantes';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 /** Datos del reporte de disponibilidad de espacios. */
 export function useDisponibilidadReporte(estadoReporte: EstadoHorarioReporte) {
+    // Alguien más cambió los datos del reporte: se vuelve a calcular.
+    const [recarga, setRecarga] = useState(0);
+    useActualizacionEnVivo(['horarios', 'horarios-fusionados', 'espacios', 'espacios-permitidos', 'tipos-espacio', 'periodos', 'sedes', 'prestamos-espacio'], () => setRecarga((n) => n + 1));
+
     const [disponibilidadEspacios, setDisponibilidadEspacios] = useState<DisponibilidadEspacio[]>(disponibilidadEspaciosDefault);
     const [cargandoDisponibilidad, setCargandoDisponibilidad] = useState(false);
     const [errorDisponibilidad, setErrorDisponibilidad] = useState<string | null>(null);
@@ -42,7 +47,7 @@ export function useDisponibilidadReporte(estadoReporte: EstadoHorarioReporte) {
         };
 
         cargarDisponibilidadReporte();
-    }, [estadoReporte]);
+    }, [estadoReporte, recarga]);
 
     return { disponibilidadEspacios, cargandoDisponibilidad, errorDisponibilidad };
 }

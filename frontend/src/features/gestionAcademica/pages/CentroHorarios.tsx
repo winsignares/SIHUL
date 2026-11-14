@@ -17,6 +17,7 @@ import { useIsMobile } from '../../../hooks/useIsMobile';
 import { ConsultaHorariosTab } from '../components/centroHorarios/ConsultaHorariosTab';
 import { ModificacionHorariosTab } from '../components/centroHorarios/ModificacionHorariosTab';
 import { HorariosModales } from '../components/centroHorarios/HorariosModales';
+import { AvisoCambios } from '../../../components/common/AvisoCambios';
 export default function CentroHorarios() {
   const isMobile = useIsMobile();
   const hook = useCentroHorarios();
@@ -53,6 +54,7 @@ export default function CentroHorarios() {
 
   return (
     <div className={`${isMobile ? 'p-4' : 'p-8'} space-y-6`}>
+      <AvisoCambios {...hook.avisoCambios} />
       <NotificationBanner notification={notification} />
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">

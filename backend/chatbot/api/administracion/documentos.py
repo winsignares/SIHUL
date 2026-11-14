@@ -1,5 +1,6 @@
 """Documentos de los chatbots: listado, carga, prioridad, descarga y borrado."""
 import requests
+from nucleo.eventos.publicar import publicar_cambio
 from django.http import HttpResponse
 from nucleo.auth_helpers import is_authenticated_user
 from rest_framework import permissions
@@ -137,6 +138,8 @@ class ChatbotDocumentosProxyView(APIView):
             )
         except requests.exceptions.RequestException as exc:
             return _proxy_error_response(exc)
+        if resp.status_code < 400:
+            publicar_cambio('chatbot-documentos', id=chatbot_id)
         return _forward_response(resp)
 
 
@@ -158,6 +161,8 @@ class ChatbotDocumentoDetalleProxyView(APIView):
             # una nueva versión con el mismo nombre el RAG ya la reemplazó) el resultado
             # es el que se pedía.
             return Response(status=204)
+        if resp.status_code < 400:
+            publicar_cambio('chatbot-documentos', 'eliminado', id=pk)
         return _forward_response(resp)
 
 
@@ -178,6 +183,8 @@ class ChatbotDocumentoPrioridadProxyView(APIView):
             )
         except requests.exceptions.RequestException as exc:
             return _proxy_error_response(exc)
+        if resp.status_code < 400:
+            publicar_cambio('chatbot-documentos', id=pk)
         return _forward_response(resp)
 
 

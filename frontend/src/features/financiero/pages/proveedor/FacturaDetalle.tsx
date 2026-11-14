@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { facturasService } from '../../services';
 import type { Factura, HistorialFactura, ItemFactura } from '../../models/core.models';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 const formatMoney = (val: number | string | null | undefined) => {
   const num = Number(val) || 0;
@@ -102,6 +103,11 @@ export default function FacturaDetalle() {
         if (initialLoad) setLoading(false);
       }
     }, [id]);
+
+  // Alguien más cambió esta factura: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void loadFactura();
+  });
 
   useEffect(() => {
     void loadFactura(true);

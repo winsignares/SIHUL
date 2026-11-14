@@ -19,6 +19,7 @@ import {
     type EspacioAsignable,
     type SedeAsignable,
 } from './usuariosUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Catálogos que usa la gestión de usuarios (roles, facultades, espacios, sedes, seccionales y tipos de espacio) y su recarga. */
 export function useCatalogosUsuarios() {
@@ -148,6 +149,17 @@ export function useCatalogosUsuarios() {
             console.error('Error cargando seccionales:', error);
         }
     };
+
+    // Alguien más cambió roles, facultades, espacios, tipos de espacio, sedes o seccionales: se vuelven a leer.
+    useActualizacionEnVivo(['roles', 'facultades', 'espacios', 'tipos-espacio', 'sedes', 'seccionales'], () => {
+        clearSessionCache(GESTION_ROLES_CACHE_KEY);
+        void loadRoles({ force: true });
+        void loadFacultades({ force: true });
+        void loadEspacios({ force: true });
+        void loadTiposEspacio({ force: true });
+        void loadSedes({ force: true });
+        void loadSeccionales();
+    });
 
     useEffect(() => {
         const reloadRolesParaUsuarios = () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../../../components/ui/card';
 import {
@@ -12,6 +12,7 @@ import {
 import { facturasService } from '../../services';
 import type { Factura as APIFactura } from '../../models/core.models';
 import { useAuth } from '../../../../context/AuthContext';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 const TESORERIA_STATES = ['Causada', 'Alistada', 'Enviada', 'Pago Aplicado', 'Pagada', 'Devuelta'] as const;
 
@@ -134,40 +135,45 @@ export default function TesoreriaHome({
     return filtered;
   }, [recentFacturas]);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [radicadas, causadas, detenidas, aprobadas, autorizadas, recientes] = await Promise.all([
-          facturasService.getAll({ estado: 'Radicada', limit: 200 }),
-          facturasService.getAll({ estado: 'Causada', limit: 200 }),
-          facturasService.getAll({ estado: 'Detenida', limit: 200 }),
-          facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 }),
-          facturasService.getAll({ estado: 'Autorizada', limit: 200 }),
-          facturasService.getAll({ ordering: '-fecha_recepcion', limit: 50 }),
-        ]);
+  const load = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
+    try {
+      const [radicadas, causadas, detenidas, aprobadas, autorizadas, recientes] = await Promise.all([
+        facturasService.getAll({ estado: 'Radicada', limit: 200 }),
+        facturasService.getAll({ estado: 'Causada', limit: 200 }),
+        facturasService.getAll({ estado: 'Detenida', limit: 200 }),
+        facturasService.getAll({ estado: 'Aprobada Auditoría', limit: 200 }),
+        facturasService.getAll({ estado: 'Autorizada', limit: 200 }),
+        facturasService.getAll({ ordering: '-fecha_recepcion', limit: 50 }),
+      ]);
 
-        const list = (data: unknown) => Array.isArray((data as { results?: APIFactura[] })?.results)
-          ? (data as { results: APIFactura[] }).results
-          : (Array.isArray(data) ? data as APIFactura[] : []);
+      const list = (data: unknown) => Array.isArray((data as { results?: APIFactura[] })?.results)
+        ? (data as { results: APIFactura[] }).results
+        : (Array.isArray(data) ? data as APIFactura[] : []);
 
-        const porAlistar = list(radicadas).length + list(causadas).length + list(detenidas).length;
-        const aprobadasAuditoria = list(aprobadas).length;
-        const porRegistrarPago = list(autorizadas).length;
+      const porAlistar = list(radicadas).length + list(causadas).length + list(detenidas).length;
+      const aprobadasAuditoria = list(aprobadas).length;
+      const porRegistrarPago = list(autorizadas).length;
 
-        const valorPendiente = [...list(radicadas), ...list(causadas), ...list(detenidas), ...list(aprobadas), ...list(autorizadas)]
-          .reduce((sum, item) => sum + Number(item.valor_total || 0), 0);
+      const valorPendiente = [...list(radicadas), ...list(causadas), ...list(detenidas), ...list(aprobadas), ...list(autorizadas)]
+        .reduce((sum, item) => sum + Number(item.valor_total || 0), 0);
 
-        setStatsData({ porAlistar, aprobadasAuditoria, porRegistrarPago, valorPendiente });
-        setRecentFacturas(list(recientes));
-        setCurrentActivityPage(1);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
+      setStatsData({ porAlistar, aprobadasAuditoria, porRegistrarPago, valorPendiente });
+      setRecentFacturas(list(recientes));
+      setCurrentActivityPage(1);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void load({ silent: true });
+  });
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {

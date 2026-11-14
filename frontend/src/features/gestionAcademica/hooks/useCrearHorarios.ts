@@ -23,6 +23,7 @@ import {
     type GrupoConInfo,
 } from './crearHorarios/crearHorariosUtils';
 import { useFiltrosCrearHorarios } from './crearHorarios/useFiltrosCrearHorarios';
+import { useActualizacionProtegida } from '../../../hooks/useActualizacionProtegida';
 
 export type { CrearHorariosHookProps, GrupoConInfo } from './crearHorarios/crearHorariosUtils';
 
@@ -90,7 +91,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     const semestres = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], []);
 
     // Carga progresiva: primero datos pequeños, luego grupos masivos
-    const loadData = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
+    const loadData = useCallback(async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         const activeToken = localStorage.getItem('auth_token');
         const userScope = `${role?.nombre || 'no-role'}-${user?.id || 'no-user'}-${user?.facultad?.id || 'no-facultad'}`;
         const cacheKey = `${CREAR_HORARIOS_CACHE_KEY}-${userScope}`;
@@ -130,7 +131,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
         }
 
         // 2. Iniciar carga progresiva
-        setLoading(true);
+        if (!silent) setLoading(true);
 
         try {
             // FASE 1: Cargar datos pequeños en paralelo (rápidos)
@@ -282,6 +283,12 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
             window.removeEventListener(ESPACIOS_UPDATED_EVENT, reloadCatalogos);
         };
     }, [loadData]);
+
+    // Alguien más cambió horarios o sus catálogos: se vuelve a leer solo si no estás asignando una asignatura.
+    const avisoCambios = useActualizacionProtegida(['horarios', 'horarios-fusionados', 'grupos', 'asignaturas', 'asignaturas-programa', 'espacios', 'periodos', 'programas', 'facultades', 'usuarios'], () => {
+        clearSessionCacheByPrefix(CREAR_HORARIOS_CACHE_KEY);
+        void loadData({ force: true, silent: true });
+    }, showModalAsignar);
 
     const notifyHorariosUpdated = () => {
         clearSessionCacheByPrefix(CREAR_HORARIOS_CACHE_KEY);
@@ -599,6 +606,7 @@ export function useCrearHorarios({ onHorarioCreado }: CrearHorariosHookProps = {
     const horas = generarHoras();
 
     return {
+        avisoCambios,
         loading,
         facultades,
         programas,

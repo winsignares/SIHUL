@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { catalogosProveedoresService, registroProveedorService } from '../../../services';
 import type {
@@ -6,6 +6,7 @@ import type {
   RegistroProveedorForm,
   RegistroProveedorPayload,
 } from '../../../models/proveedor/RegistroProveedor';
+import { useActualizacionEnVivo } from '../../../../../hooks/useActualizacionEnVivo';
 
 const initialForm: RegistroProveedorForm = {
   nombre: '',
@@ -53,26 +54,31 @@ export function useRegistroProveedor() {
     if (redireccionExitosa.current !== null) window.clearTimeout(redireccionExitosa.current);
   }, []);
 
-  useEffect(() => {
-    const cargarCatalogos = async () => {
-      try {
-        const [paises, departamentos, ciudades, bancos, tiposCuenta] = await Promise.all([
-          catalogosProveedoresService.getPaises(),
-          catalogosProveedoresService.getDepartamentos(),
-          catalogosProveedoresService.getCiudades(),
-          catalogosProveedoresService.getBancos(),
-          catalogosProveedoresService.getTiposCuenta(),
-        ]);
-        setCatalogos({ paises, departamentos, ciudades, bancos, tiposCuenta });
-      } catch {
-        setError('No fue posible cargar los catálogos. Recarga la página e intenta nuevamente.');
-      } finally {
-        setCargandoCatalogos(false);
-      }
-    };
-
-    void cargarCatalogos();
+  const cargarCatalogos = useCallback(async () => {
+    try {
+      const [paises, departamentos, ciudades, bancos, tiposCuenta] = await Promise.all([
+        catalogosProveedoresService.getPaises(),
+        catalogosProveedoresService.getDepartamentos(),
+        catalogosProveedoresService.getCiudades(),
+        catalogosProveedoresService.getBancos(),
+        catalogosProveedoresService.getTiposCuenta(),
+      ]);
+      setCatalogos({ paises, departamentos, ciudades, bancos, tiposCuenta });
+    } catch {
+      setError('No fue posible cargar los catálogos. Recarga la página e intenta nuevamente.');
+    } finally {
+      setCargandoCatalogos(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void cargarCatalogos();
+  }, [cargarCatalogos]);
+
+  // Alguien más cambió los catálogos: se vuelven a leer sin tocar el formulario.
+  useActualizacionEnVivo(['catalogos-financieros'], () => {
+    void cargarCatalogos();
+  });
 
   const departamentosDisponibles = useMemo(
     () => catalogos.departamentos.filter((item) => !form.paisId || String(item.pais_id) === form.paisId),

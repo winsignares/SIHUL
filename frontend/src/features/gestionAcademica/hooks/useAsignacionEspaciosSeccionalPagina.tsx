@@ -3,6 +3,7 @@ import { useAsignacionEspaciosSeccional } from '../../horarios/hooks/useAsignaci
 import type { HorarioAsignacion } from '../../horarios/services/asignacionEspaciosService';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { Badge } from '../../../components/ui/badge';
+import { useActualizacionProtegida } from '../../../hooks/useActualizacionProtegida';
 
 /** Estado y acciones de la página de asignación de espacios por seccional. */
 export function useAsignacionEspaciosSeccionalPagina() {
@@ -44,6 +45,15 @@ export function useAsignacionEspaciosSeccionalPagina() {
     periodos,
     diasSemana,
   } = useAsignacionEspaciosSeccional();
+
+  // Alguien más cambió horarios, espacios o solicitudes: se vuelve a leer solo si no estás en medio de una asignación.
+  const avisoCambios = useActualizacionProtegida(
+    ['horarios', 'solicitudes-espacio', 'espacios', 'periodos', 'grupos', 'programas', 'asignaturas'],
+    () => {
+      void recargarHorarios();
+    },
+    Boolean(horarioSeleccionado || espacioSeleccionado),
+  );
 
   // Force reload function
   const handleForceReload = useCallback(async () => {
@@ -116,6 +126,7 @@ export function useAsignacionEspaciosSeccionalPagina() {
   }, [horarios.length, itemsPerPageHorarios]);
 
   return {
+    avisoCambios,
     isMobile,
     modalOpen,
     setModalOpen,

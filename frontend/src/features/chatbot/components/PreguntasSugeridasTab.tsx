@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Textarea } from '../../../components/ui/textarea';
 import { chatbotAdminAPI } from '../services/chatbotAdminAPI';
 import type { ChatbotAgente, ConfigSeccionalesChatbot, PreguntaSugeridaChatbot } from '../models/chatbotAdmin.model';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 type Borrador = { id: number | null; pregunta: string; orden: number; activo: boolean; seccional: string };
 
@@ -54,9 +55,14 @@ export function PreguntasSugeridasTab({ chatbots }: { chatbots: ChatbotAgente[] 
         if (!agenteId && chatbotsActivos.length > 0) setAgenteId(String(chatbotsActivos[0].id));
     }, [agenteId, chatbotsActivos]);
 
-    const cargar = useCallback(async () => {
+    // Alguien más cambió las preguntas sugeridas: se vuelven a leer sin spinner.
+    useActualizacionEnVivo(['preguntas-sugeridas', 'chatbots'], () => {
+        void cargar({ silent: true });
+    });
+
+    const cargar = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
         if (!agenteId) return;
-        setLoading(true);
+        if (!silent) setLoading(true);
         try {
             setItems(await chatbotAdminAPI.listarPreguntasSugeridas(Number(agenteId)));
         } catch (error) {
