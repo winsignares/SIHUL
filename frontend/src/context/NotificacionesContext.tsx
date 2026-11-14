@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { useAuthOptional } from './AuthContext';
 import { obtenerEstadisticas } from '../services/notificaciones/notificacionesAPI';
 import { useSondeoVisible } from '../hooks/useSondeoVisible';
+import { useActualizacionEnVivo } from '../hooks/useActualizacionEnVivo';
 
 interface NotificacionesContextType {
     contadorNoLeidas: number;
@@ -57,7 +58,13 @@ export function NotificacionesProvider({ children }: { children: ReactNode }) {
         actualizarContador();
     }, [actualizarContador, isAuthenticated, user?.id, isAuthLoading]);
 
-    useSondeoVisible(actualizarContador, 30000, isAuthenticated && Boolean(user?.id) && !isAuthLoading);
+    const hayUsuario = isAuthenticated && Boolean(user?.id) && !isAuthLoading;
+    useSondeoVisible(actualizarContador, 30000, hayUsuario);
+
+    // Llegó, se leyó o se borró una notificación tuya: el contador se actualiza al instante.
+    useActualizacionEnVivo(['notificaciones'], () => {
+        void actualizarContador();
+    }, hayUsuario);
 
     return (
         <NotificacionesContext.Provider value={{ contadorNoLeidas, actualizarContador }}>
