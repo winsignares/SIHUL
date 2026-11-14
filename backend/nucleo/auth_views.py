@@ -7,13 +7,11 @@ from django.conf import settings
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import redirect
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
 
 from identidad.componentes.models import ComponenteUsuario
 from instalaciones.espacios.models import EspacioPermitido
 from instalaciones.espacios import alcance as alcance_espacios
+from nucleo.vistas import VistaJson
 from nucleo.auth_helpers import componentes_de_rol_efectivos, role_supervisa_espacios, seccional_para_sesion
 from identidad.usuarios.models import Usuario
 
@@ -91,86 +89,89 @@ def _get_authenticated_user(request):
     return user
 
 
-@require_GET
-def user_view(request):
-    auth_user = _get_authenticated_user(request)
-    if not auth_user:
-        return JsonResponse({'authenticated': False}, status=200)
+class UserView(VistaJson):
+    def get(self, request):
+        auth_user = _get_authenticated_user(request)
+        if not auth_user:
+            return JsonResponse({'authenticated': False}, status=200)
 
-    try:
-        usuario = Usuario.objects.select_related(
-            'sede',
-            'sede__seccional',
-            'seccional',
-            'rol',
-            'facultad',
-        ).get(id=auth_user.id, activo=True)
-    except Usuario.DoesNotExist:
-        # Cookies are shared by host, not by port. A session from another
-        # environment can therefore reference a user absent from this DB.
-        request.session.flush()
-        return JsonResponse({'authenticated': False}, status=200)
+        try:
+            usuario = Usuario.objects.select_related(
+                'sede',
+                'sede__seccional',
+                'seccional',
+                'rol',
+                'facultad',
+            ).get(id=auth_user.id, activo=True)
+        except Usuario.DoesNotExist:
+            # Cookies are shared by host, not by port. A session from another
+            # environment can therefore reference a user absent from this DB.
+            request.session.flush()
+            return JsonResponse({'authenticated': False}, status=200)
 
-    request.session['user_id'] = usuario.id
-    request.session['correo'] = usuario.correo
-    request.session['is_authenticated'] = True
-    request.session['rol'] = usuario.rol.nombre if usuario.rol else None
-    request.session['id_rol'] = usuario.rol.id if usuario.rol else None
-    if not request.session.get('token'):
-        request.session['token'] = secrets.token_urlsafe(32)
+        request.session['user_id'] = usuario.id
+        request.session['correo'] = usuario.correo
+        request.session['is_authenticated'] = True
+        request.session['rol'] = usuario.rol.nombre if usuario.rol else None
+        request.session['id_rol'] = usuario.rol.id if usuario.rol else None
+        if not request.session.get('token'):
+            request.session['token'] = secrets.token_urlsafe(32)
 
-    componentes = _build_componentes(usuario)
-    espacios_permitidos = _build_espacios_permitidos(usuario)
+        componentes = _build_componentes(usuario)
+        espacios_permitidos = _build_espacios_permitidos(usuario)
 
-    return JsonResponse(
-        {
-            'authenticated': True,
-            'id': usuario.id,
-            'nombre': usuario.nombre,
-            'correo': usuario.correo,
-            'rol': {
-                'id': usuario.rol.id,
-                'nombre': usuario.rol.nombre,
-                'descripcion': usuario.rol.descripcion,
-                'supervisa_espacios': usuario.rol.supervisa_espacios,
-            } if usuario.rol else None,
-            'facultad': {
-                'id': usuario.facultad.id,
-                'nombre': usuario.facultad.nombre,
-            } if usuario.facultad else None,
-            'sede': {
-                'id': usuario.sede.id,
-                'nombre': usuario.sede.nombre,
-                'seccional_id': usuario.sede.seccional_id,
-                'seccional_ciudad': usuario.sede.seccional.ciudad if usuario.sede.seccional else None,
-                'direccion': usuario.sede.direccion,
-            } if usuario.sede else None,
-            'seccional': seccional_para_sesion(usuario),
-            'componentes': componentes,
-            'espacios_permitidos': espacios_permitidos,
-            **alcance_espacios.resumen_sesion(usuario),
-            'token': request.session['token'],
-            'signature': _session_signature(usuario.rol, componentes),
-        },
-        status=200,
-    )
-
-
-@require_http_methods(['GET', 'POST'])
-def logout_view(request):
-    # Logout idempotente: si no hay sesion activa, responder OK igual.
-    if request.session.session_key:
-        request.session.flush()
-    return JsonResponse({'message': 'Logout exitoso'}, status=200)
+        return JsonResponse(
+            {
+                'authenticated': True,
+                'id': usuario.id,
+                'nombre': usuario.nombre,
+                'correo': usuario.correo,
+                'rol': {
+                    'id': usuario.rol.id,
+                    'nombre': usuario.rol.nombre,
+                    'descripcion': usuario.rol.descripcion,
+                    'supervisa_espacios': usuario.rol.supervisa_espacios,
+                } if usuario.rol else None,
+                'facultad': {
+                    'id': usuario.facultad.id,
+                    'nombre': usuario.facultad.nombre,
+                } if usuario.facultad else None,
+                'sede': {
+                    'id': usuario.sede.id,
+                    'nombre': usuario.sede.nombre,
+                    'seccional_id': usuario.sede.seccional_id,
+                    'seccional_ciudad': usuario.sede.seccional.ciudad if usuario.sede.seccional else None,
+                    'direccion': usuario.sede.direccion,
+                } if usuario.sede else None,
+                'seccional': seccional_para_sesion(usuario),
+                'componentes': componentes,
+                'espacios_permitidos': espacios_permitidos,
+                **alcance_espacios.resumen_sesion(usuario),
+                'token': request.session['token'],
+                'signature': _session_signature(usuario.rol, componentes),
+            },
+            status=200,
+        )
 
 
-@require_GET
-def login_success(request):
-    if not _get_authenticated_user(request):
-        return redirect(f"{settings.FRONTEND_URL}/login")
+class LogoutView(VistaJson):
+    def get(self, request):
+        # Logout idempotente: si no hay sesion activa, responder OK igual.
+        if request.session.session_key:
+            request.session.flush()
+        return JsonResponse({'message': 'Logout exitoso'}, status=200)
 
-    frontend_url = f"{settings.FRONTEND_URL}/login?oauth=success"
-    return redirect(frontend_url)
+    def post(self, request):
+        return self.get(request)
+
+
+class LoginSuccessView(VistaJson):
+    def get(self, request):
+        if not _get_authenticated_user(request):
+            return redirect(f"{settings.FRONTEND_URL}/login")
+
+        frontend_url = f"{settings.FRONTEND_URL}/login?oauth=success"
+        return redirect(frontend_url)
 
 
 # ---- Errores del navegador ---------------------------------------------------------------------
@@ -188,30 +189,29 @@ def _limpiar_texto(valor, maximo):
     return ''.join(ch for ch in texto if ch.isprintable())[:maximo]
 
 
-@csrf_exempt
-@require_POST
-def error_cliente(request):
-    ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', 'desconocida')).split(',')[0].strip()
-    clave = f'error-cliente:{ip}'
-    cache.add(clave, 0, 60)
-    try:
-        cuenta = cache.incr(clave)
-    except ValueError:
-        cuenta = 1
-    if cuenta > ERRORES_CLIENTE_POR_MINUTO:
-        return JsonResponse({'ok': False}, status=429)
+class ErrorClienteView(VistaJson):
+    def post(self, request):
+        ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', 'desconocida')).split(',')[0].strip()
+        clave = f'error-cliente:{ip}'
+        cache.add(clave, 0, 60)
+        try:
+            cuenta = cache.incr(clave)
+        except ValueError:
+            cuenta = 1
+        if cuenta > ERRORES_CLIENTE_POR_MINUTO:
+            return JsonResponse({'ok': False}, status=429)
 
-    try:
-        datos = json.loads(request.body[:8000] or b'{}')
-    except (ValueError, UnicodeDecodeError):
-        return JsonResponse({'ok': False}, status=400)
-    if not isinstance(datos, dict):
-        return JsonResponse({'ok': False}, status=400)
+        try:
+            datos = json.loads(request.body[:8000] or b'{}')
+        except (ValueError, UnicodeDecodeError):
+            return JsonResponse({'ok': False}, status=400)
+        if not isinstance(datos, dict):
+            return JsonResponse({'ok': False}, status=400)
 
-    campos = {nombre: _limpiar_texto(datos.get(nombre), maximo) for nombre, maximo in _LIMITES_CAMPO.items()}
-    logger_cliente.warning(
-        'ERROR_CLIENTE usuario=%s origen=%s ruta=%s mensaje=%s navegador=%s pila=%s',
-        request.session.get('user_id', '-'), campos['origen'], campos['ruta'], campos['mensaje'],
-        campos['navegador'], campos['pila'],
-    )
-    return JsonResponse({'ok': True})
+        campos = {nombre: _limpiar_texto(datos.get(nombre), maximo) for nombre, maximo in _LIMITES_CAMPO.items()}
+        logger_cliente.warning(
+            'ERROR_CLIENTE usuario=%s origen=%s ruta=%s mensaje=%s navegador=%s pila=%s',
+            request.session.get('user_id', '-'), campos['origen'], campos['ruta'], campos['mensaje'],
+            campos['navegador'], campos['pila'],
+        )
+        return JsonResponse({'ok': True})

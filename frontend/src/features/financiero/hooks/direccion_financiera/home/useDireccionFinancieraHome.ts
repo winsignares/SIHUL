@@ -20,6 +20,19 @@ export interface KanbanEstadoDireccionFinanciera {
   facturas: SharedFacturaDetail[];
 }
 
+/** Estados que ve dirección financiera en su actividad reciente. */
+const ESTADOS_DF = new Set([
+  'Aprobada Auditoría',
+  'Revisada Dir. Financiera',
+  'Cargada',
+  'Enviada Rectoría',
+  'Autorizada',
+  'Rechazada por Rectoría',
+  'Devuelta',
+  'Pago Aplicado',
+  'Pagada',
+]);
+
 export function useDireccionFinancieraHome() {
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [docsMap, setDocsMap] = useState<Record<number, DocumentoAdjunto[]>>({});
@@ -183,18 +196,6 @@ export function useDireccionFinancieraHome() {
       };
     });
   }, [facturas, docsMap]);
-
-  const ESTADOS_DF = new Set([
-    'Aprobada Auditoría',
-    'Revisada Dir. Financiera',
-    'Cargada',
-    'Enviada Rectoría',
-    'Autorizada',
-    'Rechazada por Rectoría',
-    'Devuelta',
-    'Pago Aplicado',
-    'Pagada',
-  ]);
 
   const actividadesRecientes = useMemo<SharedFacturaDetail[]>(() => {
     return facturas

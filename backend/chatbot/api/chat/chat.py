@@ -4,7 +4,6 @@ import uuid
 from django.http import JsonResponse
 from django.utils import timezone
 from nucleo.vistas import VistaJson
-from identidad.usuarios.models import Usuario
 from ...anexos import anexos_json
 from ...models import Agente
 from ...models import Conversacion
@@ -17,6 +16,9 @@ from .rag import _consultar_rag
 class EnviarPreguntaView(VistaJson):
     def post(self, request):
         """Envía pregunta al endpoint RAG del agente y guarda la conversación completa"""
+        usuario = getattr(request, 'user_obj', None)
+        if usuario is None:
+            return JsonResponse({'error': 'Autenticación requerida'}, status=401)
 
         try:
             data = json.loads(request.body)
@@ -31,16 +33,13 @@ class EnviarPreguntaView(VistaJson):
             if not agente_id or not pregunta:
                 return JsonResponse({'error': 'agente_id y pregunta son requeridos'}, status=400)
 
-            if not id_usuario:
-                return JsonResponse({'error': 'id_usuario es requerido'}, status=400)
-
             if not nombre_usuario:
                 return JsonResponse({'error': 'nombre_usuario es requerido'}, status=400)
 
-            try:
-                usuario = Usuario.objects.select_related('sede', 'seccional', 'sede__seccional').get(id=id_usuario)
-            except Usuario.DoesNotExist:
-                return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
+            # La pregunta la hace quien tiene la sesión: el id del cuerpo, si llega, debe ser el suyo.
+            if id_usuario and str(id_usuario) != str(usuario.id):
+                return JsonResponse({'error': 'No puedes preguntar a nombre de otra persona'}, status=403)
+            id_usuario = usuario.id
 
             sede_value = _resolve_user_sede_value(usuario)
             if not sede_value:
@@ -114,7 +113,10 @@ class EnviarPreguntaView(VistaJson):
 
 class ObtenerHistorialView(VistaJson):
     def get(self, request):
-        """Obtiene el historial de conversaciones por chat_id o por agente"""
+        """Obtiene el historial de conversaciones, por chat_id o por agente, de quien tiene la sesión"""
+        usuario = getattr(request, 'user_obj', None)
+        if usuario is None:
+            return JsonResponse({'error': 'Autenticación requerida'}, status=401)
         try:
             chat_id = request.GET.get('chat_id')
             agente_id = request.GET.get('agente_id')
@@ -123,17 +125,16 @@ class ObtenerHistorialView(VistaJson):
             if not chat_id and not agente_id:
                 return JsonResponse({'error': 'Se requiere chat_id o agente_id'}, status=400)
 
-            # Construir query base
-            query = Conversacion.objects.all()
+            # Solo las conversaciones propias: nadie lee las de otra persona, ni por chat_id ni por agente.
+            if id_usuario and str(id_usuario) != str(usuario.id):
+                return JsonResponse({'error': 'Solo puedes consultar tu propio historial'}, status=403)
+            query = Conversacion.objects.filter(id_usuario=usuario.id)
 
             if chat_id:
                 query = query.filter(chat_id=chat_id)
 
             if agente_id:
                 query = query.filter(chatbot_id=agente_id)
-
-            if id_usuario:
-                query = query.filter(id_usuario=id_usuario)
 
             # Obtener conversaciones ordenadas por fecha
             conversaciones = (

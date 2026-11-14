@@ -161,6 +161,7 @@ export function useConsultaHorario() {
     // Cargar horarios del backend cuando el componente monta
     useEffect(() => {
         cargarHorarios();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const exportarPDF = async () => {
