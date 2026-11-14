@@ -54,18 +54,20 @@ class UsuarioDePruebasTests(TestCase):
 
 class LimpiarPruebasTests(TestCase):
     def test_sin_confirmar_solo_cuenta(self):
-        Sede.objects.create(nombre='PRUEBA sede uno')
+        Sede.objects.create(nombre='PRUEBA-sede uno')
         texto = _ejecutar('limpiar_pruebas')
         self.assertIn('Sede: 1', texto)
-        self.assertTrue(Sede.objects.filter(nombre='PRUEBA sede uno').exists())
+        self.assertTrue(Sede.objects.filter(nombre='PRUEBA-sede uno').exists())
 
     def test_confirmar_borra_solo_lo_que_empieza_por_el_prefijo(self):
-        Sede.objects.create(nombre='PRUEBA sede dos')
+        Sede.objects.create(nombre='PRUEBA-sede dos')
         Sede.objects.create(nombre='prueba minuscula')
         real = Sede.objects.create(nombre='Sede real del sistema')
+        parecida = Sede.objects.create(nombre='PRUEBAS PENALES')  # dato real que empieza por «PRUEBA» pero sin guion
         _ejecutar('limpiar_pruebas', '--confirmar')
         self.assertTrue(Sede.objects.filter(id=real.id).exists())
-        self.assertFalse(Sede.objects.filter(nombre__istartswith='PRUEBA').exists())
+        self.assertTrue(Sede.objects.filter(id=parecida.id).exists())
+        self.assertFalse(Sede.objects.filter(nombre__istartswith='PRUEBA-').exists())
 
     def test_tambien_borra_el_usuario_de_pruebas_y_sus_notificaciones(self):
         from notificaciones.models import Notificacion
@@ -79,9 +81,13 @@ class LimpiarPruebasTests(TestCase):
         self.assertFalse(Usuario.objects.filter(id=usuario.id).exists())
         self.assertFalse(Notificacion.objects.filter(id_usuario=usuario.id).exists())
 
+    def test_rechaza_un_prefijo_corto(self):
+        with self.assertRaises(CommandError):
+            _ejecutar('limpiar_pruebas', '--prefijo', 'PRU', '--confirmar')
+
     def test_con_otro_prefijo_no_toca_lo_demas(self):
-        Sede.objects.create(nombre='PRUEBA aparte')
+        Sede.objects.create(nombre='PRUEBA-aparte')
         Sede.objects.create(nombre='LOTE2 sede')
         _ejecutar('limpiar_pruebas', '--prefijo', 'LOTE2', '--confirmar')
-        self.assertTrue(Sede.objects.filter(nombre='PRUEBA aparte').exists())
+        self.assertTrue(Sede.objects.filter(nombre='PRUEBA-aparte').exists())
         self.assertFalse(Sede.objects.filter(nombre='LOTE2 sede').exists())
