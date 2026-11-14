@@ -15,6 +15,7 @@ import {
   PAGE_SIZE_DEFAULT
 } from './paginacion';
 import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const SEDES_CACHE_KEY = 'gestion-academica-sedes';
 const GESTION_USUARIOS_SEDES_CACHE_KEY = 'gestion-academica-sedes-usuarios-v2';
@@ -54,7 +55,7 @@ export function useSedes() {
         }
     };
 
-    const loadSedes = async ({ force = false }: { force?: boolean } = {}) => {
+    const loadSedes = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         try {
             const activeToken = localStorage.getItem('auth_token');
             const cachedSedes = force ? null : getSessionCacheData<Sede[]>(SEDES_CACHE_KEY, activeToken);
@@ -65,7 +66,7 @@ export function useSedes() {
             // carga de esta pantalla en vez de esperar hasta 5 min de TTL.
             if (cachedSedes) {
                 setSedes(cachedSedes);
-            } else {
+            } else if (!silent) {
                 setLoading(true);
             }
 
@@ -78,6 +79,13 @@ export function useSedes() {
             setLoading(false);
         }
     };
+
+    // Otra persona creó, editó o borró una sede o una seccional: se vuelve a leer sin mostrar el spinner.
+    useActualizacionEnVivo(['sedes', 'seccionales'], () => {
+        notifySedesUpdated();
+        void loadSedes({ force: true, silent: true });
+        void loadSeccionales();
+    });
 
     const notifySedesUpdated = () => {
         clearSessionCache(SEDES_CACHE_KEY);
