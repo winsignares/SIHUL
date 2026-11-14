@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { rolService } from '../../users/services/authService';
 import type { Rol } from '../../users/services/authService';
 import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const GESTION_ROLES_CACHE_KEY = 'permisos-gestion-roles-v3';
 const GESTION_USUARIOS_ROLES_CACHE_KEY = 'gestion-academica-roles-v3';
@@ -54,8 +55,13 @@ export function useGestionRoles(): UseGestionRolesReturn {
     if (pagina >= 1 && pagina <= totalPaginas) setPaginaActual(pagina);
   };
 
-  const cargarRoles = async ({ force = false }: { force?: boolean } = {}) => {
-    setLoading(true);
+  // Alguien más creó, editó o borró un rol: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['roles'], () => {
+    void cargarRoles({ force: true, silent: true });
+  });
+
+  const cargarRoles = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const activeToken = localStorage.getItem('auth_token');

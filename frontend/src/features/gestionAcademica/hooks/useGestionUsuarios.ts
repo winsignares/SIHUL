@@ -22,6 +22,7 @@ import {
     type EspacioAsignable,
 } from './usuarios/usuariosUtils';
 import { useCatalogosUsuarios } from './usuarios/useCatalogosUsuarios';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 export function useGestionUsuarios() {
     const PAGE_SIZE = PAGE_SIZE_DEFAULT;
@@ -122,6 +123,11 @@ export function useGestionUsuarios() {
     const setUsuariosAndCache = useCallback((updater: (prev: Usuario[]) => Usuario[]) => {
         setUsuarios(updater);
     }, []);
+
+    // Alguien más creó, editó o borró un usuario: se vuelve a leer el bloque que se está viendo.
+    useActualizacionEnVivo(['usuarios'], () => {
+        void loadUsuarios();
+    });
 
     // Cargar desde el servidor el bloque de 100 que contiene la página actual, con la búsqueda y el rol vigentes.
     // Si llegan dos respuestas, solo cuenta la de la última consulta.
