@@ -16,3 +16,17 @@ App más grande y reciente del backend, dividida por recurso: `api/` (un archivo
 > **Aviso de desactualización**: los documentos `../general/ARQUITECTURA_COMPLETA_ANALISIS.md` y `../historico/GUIA_INTEGRACION_MODULO_FINANCIERO.md` describen un **diseño original propuesto** con modelos `Presupuesto`/`Transaccion`/`CentroFinanciero`/`AuditoriaFinanciera` que **no coinciden** con la implementación real (basada en `Factura` con flujo SLA). Útiles para entender la intención de diseño y el razonamiento de integración (por qué se decidió integrar el módulo en vez de crear un proyecto separado), pero no reflejan el estado final del código. El changelog en `../historico/CAMBIOS_SIHUL_FINANCIERO.md` sí documenta cambios puntuales reales (ej. panel de Proveedor, deshabilitación de seed data de facturas demo).
 
 Ver también [../documentacion_frontend/PAGINAS_CHATBOT_FINANCIERO.md](../documentacion_frontend/PAGINAS_CHATBOT_FINANCIERO.md) para los 8 dashboards financieros del frontend (uno por rol).
+
+## Quién ejecuta cada paso del flujo de la factura
+La API comprueba el estado de la factura y también el rol de quien ejecuta el paso (`financiero/permissions.py::ROLES_POR_PASO`). La administración (general, del sistema y financiera) puede ejecutar todos.
+
+| Paso | Rol |
+|---|---|
+| `radicar`, `causar` | Contabilidad |
+| `alistar`, `enviar_direccion_financiera`, `detener_en_tesoreria`, `registrar_pago_aplicado`, `generar_comprobante` | Tesorería |
+| `aprobar_auditoria`, `rechazar_auditoria` | Auditoría |
+| `cargar_direccion_financiera`, `enviar_rectoria`, `generar_numero_confirmacion`, `confirmar_control_pago` | Dirección Financiera |
+| `autorizar_rectoria`, `rechazar_rectoria` | Rectoría |
+| `rechazar` (devolución) | Funcionario, Contabilidad, Tesorería, Auditoría, Dirección Financiera y Rectoría |
+
+Un rol que no corresponde recibe 403. `completar_registro` y `corregir` conservan sus reglas propias.

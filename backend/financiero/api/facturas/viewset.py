@@ -1,7 +1,7 @@
 """ViewSet de facturas: configuración común, consulta base y acciones de cada etapa."""
 from rest_framework import viewsets, filters, parsers, status
 from rest_framework.response import Response
-from ...permissions import EsUsuarioFinanciero
+from ...permissions import EsUsuarioFinanciero, RolDelPasoDeFactura
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
@@ -41,7 +41,7 @@ class FacturaViewSet(
     DevolucionFactura,
     viewsets.ModelViewSet,
 ):
-    permission_classes = [EsUsuarioFinanciero]
+    permission_classes = [EsUsuarioFinanciero, RolDelPasoDeFactura]
     pagination_class = FacturaPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['estado', 'indicador_riesgo', 'proveedor', 'departamento', 'urgente']

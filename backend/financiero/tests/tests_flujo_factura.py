@@ -27,7 +27,8 @@ class FlujoFacturaTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.u = {}
-        for rol in ('Funcionario', 'Contabilidad', 'Tesorería', 'Auditoría', 'Dirección Financiera', 'Rectoría', 'Proveedor'):
+        for rol in ('Funcionario', 'Contabilidad', 'Tesorería', 'Auditoría', 'Dirección Financiera', 'Rectoría', 'Proveedor',
+                    'Admin Financiero'):
             r = Rol.objects.get_or_create(nombre=rol)[0]
             cls.u[rol] = Usuario.objects.create_user(correo=f'{rol[:5].lower()}@flujo.test', nombre=f'Usuario {rol}', rol=r)
         cls.inactivo = Usuario.objects.create_user(correo='inactivo@flujo.test', nombre='Inactivo',
@@ -203,16 +204,44 @@ class FlujoFacturaTests(TestCase):
         f = self.factura(estado='Anulada')
         for accion, error in casos.items():
             with self.subTest(accion=accion):
-                r = self.accion(f, accion, motivo=MOTIVO, observaciones=MOTIVO)
+                r = self.accion(f, accion, 'Admin Financiero', motivo=MOTIVO, observaciones=MOTIVO)
                 self.assertEqual((r.status_code, r.data), (400, {'error': error}))
         self.assertEqual(models.HistorialFactura.objects.filter(factura=f).count(), 0)
+
+    def test_cada_paso_lo_ejecuta_solo_su_rol(self):
+        from ..permissions import ROLES_POR_PASO
+
+        nombres = {'contabilidad': 'Contabilidad', 'tesoreria': 'Tesorería', 'auditoria': 'Auditoría',
+                   'direccion financiera': 'Dirección Financiera', 'rectoria': 'Rectoría', 'funcionario': 'Funcionario'}
+        f = self.factura(estado='Anulada')
+        for paso, roles in ROLES_POR_PASO.items():
+            propios = {nombres[r] for r in roles}
+            for rol in ('Funcionario', 'Contabilidad', 'Tesorería', 'Auditoría', 'Dirección Financiera', 'Rectoría', 'Proveedor'):
+                with self.subTest(paso=paso, rol=rol):
+                    r = self.accion(f, paso, rol, motivo=MOTIVO, observaciones=MOTIVO)
+                    if rol in propios:
+                        self.assertNotEqual(r.status_code, 403, f'{rol} debe poder ejecutar {paso}')
+                    else:
+                        self.assertEqual(r.status_code, 403, f'{rol} no debe poder ejecutar {paso}')
+
+    def test_la_administracion_puede_ejecutar_cualquier_paso(self):
+        f = self.factura(estado='Anulada')
+        for paso in ('radicar', 'alistar', 'autorizar_rectoria'):
+            r = self.accion(f, paso, 'Admin Financiero', motivo=MOTIVO, observaciones=MOTIVO)
+            self.assertNotEqual(r.status_code, 403, paso)
+
+    def test_un_proveedor_no_autoriza_en_rectoria(self):
+        f = self.factura(estado='Enviada Rectoría')
+        r = self.accion(f, 'autorizar_rectoria', 'Proveedor', observaciones='x')
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(f.estado, 'Enviada Rectoría')
 
     def test_alistar_exige_proceso_o_archivo_plano_unico(self):
         self.factura(numero='FAC-OTRA', documentos=False, numero_proceso_pago='PP-7')
         f = self.factura(estado='Detenida')
-        self.assertEqual(self.accion(f, 'alistar').data,
+        self.assertEqual(self.accion(f, 'alistar', 'Tesorería').data,
                          {'error': 'Debe registrar el número de proceso de pago o un archivo plano generado'})
-        self.assertEqual(self.accion(f, 'alistar', numero_proceso_pago='PP-7').data, {
+        self.assertEqual(self.accion(f, 'alistar', 'Tesorería', numero_proceso_pago='PP-7').data, {
             'error': 'El número de proceso de pago "PP-7" ya está registrado en la factura FAC-OTRA. '
                      'Cada proceso de pago debe ser único.'})
         r = self.accion(f, 'alistar', 'Tesorería', archivo_plano_generado='plano.txt')
@@ -222,10 +251,10 @@ class FlujoFacturaTests(TestCase):
 
     def test_el_numero_de_confirmacion_se_conserva(self):
         f = self.factura(estado='Autorizada', numero_confirmacion='CONF-2025-0003')
-        r = self.accion(f, 'generar_numero_confirmacion')
+        r = self.accion(f, 'generar_numero_confirmacion', 'Dirección Financiera')
         self.assertEqual((r.status_code, f.numero_confirmacion), (200, 'CONF-2025-0003'))
         f = self.factura(estado='Autorizada', numero='FAC-F-2')
-        self.accion(f, 'confirmar_control_pago')
+        self.accion(f, 'confirmar_control_pago', 'Dirección Financiera')
         self.assertEqual(f.numero_confirmacion, 'CONF-2026-0001')
 
     # ------------------------------------------------------------------ rechazos y devoluciones
