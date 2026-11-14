@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from ..models import EspacioFisico
 from academico.horario.models import Horario
-from mysite.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
+from nucleo.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
 from .filtros import _usuario_puede_acceder_espacio, _usuario_sin_seccional, get_dia_semana_actual
 
 

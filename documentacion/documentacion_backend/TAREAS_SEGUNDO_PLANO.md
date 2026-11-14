@@ -1,6 +1,6 @@
 # Tareas en segundo plano
 
-`mysite/tareas.py` expone `encolar(funcion, *args)` para ejecutar trabajo fuera de la petición HTTP.
+`nucleo/tareas.py` expone `encolar(funcion, *args)` para ejecutar trabajo fuera de la petición HTTP.
 
 | Variable | Efecto |
 |---|---|

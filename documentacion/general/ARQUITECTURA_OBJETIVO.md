@@ -17,7 +17,7 @@ hoja de ruta (sección 8) se hace en un PR propio hacia `develop`, sin apilar PR
 
 ## 2. Qué hay hoy
 
-- **Backend:** 16 apps en la raíz de `backend/`. `financiero` concentra 49 archivos de código en una sola app y `mysite` 60.
+- **Backend:** 16 apps en la raíz de `backend/`. `financiero` concentra 49 archivos de código en una sola app y `mysite` 60 (hoy repartido en `config/` y `nucleo/`).
 - **Servicios desplegados:** `db` (PostgreSQL), `redis`, `backend` (Django), `chatbot` (FastAPI), `frontend` y un trabajo de
   `release` que corre las migraciones.
 - **Trabajo pesado:** no hay un proceso en segundo plano. Las cargas desde Oracle son comandos de `manage.py` y las
@@ -41,7 +41,7 @@ código a una carpeta de dominio y se declara el `label` en su `AppConfig`.
 | `integraciones/oracle` | (nuevo) | Lectura de las vistas de Oracle (ver documento de Oracle) |
 | `asistencia` | `backend/asistencia/` (API lista; sin pantallas todavía) | Asistencia con ubicación en prácticas |
 
-`mysite` queda como proyecto de configuración (ajustes, rutas raíz, utilidades transversales) y se le sacan las piezas que
+`mysite` se separó en `config/` (ajustes y rutas raíz) y `nucleo/` (utilidades transversales); se le sacan las piezas que
 son de un dominio.
 
 ### Subdominios de `financiero`

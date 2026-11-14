@@ -6,7 +6,7 @@
   préstamos y el propio solicitante. Para el resto, el calendario muestra solo espacio, fecha, hora y estado.
 - Un solicitante público se identifica con su correo y su identificación (query `correo` e `identificacion`).
 """
-from mysite.auth_helpers import is_admin_global, is_admin_sistema, is_authenticated_user, user_can_edit_componente
+from nucleo.auth_helpers import is_admin_global, is_admin_sistema, is_authenticated_user, user_can_edit_componente
 
 from instalaciones.espacios import alcance
 

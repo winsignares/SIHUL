@@ -1,6 +1,6 @@
 """Alta, detalle, edición y baja de notificaciones."""
 from rest_framework import generics, permissions
-from mysite.auth_helpers import is_admin_global
+from nucleo.auth_helpers import is_admin_global
 from ..models import Notificacion
 from ..serializers import NotificacionSerializer
 from ._filtros import _filter_relevantes_por_rol

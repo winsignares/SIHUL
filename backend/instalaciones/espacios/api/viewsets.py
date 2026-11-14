@@ -8,12 +8,12 @@ from instalaciones.espacios.models import EspacioFisico, EspacioPermitido, TipoE
 from instalaciones.espacios.serializers import EspacioFisicoSerializer, EspacioPermitidoSerializer, TipoEspacioSerializer
 from identidad.usuarios.models import Usuario
 
-from mysite.auth_helpers import (
+from nucleo.auth_helpers import (
     puede_ver_usuario, user_supervisa_espacios,
 )
-from mysite.cache_utils import CachedCatalogMixin
-from mysite.seccional_auth import SeccionalMixin
-from mysite.permissions import (
+from nucleo.cache_utils import CachedCatalogMixin
+from nucleo.seccional_auth import SeccionalMixin
+from nucleo.permissions import (
     IsAuthenticatedReadOnlyOrAdminWrite,
 )
 

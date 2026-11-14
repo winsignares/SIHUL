@@ -701,7 +701,7 @@ frontend/
   - [ ] Crear modelos en `financiero/models.py`
   - [ ] Crear serializers en `financiero/serializers.py`
   - [ ] Crear views/viewsets en `financiero/views.py`
-  - [ ] Crear `financiero/api_urls.py` e incluir en `mysite/urls.py`
+  - [ ] Crear `financiero/api_urls.py` e incluir en `config/urls.py`
   - [ ] Ejecutar migrations: `python manage.py makemigrations financiero`
   - [ ] Crear componentes en DB: `Componente.objects.create(...)`
   - [ ] Asignar a roles: `ComponenteRol.objects.create(...)`
@@ -908,7 +908,7 @@ urlpatterns = [
     path('transacciones/', views.TransaccionListAPI.as_view(), name='transaccion-list'),
 ]
 
-# En mysite/urls.py, agregar:
+# En config/urls.py, agregar:
 # path('api/financiero/', include('financiero.api_urls'))
 ```
 

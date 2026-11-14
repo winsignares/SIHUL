@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
-from mysite.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
+from nucleo.auth_helpers import get_role_name, is_admin_global, is_admin_sistema
 
 from .administracion import (
     PuedeGestionarChatbots, PuedeGestionarDocumentosChatbots, _chatbot_permitido, ids_chatbots_permitidos,

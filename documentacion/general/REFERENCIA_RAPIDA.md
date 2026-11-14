@@ -224,7 +224,7 @@ ComponenteRol.objects.create(rol=rol, componente=comp, permiso='EDITAR')
 1. python manage.py startapp financiero
 2. Crear modelos (Presupuesto, Transaccion)
 3. Crear serializers + views
-4. Registrar URLs en mysite/urls.py
+4. Registrar URLs en config/urls.py
 5. python manage.py migrate
 6. Crear Componente en BD:
    Componente.objects.create(nombre="Gestión Financiera")

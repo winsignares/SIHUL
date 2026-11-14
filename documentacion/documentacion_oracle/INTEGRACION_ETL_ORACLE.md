@@ -26,7 +26,7 @@ Cada comando ETL construye su propia conexión Oracle leyendo variables de entor
 
 El flujo es el mismo para todos los dominios (ejemplo tomado de `usuarios/management/commands/etl_oracle_estudiantes.py`):
 
-1. **Query Oracle parametrizada** por periodo académico (`settings.ETL_PERIODO`) y, opcionalmente, por `--seccional` (usando `mysite/oracle_seccional_filter.py` para filtrar vía subquery a `VW_PROGRAMAS_ACADEMICOS`).
+1. **Query Oracle parametrizada** por periodo académico (`settings.ETL_PERIODO`) y, opcionalmente, por `--seccional` (usando `nucleo/oracle_seccional_filter.py` para filtrar vía subquery a `VW_PROGRAMAS_ACADEMICOS`).
 2. **Hash de fila** (`row_hash`) para detectar cambios de forma idempotente sin reprocesar todo cada vez.
 3. **Staging**: cada fila se guarda en un modelo `Stg*` (ej. `StgOracleEstudiante`, `StgOracleDocente`, `StgOracleGrupoAcademico`, `StgOracleEspacioFisico`, `StgOracleHorario`, `StgOraclePrograma`) con `source_system='ORACLE_SIU'`, `external_id`, `raw_data` (JSON crudo) y `estado_registro`.
 4. **Flags de ejecución**: `--dry-run`, `--limit`, `--offset`, `--batch-size` para pruebas y cargas incrementales controladas.
@@ -54,7 +54,7 @@ docker compose exec backend python manage.py migrate_staging_to_real
 
 ## Normalización de seccionales
 
-`mysite/oracle_seccional_filter.py` define los nombres canónicos de seccional (Nacional, Virtual, El Socorro, Cali, Barranquilla, Bogotá, Cúcuta, Cartagena, Pereira) y un diccionario de alias para limpiar inconsistencias del dato Oracle crudo antes de filtrar la extracción por sede/seccional.
+`nucleo/oracle_seccional_filter.py` define los nombres canónicos de seccional (Nacional, Virtual, El Socorro, Cali, Barranquilla, Bogotá, Cúcuta, Cartagena, Pereira) y un diccionario de alias para limpiar inconsistencias del dato Oracle crudo antes de filtrar la extracción por sede/seccional.
 
 ## Migraciones relacionadas (historial de esta integración)
 

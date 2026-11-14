@@ -7,7 +7,7 @@ from decimal import Decimal
 from django.db import IntegrityError
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from mysite.xss_protection import sanitize_dict, FACTURA_SCHEMA
+from nucleo.xss_protection import sanitize_dict, FACTURA_SCHEMA
 from ..documentos_sensibles import documento_es_sensible as _documento_es_sensible
 from ..documentos_sensibles import usuario_puede_ver_documentos_sensibles as _usuario_puede_ver_documentos_sensibles
 from .documentos import DocumentoAdjuntoSerializer

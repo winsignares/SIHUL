@@ -2,9 +2,9 @@
 import requests
 from django.db.models import Q
 from identidad.usuarios.models import Usuario
-from mysite.auth_helpers import get_user_seccional_id
-from mysite.auth_helpers import is_admin_global
-from mysite.auth_helpers import q_usuarios_de_seccional
+from nucleo.auth_helpers import get_user_seccional_id
+from nucleo.auth_helpers import is_admin_global
+from nucleo.auth_helpers import q_usuarios_de_seccional
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from ..chat import fastapi_base_url

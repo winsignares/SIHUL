@@ -3,10 +3,10 @@ from django.views.decorators.csrf import csrf_exempt
 from ..models import EspacioFisico, EspacioPermitido
 from academico.horario.models import Horario
 from identidad.usuarios.models import Usuario
-from mysite.auth_helpers import (
+from nucleo.auth_helpers import (
     SECCIONAL_PUBLICA_REQUERIDA, seccional_publica,
 )
-from mysite.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
+from nucleo.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
 from .filtros import _filtrar_espacios_por_sede_usuario, _filtrar_horarios_por_rango_fecha, _usuario_sin_seccional
 
 

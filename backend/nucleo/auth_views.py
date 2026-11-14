@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from identidad.componentes.models import ComponenteUsuario
 from instalaciones.espacios.models import EspacioPermitido
 from instalaciones.espacios import alcance as alcance_espacios
-from mysite.auth_helpers import componentes_de_rol_efectivos, role_supervisa_espacios, seccional_para_sesion
+from nucleo.auth_helpers import componentes_de_rol_efectivos, role_supervisa_espacios, seccional_para_sesion
 from identidad.usuarios.models import Usuario
 
 

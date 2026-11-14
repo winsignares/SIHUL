@@ -1,8 +1,8 @@
 """Permisos para gestionar chatbots y su documentación."""
-from mysite.auth_helpers import is_admin_global
-from mysite.auth_helpers import is_admin_sistema
-from mysite.auth_helpers import is_authenticated_user
-from mysite.auth_helpers import user_can_edit_componente
+from nucleo.auth_helpers import is_admin_global
+from nucleo.auth_helpers import is_admin_sistema
+from nucleo.auth_helpers import is_authenticated_user
+from nucleo.auth_helpers import user_can_edit_componente
 from rest_framework import permissions
 from ...models import AgenteResponsable
 

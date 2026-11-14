@@ -11,7 +11,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from academico.facultades.models import Facultad
-from mysite.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
+from nucleo.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
 from academico.sedes.models import (
     MapOracleSedeSeccional,
     OracleSyncIssue,

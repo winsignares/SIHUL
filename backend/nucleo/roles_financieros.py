@@ -5,7 +5,7 @@ la gestión de usuarios y de componentes necesita saber qué es «financiero» s
 """
 import unicodedata
 
-from mysite.auth_helpers import is_admin_global, is_admin_sistema, is_authenticated_user
+from nucleo.auth_helpers import is_admin_global, is_admin_sistema, is_authenticated_user
 
 # Mismo criterio que `normalizeFinancialRole` del frontend (frontend/src/context/financialRoleUtils.ts)
 PALABRAS_DE_ROL_FINANCIERO = (

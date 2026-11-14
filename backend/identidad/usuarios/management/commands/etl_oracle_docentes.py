@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from mysite.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
+from nucleo.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
 from identidad.usuarios.models import StgOracleDocente
 
 

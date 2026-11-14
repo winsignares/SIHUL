@@ -2,7 +2,7 @@
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from mysite.auth_helpers import is_admin_global
+from nucleo.auth_helpers import is_admin_global
 from ..models import Notificacion
 from ._filtros import _resolve_target_user_id
 

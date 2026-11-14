@@ -1,7 +1,7 @@
 """Documentos de los chatbots: listado, carga, prioridad, descarga y borrado."""
 import requests
 from django.http import HttpResponse
-from mysite.auth_helpers import is_authenticated_user
+from nucleo.auth_helpers import is_authenticated_user
 from rest_framework import permissions
 from rest_framework.parsers import FormParser
 from rest_framework.parsers import MultiPartParser

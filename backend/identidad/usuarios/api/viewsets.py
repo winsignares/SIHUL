@@ -9,13 +9,13 @@ from rest_framework.response import Response
 from identidad.usuarios.models import Rol, Usuario
 from identidad.usuarios.serializers import RolSerializer, UsuarioMinimalSerializer, UsuarioSerializer
 
-from mysite.auth_helpers import (
+from nucleo.auth_helpers import (
     is_admin_global, q_usuarios_de_seccional, is_admin_sistema,
 )
-from mysite.roles_financieros import es_solo_admin_financiero
-from mysite.cache_utils import CachedCatalogMixin
-from mysite.seccional_auth import SeccionalMixin
-from mysite.permissions import (
+from nucleo.roles_financieros import es_solo_admin_financiero
+from nucleo.cache_utils import CachedCatalogMixin
+from nucleo.seccional_auth import SeccionalMixin
+from nucleo.permissions import (
     IsAdminRoleManagement,
     IsAdminUserManagement,
 )

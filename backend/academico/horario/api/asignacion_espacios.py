@@ -7,7 +7,7 @@ from notificaciones.signals import crear_notificacion
 from identidad.usuarios.models import Usuario
 from instalaciones.espacios.models import EspacioFisico
 from ..models import Horario, SolicitudEspacio
-from mysite.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
+from nucleo.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
 from .acceso import _get_authenticated_seccional_scope
 
 

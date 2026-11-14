@@ -131,11 +131,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
         # Quien administra una seccional solo puede dejar usuarios en la suya. El administrador general
         # (superusuario o rol admin_global) puede asignar cualquiera.
-        from mysite.auth_helpers import get_user_seccional_id, is_admin_global, ve_todas_las_seccionales
+        from nucleo.auth_helpers import get_user_seccional_id, is_admin_global, ve_todas_las_seccionales
 
         request = self.context.get('request')
         solicitante = (getattr(request, 'user_obj', None) or getattr(request, 'user', None)) if request else None
-        from mysite.roles_financieros import es_rol_gestionable_por_admin_financiero, es_solo_admin_financiero
+        from nucleo.roles_financieros import es_rol_gestionable_por_admin_financiero, es_solo_admin_financiero
 
         autenticado = bool(solicitante) and getattr(solicitante, 'is_authenticated', True)
         admin_financiero = autenticado and es_solo_admin_financiero(solicitante)

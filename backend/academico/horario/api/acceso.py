@@ -1,6 +1,6 @@
 from django.http import JsonResponse
-from mysite.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema
-from mysite.auth_helpers import ve_todas_las_seccionales
+from nucleo.auth_helpers import get_role_name, get_user_seccional_id, is_admin_global, is_admin_sistema
+from nucleo.auth_helpers import ve_todas_las_seccionales
 
 
 

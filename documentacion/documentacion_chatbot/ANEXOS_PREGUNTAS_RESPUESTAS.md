@@ -81,7 +81,7 @@ Siempre está presente (lista vacía si no hay anexos o si el RAG falló). Djang
 - No exige sesión, porque el chat público también entrega anexos y un enlace `<a href>` no envía cabeceras: la autorización es el token, que solo emite el sistema al responder.
 - Los enlaces del chat dejan de servir (**404**) si la pregunta o el agente se desactivan; los de la gestión no.
 - Respuesta: el archivo real con `Content-Disposition: attachment; filename="<nombre original>"`, su tipo MIME, `X-Content-Type-Options: nosniff` y `Cache-Control: private, no-store`. La ruta en disco nunca se expone (tampoco en el admin de Django).
-- Con `DJANGO_DEBUG=True` el proyecto sirve todo `MEDIA_ROOT` en `/media/` (comportamiento previo, `mysite/urls.py`). Los anexos quedan fuera de alcance por esa vía porque su nombre en disco es un UUID aleatorio que no se publica; en producción (`DEBUG=False`) esa ruta no sirve archivos.
+- Con `DJANGO_DEBUG=True` el proyecto sirve todo `MEDIA_ROOT` en `/media/` (comportamiento previo, `config/urls.py`). Los anexos quedan fuera de alcance por esa vía porque su nombre en disco es un UUID aleatorio que no se publica; en producción (`DEBUG=False`) esa ruta no sirve archivos.
 
 ### RAG (FastAPI, interno)
 

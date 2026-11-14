@@ -1,7 +1,7 @@
 """Validaciones y ayudas de las preguntas-respuestas."""
 from django.db import transaction
-from mysite.auth_helpers import is_admin_global
-from mysite.auth_helpers import is_admin_sistema
+from nucleo.auth_helpers import is_admin_global
+from nucleo.auth_helpers import is_admin_sistema
 from rest_framework.response import Response
 from ...anexos import anexos_json
 from ...anexos import sincronizar_rag

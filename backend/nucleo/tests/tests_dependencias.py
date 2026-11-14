@@ -2,7 +2,7 @@
 
 El módulo financiero es un sistema aparte del académico (horarios, espacios y préstamos):
 - nada fuera de `financiero` lo importa (la plataforma y lo académico no dependen de él);
-- `financiero` solo toma de la plataforma (usuarios, sedes, facultades, notificaciones, componentes y mysite) y
+- `financiero` solo toma de la plataforma (usuarios, sedes, facultades, notificaciones, componentes y nucleo) y
   nunca de espacios, horario, préstamos u otras apps académicas.
 No se revisan las pruebas, las migraciones ni los comandos de gestión (seeders y ETL), que arman datos de todo el sistema.
 """
@@ -14,7 +14,7 @@ from django.test import SimpleTestCase
 RAIZ = pathlib.Path(__file__).resolve().parent.parent.parent
 
 ACADEMICAS = {'espacios', 'horario', 'prestamos', 'programas', 'grupos', 'asignaturas', 'recursos', 'periodos'}
-PLATAFORMA = {'usuarios', 'sedes', 'facultades', 'notificaciones', 'componentes', 'mysite'}
+PLATAFORMA = {'usuarios', 'sedes', 'facultades', 'notificaciones', 'componentes', 'nucleo'}
 OMITIDAS = ('migrations', 'management', 'tests', 'static_assets')
 
 

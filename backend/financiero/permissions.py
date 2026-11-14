@@ -6,8 +6,8 @@ docente o cualquier otro rol que solo esté autenticado no debe poder leer ni mo
 """
 from rest_framework.permissions import BasePermission
 
-from mysite.auth_helpers import construir_componentes, is_authenticated_user, is_superuser_effective
-from mysite.roles_financieros import PALABRAS_DE_COMPONENTE_FINANCIERO, PALABRAS_DE_ROL_FINANCIERO, normalizar
+from nucleo.auth_helpers import construir_componentes, is_authenticated_user, is_superuser_effective
+from nucleo.roles_financieros import PALABRAS_DE_COMPONENTE_FINANCIERO, PALABRAS_DE_ROL_FINANCIERO, normalizar
 
 def es_usuario_financiero(usuario):
     """True si el usuario pertenece al módulo financiero por su rol o por sus componentes."""

@@ -2,10 +2,10 @@ import logging
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from mysite.auth_helpers import get_user_seccional_id
+from nucleo.auth_helpers import get_user_seccional_id
 from ..models import Horario
-from mysite.auth_helpers import SECCIONAL_PUBLICA_REQUERIDA, seccional_publica, ve_todas_las_seccionales
-from mysite.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
+from nucleo.auth_helpers import SECCIONAL_PUBLICA_REQUERIDA, seccional_publica, ve_todas_las_seccionales
+from nucleo.auth_helpers import respuesta_sin_seccional as _missing_seccional_response
 from .acceso import _get_authenticated_seccional_scope, _get_request_user
 
 

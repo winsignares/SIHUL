@@ -3,12 +3,12 @@ from rest_framework import permissions, viewsets
 from academico.sedes.models import Seccional, Sede
 from academico.sedes.serializers import SeccionalSerializer, SedeSerializer
 
-from mysite.auth_helpers import (
+from nucleo.auth_helpers import (
     ve_todas_las_seccionales,
 )
-from mysite.cache_utils import CachedCatalogMixin
-from mysite.seccional_auth import SeccionalMixin
-from mysite.permissions import (
+from nucleo.cache_utils import CachedCatalogMixin
+from nucleo.seccional_auth import SeccionalMixin
+from nucleo.permissions import (
     IsAuthenticatedReadOnlyOrAdminWrite,
 )
 

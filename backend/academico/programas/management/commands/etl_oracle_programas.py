@@ -10,7 +10,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from academico.facultades.models import Facultad
-from mysite.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
+from nucleo.oracle_seccional_filter import execute_oracle_query_with_optional_seccional
 from academico.programas.models import Programa, StgOraclePrograma
 from academico.sedes.models import StgOracleFacultad
 

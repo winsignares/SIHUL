@@ -4,7 +4,7 @@ Reglas de aprobación de préstamos (internos y públicos).
 No reciben la petición HTTP: reciben el usuario que actúa y los datos, así se pueden usar y probar fuera de
 los serializers.
 """
-from mysite.auth_helpers import user_can_edit_componente
+from nucleo.auth_helpers import user_can_edit_componente
 
 from . import privacidad
 

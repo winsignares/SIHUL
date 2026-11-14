@@ -5,7 +5,7 @@ from django.urls import path, re_path, include
 from django.views.static import serve
 from rest_framework.routers import DefaultRouter
 
-from mysite import health
+from nucleo import health
 
 from academico.asignaturas.api.viewsets import AsignaturaProgramaViewSet, AsignaturaViewSet
 from instalaciones.espacios.api.viewsets import EspacioFisicoViewSet, EspacioPermitidoViewSet, TipoEspacioViewSet
@@ -44,7 +44,7 @@ urlpatterns = [
     path('health/ready/', health.ready),
     path('panel-sihul-gestion/', admin.site.urls),
     path('api/', include(router.urls)),
-    path('api/auth/', include('mysite.auth_urls')),
+    path('api/auth/', include('nucleo.auth_urls')),
     path('api/periodos/', include('academico.periodos.api.urls')),
     path('api/componentes/', include('identidad.componentes.api.urls')),
     path('api/prestamos/', include('instalaciones.prestamos.api.urls')),

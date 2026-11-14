@@ -3,12 +3,12 @@ from rest_framework import viewsets
 from academico.asignaturas.models import Asignatura, AsignaturaPrograma
 from academico.asignaturas.serializers import AsignaturaProgramaSerializer, AsignaturaSerializer
 
-from mysite.auth_helpers import (
+from nucleo.auth_helpers import (
     is_admin_global,
 )
-from mysite.cache_utils import CachedCatalogMixin
-from mysite.seccional_auth import SeccionalMixin
-from mysite.permissions import (
+from nucleo.cache_utils import CachedCatalogMixin
+from nucleo.seccional_auth import SeccionalMixin
+from nucleo.permissions import (
     IsAuthenticatedReadOnlyOrAdminWrite,
 )
 

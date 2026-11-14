@@ -1,6 +1,6 @@
 """Permisos de rol por seccional: una plantilla general y ajustes que solo valen para una seccional."""
 from identidad.componentes.models import Componente, ComponenteRol, ComponenteUsuario
-from mysite.auth_helpers import construir_componentes, user_can_edit_componente
+from nucleo.auth_helpers import construir_componentes, user_can_edit_componente
 from identidad.usuarios.models import Rol
 
 from .tests_aislamiento import AislamientoBase, _cliente
