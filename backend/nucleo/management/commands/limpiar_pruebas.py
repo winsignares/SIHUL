@@ -1,17 +1,22 @@
-"""Borra lo que se creó durante las pruebas: todo registro cuyo nombre empieza por «PRUEBA» (sin distinguir
+"""Borra lo que se creó durante las pruebas: todo registro cuyo nombre empieza por «PRUEBA-» (sin distinguir
 mayúsculas), además del usuario de pruebas. Por defecto solo cuenta; para borrar hay que pasar --confirmar.
 
     python manage.py limpiar_pruebas                 # muestra qué se borraría
     python manage.py limpiar_pruebas --confirmar     # lo borra
-    python manage.py limpiar_pruebas --prefijo PRUEBA-X --confirmar
+    python manage.py limpiar_pruebas --prefijo LOTE2- --confirmar
 
 Al probar, ponle ese prefijo a todo lo que crees (sedes, espacios, facturas, proveedores, motivos de préstamo...).
+El prefijo lleva guion a propósito: en producción hay datos reales cuyo nombre empieza por «PRUEBA» (por ejemplo
+asignaturas como «PRUEBAS PENALES»), y con el prefijo corto se habrían borrado. Se exigen al menos 5 caracteres.
 Si algo no se puede borrar porque otra cosa depende de él, se informa y se sigue con lo demás.
 """
 from django.apps import apps
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import ProtectedError
+
+PREFIJO_POR_DEFECTO = 'PRUEBA-'
+CORREO_USUARIO_PRUEBAS = 'prueba.'  # el que fuerza crear_usuario_pruebas
 
 # (app, modelo, campo por el que se busca el prefijo), en el orden en que se puede borrar sin romper dependencias.
 OBJETIVOS = (
@@ -36,16 +41,21 @@ class Command(BaseCommand):
     help = 'Borra lo creado en las pruebas (registros cuyo nombre empieza por el prefijo). Sin --confirmar solo cuenta.'
 
     def add_arguments(self, parser):
-        parser.add_argument('--prefijo', default='PRUEBA')
+        parser.add_argument('--prefijo', default=PREFIJO_POR_DEFECTO)
         parser.add_argument('--confirmar', action='store_true')
 
     def handle(self, *args, **opciones):
         prefijo = opciones['prefijo']
         confirmar = opciones['confirmar']
+        if len(prefijo.strip()) < 5:
+            raise CommandError('El prefijo debe tener al menos 5 caracteres para no borrar datos reales.')
         total = 0
         for app, nombre, campo in OBJETIVOS:
+            if nombre == 'Usuario' and prefijo != PREFIJO_POR_DEFECTO:
+                continue  # el usuario de pruebas solo se limpia con el prefijo por defecto
             modelo = apps.get_model(app, nombre)
-            consulta = modelo.objects.filter(**{f'{campo}__istartswith': prefijo})
+            valor = CORREO_USUARIO_PRUEBAS if nombre == 'Usuario' else prefijo
+            consulta = modelo.objects.filter(**{f'{campo}__istartswith': valor})
             cantidad = consulta.count()
             if not cantidad:
                 continue
