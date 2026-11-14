@@ -41,5 +41,5 @@ Sin el servicio `eventos` (o sin Redis) todo funciona igual, sin actualización 
 - **Muchas personas conectadas:** cada pestaña abierta usa un hilo. Con `EVENTOS_WORKERS=1` y `EVENTOS_THREADS=400` caben unas 400 pestañas a la vez (unos 400 MB). Para más, subir `EVENTOS_WORKERS` y `EVENTOS_MEM_LIMIT`. Ver `documentacion/documentacion_backend/EVENTOS_TIEMPO_REAL.md`, sección «Capacidad medida».
 - **Límite de conexiones a PostgreSQL:** una conexión SSE abierta no retiene una conexión a la base, pero si todas las pestañas se reconectan a la vez (al reiniciar `eventos`) hay un pico de consultas de sesión. Reiniciar ese servicio fuera de horas de uso, o poner un agrupador de conexiones.
 
-## Después de que todos los entornos usen `config.wsgi`
-Se puede borrar la carpeta `backend/mysite/` (solo contiene un `wsgi.py` y un `asgi.py` de compatibilidad).
+## Sobre `mysite`
+La carpeta de compatibilidad `backend/mysite/` ya se eliminó: todos los entornos usan `config.wsgi:application`. Un entorno que aún tenga `DJANGO_WSGI=mysite.wsgi:application` no arrancará hasta cambiar esa línea.
