@@ -6,7 +6,7 @@ from .capacidad import ReporteCapacidadView, GenerarPdfReporteCapacidadView
 
 __all__ = [
     'ListEspaciosDisponiblesPorHorarioView',
-    'GenerarPdfOcupacionSemanalView', 'reporte_ocupacion', 'generar_pdf_reporte_ocupacion',
-    'ReporteDisponibilidadView', 'generar_pdf_reporte_disponibilidad',
-    'ReporteCapacidadView', 'generar_pdf_reporte_capacidad',
+    'GenerarPdfOcupacionSemanalView', 'ReporteOcupacionView', 'GenerarPdfReporteOcupacionView',
+    'ReporteDisponibilidadView', 'GenerarPdfReporteDisponibilidadView',
+    'ReporteCapacidadView', 'GenerarPdfReporteCapacidadView',
 ]
