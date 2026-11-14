@@ -20,6 +20,7 @@ import {
 import type { Prestamo } from '../../../models/index';
 import type { Sede } from '../../../services/sedes/sedeAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const DOCENTE_PRESTAMOS_INITIAL_CACHE_KEY = 'prestamos-docente-initial-data';
 const DOCENTE_PRESTAMOS_LIST_CACHE_KEY = 'prestamos-docente-list';
@@ -152,10 +153,10 @@ export function useDocentePrestamos() {
     };
 
     // Fetch prestamos when component mounts or user changes
-    const fetchPrestamos = async ({ force = false }: { force?: boolean } = {}) => {
+    const fetchPrestamos = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         if (!user?.id) return;
 
-        setLoading(true);
+        if (!silent) setLoading(true);
         setError(null);
 
         try {
@@ -186,6 +187,15 @@ export function useDocentePrestamos() {
     useEffect(() => {
         fetchInitialData();
     }, []);
+
+    // Alguien más cambió préstamos, espacios u horarios: se vuelve a leer lo que muestra esta pantalla sin spinner.
+    useActualizacionEnVivo(
+        ['prestamos-espacio', 'prestamos-espacio-publico', 'prestamos-recurso', 'espacios', 'horarios'],
+        () => {
+            void fetchPrestamos({ force: true, silent: true });
+            void fetchEspaciosDisponibles();
+        }
+    );
 
     useEffect(() => {
         if (tiposActividad.length > 0) {
