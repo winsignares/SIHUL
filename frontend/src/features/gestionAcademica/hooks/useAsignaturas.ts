@@ -16,6 +16,7 @@ import {
   PAGE_SIZE_DEFAULT
 } from './paginacion';
 import { clearSessionCache, clearSessionCacheByPrefix, getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const ASIGNATURAS_CACHE_KEY = 'gestion-academica-asignaturas';
 const ASIGNATURAS_LIST_CACHE_KEY = 'gestion-academica-asignaturas-list';
@@ -58,7 +59,12 @@ export function useAsignaturas() {
         loadData();
     }, []);
 
-    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
+    // Alguien más cambió asignaturas o programas: se vuelve a leer sin mostrar el spinner.
+    useActualizacionEnVivo(['asignaturas', 'asignaturas-programa', 'programas'], () => {
+        void loadData({ force: true, silent: true });
+    });
+
+    const loadData = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         try {
             const activeToken = localStorage.getItem('auth_token');
             const cachedData = force
@@ -68,7 +74,7 @@ export function useAsignaturas() {
             if (cachedData) {
                 setAsignaturas(cachedData.asignaturas);
                 setProgramas(cachedData.programas);
-            } else {
+            } else if (!silent) {
                 setLoading(true);
             }
 

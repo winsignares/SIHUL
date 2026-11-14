@@ -15,6 +15,7 @@ import {
   PAGE_SIZE_DEFAULT
 } from './paginacion';
 import { clearSessionCache, getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const GRUPOS_CACHE_KEY = 'gestion-academica-grupos';
 const GRUPOS_PROGRAMAS_CACHE_KEY = 'gestion-academica-grupos-programas';
@@ -58,14 +59,21 @@ export function useGrupos() {
     // Estados de selección
     const [selectedGrupo, setSelectedGrupo] = useState<GrupoAcademico | null>(null);
 
-    const loadGrupos = async ({ force = false }: { force?: boolean } = {}) => {
+    // Alguien más cambió grupos, programas o periodos: se vuelve a leer sin mostrar el spinner.
+    useActualizacionEnVivo(['grupos', 'programas', 'periodos'], () => {
+        void loadGrupos({ force: true, silent: true });
+        void loadProgramas({ force: true });
+        void loadPeriodos({ force: true });
+    });
+
+    const loadGrupos = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         try {
             const activeToken = localStorage.getItem('auth_token');
             const cachedGrupos = force ? null : getSessionCacheData<GrupoAcademico[]>(GRUPOS_CACHE_KEY, activeToken);
 
             if (cachedGrupos) {
                 setGrupos(cachedGrupos);
-            } else {
+            } else if (!silent) {
                 setLoading(true);
             }
 

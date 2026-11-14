@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useNotification } from '../../../components/ui/notificationBanner';
 import { horarioService } from '../services/horariosAPI';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const MI_HORARIO_CACHE_KEY = 'horarios-mi-horario';
 
@@ -44,14 +45,19 @@ export function useMiHorario() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]);
 
-    const loadData = async ({ force = false }: { force?: boolean } = {}) => {
+    // Alguien más cambió tu horario (o el de tu grupo): se vuelve a leer sin mostrar el spinner.
+    useActualizacionEnVivo(['horarios', 'horarios-estudiante', 'horarios-fusionados'], () => {
+        void loadData({ force: true, silent: true });
+    });
+
+    const loadData = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         if (!user?.id) {
             setLoading(false);
             return;
         }
 
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const activeToken = localStorage.getItem('auth_token');
             const userScope = `${user.rol?.nombre || 'sin-rol'}-${user.id}`;
             const cacheKey = `${MI_HORARIO_CACHE_KEY}-${userScope}`;

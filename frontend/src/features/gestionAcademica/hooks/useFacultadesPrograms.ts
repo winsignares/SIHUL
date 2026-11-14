@@ -18,6 +18,7 @@ import {
     type Programa,
 } from './facultades/facultadesProgramsUtils';
 import { usePaginacionFacultadesProgramas } from './facultades/usePaginacionFacultadesProgramas';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 export type TabOption = 'sedes' | 'facultades' | 'programas' | 'asignaturas' | 'docentes' | 'grupos' | 'fusion' | 'espacios' | 'recursos' | 'gestion-recursos';
 
@@ -79,7 +80,7 @@ export function useFacultadesPrograms() {
         loadAsignaturas();
     }, [activeTab]);
 
-    const loadFacultades = async ({ force = false }: { force?: boolean } = {}) => {
+    const loadFacultades = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         try {
             const activeToken = localStorage.getItem('auth_token');
             const cachedFacultades = force
@@ -88,7 +89,7 @@ export function useFacultadesPrograms() {
 
             if (cachedFacultades) {
                 setFacultades(cachedFacultades);
-            } else {
+            } else if (!silent) {
                 setLoading(true);
             }
 
@@ -102,7 +103,7 @@ export function useFacultadesPrograms() {
         }
     };
 
-    const loadProgramas = async ({ force = false }: { force?: boolean } = {}) => {
+    const loadProgramas = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         try {
             const activeToken = localStorage.getItem('auth_token');
             const cachedProgramas = force
@@ -111,7 +112,7 @@ export function useFacultadesPrograms() {
 
             if (cachedProgramas) {
                 setProgramas(cachedProgramas);
-            } else {
+            } else if (!silent) {
                 setLoading(true);
             }
 
@@ -187,6 +188,14 @@ export function useFacultadesPrograms() {
 
         setAsignaturasPrograma((current) => enrichAsignaturasPrograma(current, asignaturas));
     }, [asignaturas, asignaturasPrograma.length]);
+
+    // Alguien más cambió facultades, programas o asignaturas: se vuelve a leer sin mostrar el spinner.
+    useActualizacionEnVivo(['facultades', 'programas', 'asignaturas', 'asignaturas-programa'], () => {
+        void loadFacultades({ force: true, silent: true });
+        void loadProgramas({ force: true, silent: true });
+        void loadAsignaturas({ force: true });
+        setReloadKey((prev) => prev + 1);
+    });
 
     // Función para recargar todos los datos
     const reloadAllData = () => {
