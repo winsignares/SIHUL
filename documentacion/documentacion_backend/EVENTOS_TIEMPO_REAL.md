@@ -39,6 +39,13 @@ La lista está en `nucleo/eventos/registro.py` (sedes, seccionales, facultades, 
 - Se actualizan con aviso (no solas) las pantallas de edición: crear horarios, centro de horarios, asignación de espacios, configuración financiera y parametrización SLA.
 - Quedan fuera, a propósito: el chat en curso (conversación abierta), el diálogo de revisión de recursos al cerrar un espacio y la página pública de préstamos, que no tiene sesión.
 
+## Capacidad medida
+Prueba local con **un solo proceso** `gunicorn` (clase `gthread`, 400 hilos): 300 conexiones SSE abiertas a la vez, sin errores; un evento llegó a las 300 en menos de 0,6 s; el proceso usó unos 400 MB y PostgreSQL tuvo 4 conexiones en total. Las claves del diseño:
+- Una conexión abierta **no retiene una conexión a la base de datos**: se cierra antes de transmitir y la decisión de qué eventos recibe cada persona se calcula una sola vez al conectar.
+- Cada proceso hace **una sola suscripción a Redis** y reparte los eventos a sus conexiones, así que Redis no crece con el número de personas.
+- Cada conexión ocupa un hilo. Para N personas conectadas a la vez hacen falta N hilos entre todos los procesos (por ejemplo, 2 procesos de 400 hilos para unas 800 pestañas abiertas) y unos 1,3 MB por conexión.
+- Si todas las pestañas se reconectan a la vez (por ejemplo, al reiniciar el servicio), el pico de consultas de sesión puede superar el límite de conexiones de PostgreSQL: conviene un agrupador de conexiones (PgBouncer) o que el reinicio del servicio de eventos se haga fuera de horas de uso.
+
 ## Garantías y límites
 - No hay entrega garantizada: si la conexión se cae, al reconectar el frontend recarga.
 - Sin Redis el endpoint responde 503 y todo sigue funcionando como antes, sin actualización en vivo.

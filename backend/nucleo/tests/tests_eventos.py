@@ -136,18 +136,24 @@ class VistaEventosTests(TestCase):
         with mock.patch.object(canal, 'disponible', return_value=False):
             self.assertEqual(self.client.get('/api/eventos/').status_code, 503)
 
-    def test_el_flujo_entrega_solo_lo_que_le_corresponde_y_cierra_la_suscripcion(self):
+    def test_el_flujo_entrega_solo_lo_que_le_corresponde_y_cancela_su_cola(self):
+        import queue
+
         rol = Rol.objects.get_or_create(nombre='estudiante')[0]
         cali = Seccional.objects.get_or_create(ciudad='Cali')[0]
         u = Usuario.objects.create(nombre='F', correo='f.ev@unilibre.edu.co', contrasena_hash='x', rol=rol, seccional=cali)
-        falso = CanalFalso([
+        cola = queue.Queue()
+        for texto in (
             json.dumps({'recurso': 'sedes', 'accion': 'creado', 'id': 1, 'seccional': cali.id, 'usuario': None}),
             json.dumps({'recurso': 'sedes', 'accion': 'creado', 'id': 2, 'seccional': 999, 'usuario': None}),
             'no es json',
-        ])
-        with _con_canal(falso):
+        ):
+            cola.put(texto)
+        difusor = mock.Mock()
+        difusor.suscribir.return_value = cola
+        with mock.patch.object(vista, 'difusor', difusor):
             partes = []
-            flujo = vista._flujo(u, vida_maxima=0.05)
+            flujo = vista._flujo(audiencia.perfil_de(u), vida_maxima=0.05)
             for parte in flujo:
                 partes.append(parte)
                 if len(partes) >= 2:
@@ -155,7 +161,74 @@ class VistaEventosTests(TestCase):
             flujo.close()
         self.assertEqual(partes[0], f'retry: {vista.REINTENTO_MS}\n\n')
         self.assertEqual(json.loads(partes[1].removeprefix('data: ')), {'recurso': 'sedes', 'accion': 'creado', 'id': 1})
-        self.assertTrue(falso.cerrada)
+        difusor.cancelar.assert_called_once_with(cola)
+
+    def test_la_conexion_abierta_no_retiene_la_conexion_a_la_base(self):
+        rol = Rol.objects.get_or_create(nombre='estudiante')[0]
+        u = Usuario.objects.create(nombre='G', correo='g.ev@unilibre.edu.co', contrasena_hash='x', rol=rol)
+        sesion = self.client.session
+        sesion['user_id'] = u.id
+        sesion.save()
+        with mock.patch.object(canal, 'disponible', return_value=True), \
+                mock.patch.object(vista.connections, 'close_all') as cerrar:
+            respuesta = self.client.get('/api/eventos/')
+        self.assertEqual(respuesta.status_code, 200)
+        cerrar.assert_called_once_with()
+
+    def test_el_perfil_se_calcula_una_vez_y_no_consulta_la_base_al_decidir(self):
+        rol = Rol.objects.get_or_create(nombre='estudiante')[0]
+        cali = Seccional.objects.get_or_create(ciudad='Cali')[0]
+        u = Usuario.objects.create(nombre='H', correo='h.ev@unilibre.edu.co', contrasena_hash='x', rol=rol, seccional=cali)
+        perfil = audiencia.perfil_de(u)
+        with self.assertNumQueries(0):
+            self.assertTrue(audiencia.debe_recibir({'seccional': cali.id, 'usuario': None}, perfil))
+            self.assertFalse(audiencia.debe_recibir({'seccional': 12345, 'usuario': None}, perfil))
+            self.assertFalse(audiencia.debe_recibir({'usuarios': [], 'roles': ['contabilidad']}, perfil))
+
+
+class DifusorTests(SimpleTestCase):
+    def test_reparte_cada_evento_a_todas_las_colas_con_una_sola_suscripcion(self):
+        import time
+        from nucleo.eventos.difusion import Difusor
+
+        entregas = ['uno', 'dos']
+        suscripciones = []
+
+        class _Suscripcion:
+            def siguiente(self, espera):
+                if entregas:
+                    return entregas.pop(0)
+                time.sleep(0.01)
+                return None
+
+            def cerrar(self):
+                pass
+
+        def _suscribir():
+            suscripciones.append(1)
+            return _Suscripcion()
+
+        difusor = Difusor()
+        with mock.patch.object(canal, 'suscribir', side_effect=_suscribir):
+            a, b = difusor.suscribir(), difusor.suscribir()
+            recibido_a = [a.get(timeout=2), a.get(timeout=2)]
+            recibido_b = [b.get(timeout=2), b.get(timeout=2)]
+            difusor.cancelar(a)
+            difusor.cancelar(b)
+        self.assertEqual(recibido_a, ['uno', 'dos'])
+        self.assertEqual(recibido_b, ['uno', 'dos'])
+        self.assertEqual(len(suscripciones), 1)
+
+    def test_una_cola_llena_descarta_lo_mas_viejo(self):
+        import queue
+        from nucleo.eventos import difusion
+
+        d = difusion.Difusor()
+        cola = queue.Queue(maxsize=2)
+        d._colas.add(cola)
+        for texto in ('a', 'b', 'c'):
+            d._repartir(texto)
+        self.assertEqual([cola.get_nowait(), cola.get_nowait()], ['b', 'c'])
 
 
 class EventoNoExponeDatosTests(SimpleTestCase):
