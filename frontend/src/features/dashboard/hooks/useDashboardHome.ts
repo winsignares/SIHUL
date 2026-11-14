@@ -26,6 +26,7 @@ import {
     Bell
 } from 'lucide-react';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const DASHBOARD_HOME_CACHE_KEY = 'dashboard-home';
 
@@ -52,12 +53,22 @@ export function useDashboardHome() {
     // Derived state
     const recentActivities = activities.slice(0, 4);
 
-    const loadDashboardData = async ({ force = false }: { force?: boolean } = {}) => {
+    // Alguien más cambió horarios, espacios, préstamos, periodos o usuarios: las cifras se vuelven a leer sin spinner.
+    useActualizacionEnVivo(
+        ['horarios', 'espacios', 'periodos', 'prestamos-espacio', 'solicitudes-espacio', 'usuarios'],
+        () => {
+            void loadDashboardData({ force: true, silent: true });
+        }
+    );
+
+    const loadDashboardData = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         try {
-            setIsLoadingStats(true);
-            setIsLoadingOccupation(true);
-            setIsLoadingActivities(true);
-            setIsLoadingPeriodo(true);
+            if (!silent) {
+                setIsLoadingStats(true);
+                setIsLoadingOccupation(true);
+                setIsLoadingActivities(true);
+                setIsLoadingPeriodo(true);
+            }
 
             const activeToken = localStorage.getItem('auth_token');
             const cachedData = force
