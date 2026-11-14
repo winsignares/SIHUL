@@ -13,6 +13,7 @@ import {
   normalizeText,
   type PermisoTipo,
 } from './gestionUsuariosFinancieroUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y acciones de la gestión de usuarios financieros. */
 export function useGestionUsuariosFinanciero() {
@@ -114,8 +115,13 @@ export function useGestionUsuariosFinanciero() {
     }
   }, [buildRoleComponentSelection, componenteUsuarios]);
 
-  const cargarData = useCallback(async () => {
-    setLoading(true);
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['usuarios', 'roles'], () => {
+    void cargarData({ silent: true });
+  });
+
+  const cargarData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const [usuariosResp, rolesResp, componentesResp, componenteRolesResp, componenteUsuariosResp] = await Promise.all([
         userService.listarUsuarios({ financiero: true }),

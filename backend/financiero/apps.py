@@ -8,3 +8,5 @@ class FinancieroConfig(AppConfig):
 
     def ready(self):
         from . import signals  # noqa: F401
+        from .eventos import registrar_eventos_financieros
+        registrar_eventos_financieros()

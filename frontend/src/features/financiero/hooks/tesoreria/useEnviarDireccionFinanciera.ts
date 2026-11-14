@@ -5,6 +5,7 @@ import { buildSharedFacturaDetail } from '../../components/factura-details-helpe
 import { facturasService } from '../../services';
 import type { Factura as APIFactura } from '../../models/core.models';
 import { FILTROS_INICIALES, ITEMS_POR_PAGINA, ESTADOS_APROBADOS_AUDITORIA, toList, mapFactura, getErrorMessage, type Factura } from './enviarDireccionFinancieraUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y acciones de enviar facturas a dirección financiera (tesorería). */
 export function useEnviarDireccionFinanciera() {
@@ -45,6 +46,11 @@ export function useEnviarDireccionFinanciera() {
 
     void load();
   }, []);
+
+  // Alguien más cambió las facturas: se vuelve a leer sin mostrar el spinner y sin borrar lo que ya se ve si falla.
+  useActualizacionEnVivo(['facturas'], () => {
+    void loadFacturas().then(setFacturasAprobadas).catch(() => undefined);
+  });
 
   const filtrosActivos = [filtros.numeroFactura, filtros.numeroRadicado, filtros.numeroProcesoPago, filtros.fechaInicio, filtros.fechaFin].filter(Boolean).length;
 

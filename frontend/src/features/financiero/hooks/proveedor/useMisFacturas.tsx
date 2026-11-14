@@ -5,6 +5,7 @@ import { documentosService, proveedoresService } from '../../services';
 import type { Factura } from '../../models/core.models';
 import type { MisFacturasProps } from '../../models/proveedor';
 import { toList, REJECTED_STATES, type FacturaDocumentoAdjunto } from './misFacturasUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y acciones de las facturas del proveedor. */
 export function useMisFacturas({ miProveedor }: MisFacturasProps) {
@@ -22,6 +23,11 @@ export function useMisFacturas({ miProveedor }: MisFacturasProps) {
   const [selectedFacturaNumero, setSelectedFacturaNumero] = useState('');
   const [documentosProveedor, setDocumentosProveedor] = useState<FacturaDocumentoAdjunto[]>([]);
   const ITEMS_PER_PAGE = 5;
+
+  // Alguien más cambió las facturas: se vuelven a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void loadFacturas(true);
+  });
 
   const loadFacturas = useCallback(async (silent = false) => {
     if (!miProveedor) return;

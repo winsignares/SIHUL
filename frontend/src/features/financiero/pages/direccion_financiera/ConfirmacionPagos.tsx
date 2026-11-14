@@ -156,7 +156,7 @@ export default function ConfirmacionPagos() {
               <Badge className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-emerald-700">
                 Autorizados y listos para control
               </Badge>
-              <Button onClick={cargarFacturas} variant="outline" disabled={cargando} className="border-slate-300 text-slate-700 hover:bg-slate-50">
+              <Button onClick={() => void cargarFacturas()} variant="outline" disabled={cargando} className="border-slate-300 text-slate-700 hover:bg-slate-50">
                 <Loader2 className={`mr-2 h-4 w-4 ${cargando ? 'animate-spin' : ''}`} />
                 Actualizar
               </Button>

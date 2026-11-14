@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { facturasService } from '../../services';
 import type { Factura as APIFactura } from '../../models/core.models';
 import { ITEMS_POR_PAGINA, toList, isConfirmadaParaRegistro, parseFecha, mapFactura, type FacturaRegistroRow } from './registrarPagoAplicadoUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y acciones de registrar el pago aplicado (tesorería). */
 export function useRegistrarPagoAplicado() {
@@ -41,8 +42,13 @@ export function useRegistrarPagoAplicado() {
     return toList<APIFactura>(response).filter(isConfirmadaParaRegistro);
   }, []);
 
-  const cargarFacturas = useCallback(async () => {
-    setLoading(true);
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void cargarFacturas({ silent: true });
+  });
+
+  const cargarFacturas = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
     setLoadError(null);
     try {
       const rows = await loadFacturas();

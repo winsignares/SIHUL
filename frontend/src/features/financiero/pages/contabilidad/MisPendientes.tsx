@@ -69,7 +69,7 @@ export default function MisPendientes() {
               </div>
             </div>
             <Button
-              onClick={cargarDatos}
+              onClick={() => void cargarDatos()}
               variant="outline"
               className="border-yellow-300 text-slate-900 bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-400 shadow-lg shadow-yellow-500/30 hover:from-yellow-400 hover:via-yellow-500 hover:to-amber-500 hover:text-slate-900 disabled:opacity-60"
               disabled={cargando}

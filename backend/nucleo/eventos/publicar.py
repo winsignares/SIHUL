@@ -26,23 +26,29 @@ def seccional_de(instancia):
     return None
 
 
-def construir_evento(recurso, accion, instancia):
+def construir_evento(recurso, accion, instancia, audiencia=None, referencia=None):
+    objetivo = referencia(instancia) if referencia else instancia
     campo_personal = RECURSOS_PERSONALES.get(recurso)
-    return {
+    evento = {
         'recurso': recurso,
-        'accion': accion,
-        'id': instancia.pk,
-        'seccional': None if campo_personal else seccional_de(instancia),
-        'usuario': getattr(instancia, campo_personal, None) if campo_personal else None,
+        'accion': 'actualizado' if referencia else accion,  # un hijo que cambia es un cambio de su registro
+        'id': objetivo.pk,
+        'seccional': None if campo_personal or audiencia else seccional_de(objetivo),
+        'usuario': getattr(objetivo, campo_personal, None) if campo_personal else None,
     }
+    if audiencia:
+        reglas = audiencia(objetivo)
+        evento['usuarios'] = sorted(i for i in reglas.get('usuarios', ()) if i is not None)
+        evento['roles'] = sorted(reglas.get('roles', ()))
+    return evento
 
 
-def publicar(recurso, accion, instancia):
+def publicar(recurso, accion, instancia, audiencia=None, referencia=None):
     """Publica el evento cuando la transacción termina, para que quien lo reciba ya vea los datos."""
     if not canal.disponible():
         return
     try:
-        texto = json.dumps(construir_evento(recurso, accion, instancia))
+        texto = json.dumps(construir_evento(recurso, accion, instancia, audiencia=audiencia, referencia=referencia))
     except Exception:
         logger.exception('No se pudo armar el evento de %s', recurso)
         return

@@ -222,7 +222,7 @@ export default function DireccionFinancieraHome({
                   <CardDescription>Consulta el estado general del proceso en el Kanban resumido y revisa al mismo tiempo los movimientos mas recientes del modulo.</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button onClick={recargarDatos} variant="outline" disabled={cargando} className="border-slate-300 text-slate-700 hover:bg-slate-50">
+                  <Button onClick={() => void recargarDatos()} variant="outline" disabled={cargando} className="border-slate-300 text-slate-700 hover:bg-slate-50">
                     <RefreshCw className={`mr-2 h-4 w-4 ${cargando ? 'animate-spin' : ''}`} />
                     Actualizar
                   </Button>

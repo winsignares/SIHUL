@@ -92,7 +92,7 @@ export default function EnviarRectoria() {
               <CardTitle>Pagos Revisados - Listos para Enviar</CardTitle>
               <CardDescription>{facturasFiltradas.length} pago(s) cargado(s) listo(s) para enviar a Rectoria</CardDescription>
             </div>
-            <Button onClick={cargarFacturas} variant="outline" disabled={cargando}>
+            <Button onClick={() => void cargarFacturas()} variant="outline" disabled={cargando}>
               <Loader2 className={`w-4 h-4 mr-2 ${cargando ? 'animate-spin' : ''}`} />
               Actualizar
             </Button>

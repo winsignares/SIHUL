@@ -3,6 +3,7 @@ import { facturasService, documentosService } from '../../../services';
 import type { DocumentoAdjunto, Factura } from '../../../models/core.models';
 import { type SharedFacturaDetail } from '../../../components/factura-detail-modal';
 import { buildSharedFacturaDetail } from '../../../components/factura-details-helpers';
+import { useActualizacionEnVivo } from '../../../../../hooks/useActualizacionEnVivo';
 
 export interface RectoriaStats {
   pagosPorAutorizar: number;
@@ -70,8 +71,13 @@ export function useRectoriaHome() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showKanbanCompleto, setShowKanbanCompleto] = useState(false);
 
-  const cargarDatos = useCallback(async () => {
-    setCargando(true);
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void cargarDatos({ silent: true });
+  });
+
+  const cargarDatos = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setCargando(true);
     setError(null);
 
     try {

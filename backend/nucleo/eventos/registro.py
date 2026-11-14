@@ -51,3 +51,21 @@ RUTAS_SECCIONAL = (
 RECURSOS_PERSONALES = {
     'notificaciones': 'id_usuario',
 }
+
+
+# Recursos que se registran desde fuera de la plataforma (por ejemplo, el módulo financiero) con reglas propias:
+# (app_label, Modelo) -> {'recurso', 'audiencia', 'referencia'}
+OPCIONES_POR_MODELO = {}
+
+
+def registrar_recurso(app_label, modelo, recurso, audiencia=None, referencia=None):
+    """Publica eventos de un modelo con reglas propias.
+
+    - `referencia(instancia)`: registro al que se refiere el evento (por ejemplo, la factura de un documento).
+    - `audiencia(registro)`: `{'usuarios': {ids}, 'roles': {nombres normalizados}}`; solo esas personas (y los
+      administradores) reciben el evento. Sin `audiencia` rige la seccional, como en el resto de recursos.
+    """
+    from .senales import conectar
+
+    OPCIONES_POR_MODELO[(app_label, modelo)] = {'recurso': recurso, 'audiencia': audiencia, 'referencia': referencia}
+    conectar(app_label, modelo, recurso, audiencia=audiencia, referencia=referencia)

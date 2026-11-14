@@ -137,7 +137,7 @@ export default function RectoriaHome({ onGoToAutorizar }: RectoriaHomeProps) {
                   <CardDescription>Consulta los ultimos pagos revisados en este rol para seguir decisiones, rechazos y cierres sin salir del dashboard.</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button onClick={recargarDatos} variant="outline" disabled={cargando} className="border-slate-300 text-slate-700 hover:bg-slate-50">
+                  <Button onClick={() => void recargarDatos()} variant="outline" disabled={cargando} className="border-slate-300 text-slate-700 hover:bg-slate-50">
                     <RefreshCw className={`mr-2 h-4 w-4 ${cargando ? 'animate-spin' : ''}`} />
                     Actualizar
                   </Button>

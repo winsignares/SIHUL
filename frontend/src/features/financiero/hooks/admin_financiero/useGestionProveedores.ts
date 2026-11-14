@@ -17,6 +17,7 @@ import {
   type ProveedorFormState,
   type ProveedorUI,
 } from './gestionProveedoresUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y acciones de la gestión de proveedores. */
 export function useGestionProveedores() {
@@ -90,8 +91,13 @@ export function useGestionProveedores() {
     setTiposCuenta(tiposCuentaResp);
   }, []);
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['proveedores', 'catalogos-financieros'], () => {
+    void cargar({ silent: true });
+  });
+
+  const cargar = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const proveedoresResp = await proveedoresService.getAll({ limit: 500, ordering: '-id' });
 

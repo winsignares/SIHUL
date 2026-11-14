@@ -4,6 +4,7 @@ import { reportesFinancieroService, type AdminDashboardResponse } from '../../se
 import { useAuth } from '../../../../context/AuthContext';
 import { useSondeoVisible } from '../../../../hooks/useSondeoVisible';
 import { currency, ACTIVITIES_PER_PAGE, type AdminFinancieroHomeProps } from './adminFinancieroHomeUtils';
+import { useActualizacionEnVivo } from '../../../../hooks/useActualizacionEnVivo';
 
 /** Estado y datos del panel del administrador financiero. */
 export function useAdminFinancieroHome({ onNavigate }: AdminFinancieroHomeProps) {
@@ -17,6 +18,11 @@ export function useAdminFinancieroHome({ onNavigate }: AdminFinancieroHomeProps)
   const [kanbanPage, setKanbanPage] = useState(1);
 
   const getErrorMessage = (e: unknown) => (e instanceof Error ? e.message : 'No se pudo cargar el dashboard de administración financiera.');
+
+  // Alguien más cambió las facturas: se vuelven a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void fetchDashboard(true);
+  });
 
   const fetchDashboard = useCallback(async (showRefresh = false) => {
     if (showRefresh) {

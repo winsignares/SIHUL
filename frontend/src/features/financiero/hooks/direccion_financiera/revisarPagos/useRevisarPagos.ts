@@ -3,6 +3,7 @@ import { facturasService, documentosService } from '../../../services';
 import type { DocumentoAdjunto, Factura } from '../../../models/core.models';
 import { type SharedFacturaDetail } from '../../../components/factura-detail-modal';
 import { buildSharedFacturaDetail } from '../../../components/factura-details-helpers';
+import { useActualizacionEnVivo } from '../../../../../hooks/useActualizacionEnVivo';
 
 export interface FacturaRevision extends SharedFacturaDetail {
   id: string;
@@ -81,8 +82,13 @@ export function useRevisarPagos() {
     };
   };
 
-  const cargarFacturas = useCallback(async () => {
-    setCargando(true);
+  // Alguien más cambió estos datos: se vuelve a leer sin mostrar el spinner.
+  useActualizacionEnVivo(['facturas'], () => {
+    void cargarFacturas({ silent: true });
+  });
+
+  const cargarFacturas = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setCargando(true);
     setError(null);
     try {
       const response = await facturasService.getAll({ limit: 300, ordering: '-fecha_modificacion' });
