@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { periodoService, type PeriodoAcademico } from '../services/periodos/periodoAPI';
 import { useNotification } from '../../../components/ui/notificationBanner';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 const PERIODOS_ACADEMICOS_CACHE_KEY = 'gestion-academica-periodos';
 
@@ -36,9 +37,14 @@ export function usePeriodosAcademicos() {
     const [periodoAEditar, setPeriodoAEditar] = useState<PeriodoUI | null>(null);
     const [periodoAEliminar, setPeriodoAEliminar] = useState<PeriodoUI | null>(null);
 
-    const loadPeriodos = async ({ force = false }: { force?: boolean } = {}) => {
+    // Alguien más cambió los periodos: se vuelve a leer sin mostrar el spinner.
+    useActualizacionEnVivo(['periodos'], () => {
+        void loadPeriodos({ force: true, silent: true });
+    });
+
+    const loadPeriodos = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const activeToken = localStorage.getItem('auth_token');
             const cachedData = force
                 ? null

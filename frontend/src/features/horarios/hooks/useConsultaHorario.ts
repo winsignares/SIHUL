@@ -6,6 +6,7 @@ import { periodoActivoService } from '../../gestionAcademica/services/periodos/p
 import { userService } from '../../users/services/authService';
 import { getSessionCacheData, setSessionCacheData } from '../../../core/sessionCache';
 import { useAuth } from '../../../context/AuthContext';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 export interface Docente {
     id: number | string;
@@ -41,6 +42,12 @@ export function useConsultaHorario() {
             setPeriodoActual(PERIODO_EMPTY);
         }
     };
+
+    // Alguien más cambió horarios, programas o el periodo: se vuelve a leer.
+    useActualizacionEnVivo(['horarios', 'horarios-fusionados', 'programas', 'periodos'], () => {
+        void cargarHorarios({ force: true });
+        void cargarPeriodo();
+    });
 
     const cargarHorarios = async ({ force = false }: { force?: boolean } = {}) => {
         try {

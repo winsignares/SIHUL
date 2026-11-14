@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNotification } from '../../../components/ui/notificationBanner';
 import { solicitudEspacioService, type SolicitudEspacio } from '../../horarios/services/solicitudEspacioAPI';
 import { useAuth } from '../../../context/AuthContext';
+import { useActualizacionEnVivo } from '../../../hooks/useActualizacionEnVivo';
 
 export interface UseSolicitudesEspacioProps {
     onSolicitudActualizada?: () => void;
@@ -20,9 +21,14 @@ export function useSolicitudesEspacio({ onSolicitudActualizada }: UseSolicitudes
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const loadSolicitudes = async () => {
+    // Alguien más creó o resolvió una solicitud de espacio: se vuelve a leer sin mostrar el spinner.
+    useActualizacionEnVivo(['solicitudes-espacio', 'horarios', 'espacios'], () => {
+        void loadSolicitudes({ silent: true });
+    });
+
+    const loadSolicitudes = async ({ silent = false }: { silent?: boolean } = {}) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const response = await solicitudEspacioService.list();
             setSolicitudes(response.solicitudes);
         } catch (error) {
